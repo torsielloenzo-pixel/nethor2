@@ -22,3 +22,22 @@ test('rejette une grille incomplète',()=>{
  const m=model();m.days['2026-10-12'].cells[0]=['g'];
  assert.throws(()=>buildImportPreview(m),/Grille incohérente/);
 });
+
+test('signale créneau court et conflit avec absence approuvée',()=>{
+ const m=model();
+ m.days['2026-10-12'].cells[0]=Array.from({length:58},(_,j)=>j===0?'g':null);
+ const result=buildImportPreview(m,{
+   profiles:[{id:'u1',account_enabled:true}],
+   aliases:[{planningName:'Clément',userId:'u1'}],
+   approvedAbsences:{u1:['2026-10-12']}
+ });
+ assert.ok(result.warnings.some(w=>w.code==='SHORT_SHIFT'));
+ assert.ok(result.warnings.some(w=>w.code==='ABSENCE_CONFLICT'));
+ assert.equal(result.readyForPublish,false);
+});
+test('signale une longue coupure',()=>{
+ const m=model();
+ m.days['2026-10-12'].cells[0]=Array.from({length:58},(_,j)=>j===0||j===9?'g':null);
+ const result=buildImportPreview(m);
+ assert.ok(result.warnings.some(w=>w.code==='LONG_BREAK'));
+});
