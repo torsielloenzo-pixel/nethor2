@@ -1,11 +1,11 @@
 # Phase 1 — Aperçu d'import, sans publication
 
-Le nouveau fichier `src/import/import-preview.js` combine les modules internes de calcul des heures et d'association des salariés.
+Le nouveau fichier `src/import/import-preview.js` combine le calcul des heures et l'association des salariés ; le moteur d'anomalies détaillées reste à brancher.
 
 ## Pipeline prévu
 
 1. `readPlanningFile` lit le classeur avec son lecteur XLSX et son résolveur de couleurs.
-2. `buildImportPreview` fournit un aperçu des sept jours, des salariés, des horaires, des écarts contractuels et des associations de comptes.
+2. `buildImportPreview` fournit un aperçu des sept jours, des salariés, des heures, des écarts contractuels et des associations de comptes.
 3. L'aperçu n'écrit jamais dans Supabase. `readyForPublish` reste volontairement à `false`.
 4. La publication reste une opération distincte et autorisée après validation de l'archive originale, des permissions serveur et de la révision.
 
