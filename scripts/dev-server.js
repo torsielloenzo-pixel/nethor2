@@ -5,8 +5,8 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const allowed=new Set([
-  '/','/index.html','/styles.css','/sw.js','/manifest.webmanifest','/assets/icon.svg',
-  '/src/ui/app.js','/src/import/import-preview.js','/src/import/excel-structure.js',
+  '/','/index.html','/styles.css','/live.css','/sw.js','/manifest.webmanifest','/assets/icon.svg',
+  '/src/ui/live.js','/src/auth/session-gate.js','/src/data/planning-repository.js','/src/config/public.js','/src/import/excel-structure.js',
   '/src/domain/planning-core.js','/src/domain/employee-linker.js'
 ]);
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
@@ -25,7 +25,7 @@ const server=createServer(async(req,res)=>{
       'Content-Type':mime[ext]||'application/octet-stream',
       'Cache-Control':'no-store',
       'X-Content-Type-Options':'nosniff',
-      'Content-Security-Policy':"default-src 'none'; script-src 'self' https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
+      'Content-Security-Policy':"default-src 'none'; script-src 'self' https://cdn.sheetjs.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
     });
     res.end(req.method==='HEAD'?undefined:bytes);
   }catch{res.writeHead(404);res.end('Not found');}
