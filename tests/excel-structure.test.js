@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {parsePlanningWorkbook} from '../src/import/excel-structure.js';
 const names=['LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI','DIMANCHE'];
 const xlsx={utils:{encode_cell:({r,c})=>String.fromCharCode(65+c)+(r+1),decode_range:()=>({e:{r:3}})}};
-function fixture(){const sheets=Object.fromEntries(names.map(n=>[n,{B4:{v:'Clément'},'!ref':'B2:BH4'}]));sheets.LUNDI.B2={v:new Date(2026,9,12)};return{SheetNames:names,Sheets:sheets};}
+function fixture(){const sheets=Object.fromEntries(names.map(n=>[n,{B4:{v:'Clément'},'!ref':'B2:BH4'}]));sheets.LUNDI.B2={v:new Date(2026,9,12)};return{SheetNames:[...names],Sheets:sheets};}
 test('lit sept jours et tous les 58 créneaux',()=>{
  const model=parsePlanningWorkbook(fixture(),xlsx,()=>null);
  assert.equal(Object.keys(model.days).length,7);
