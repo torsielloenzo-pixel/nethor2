@@ -69,6 +69,8 @@ async function loadProfiles(){
   const {data,error}=await client.from('profiles').select('id,display_name,planning_name,contract_hours,account_enabled,role').order('display_name',{ascending:true});
   if(error){state.profiles=[];console.warn('Liste des profils restreinte par les autorisations.');return;}
   state.profiles=Array.isArray(data)?data:[];
+  const own=state.profiles.find(profile=>profile.id===state.user?.id);
+  if(own)state.profile={...state.profile,planning_name:own.planning_name,contract_hours:own.contract_hours};
 }
 function visibleModel(){
   const source=state.weekData?.model;
@@ -187,7 +189,21 @@ function pageAnomalies(metrics){
 function pageTeam(metrics){
   const filter=normalizeName(state.search);
   const visible=metrics.people.filter(p=>normalizeName(p.name).includes(filter));
-  return renderPageHeader('ÉQUIPE','Collaborateurs planifiés','Identités lues depuis le planning publié et associées aux profils visibles.')+'<div class="filter-row"><input id="searchTeam" value="'+escapeHtml(state.search)+'" placeholder="Rechercher un collaborateur" aria-label="Rechercher"></div><section class="card"><div class="card-head"><div><h2 class="card-title">Personnes présentes dans la semaine</h2><p class="sub">'+metrics.people.length+' personne(s) dans le planning</p></div></div><div class="live-person-list">'+(visible.length?visible.map(p=>'<div class="live-person"><div>'+person(p.name)+'<p class="live-small">'+hours(p.total)+' · '+(p.contract===null?'Contrat non renseigné':'Contrat : '+hours(p.contract))+'</p></div><span class="chip '+(p.profile?'':'warn')+'">'+(p.profile?'Profil associé':'Association à contrôler')+'</span></div>').join(''):'<div class="live-empty">Aucun résultat.</div>')+'</div></section><p class="live-muted" style="margin-top:14px">La liste des comptes dépend de tes permissions. La désactivation et la création de comptes continuent d’être gérées par les fonctions administrateur existantes.</p>';
+  const accounts=state.profiles.filter(p=>p.account_enabled===true);
+  const rows=visible.map(p=>{
+    const details='<div>'+person(p.name)+'<p class="live-small">'+hours(p.total)+' · '+(p.contract===null?'Contrat non renseigné':'Contrat : '+hours(p.contract))+'</p></div>';
+    let right='<span class="chip '+(p.profile?'':'warn')+'">'+(p.profile?'Profil associé':'Association à contrôler')+'</span>';
+    if(state.profile.role==='admin'){
+      const opts='<option value="">Choisir un compte</option>'+accounts.map(a=>'<option value="'+escapeHtml(a.id)+'" '+(a.id===p.profile?.id?'selected':'')+'>'+escapeHtml(a.display_name||'Utilisateur')+'</option>').join('');
+      right='<div class="live-controls"><select class="btn" aria-label="Compte à associer à '+escapeHtml(p.name)+'" data-link-select="'+escapeHtml(p.name)+'">'+opts+'</select><button type="button" class="btn" data-link-save="'+escapeHtml(p.name)+'">Associer</button></div>';
+    }
+    return '<div class="live-person">'+details+right+'</div>';
+  }).join('');
+  return renderPageHeader('ÉQUIPE','Collaborateurs planifiés','Identités lues depuis le planning publié et associées aux profils autorisés.')+
+    '<div class="filter-row"><input id="searchTeam" value="'+escapeHtml(state.search)+'" placeholder="Rechercher un collaborateur" aria-label="Rechercher"></div>'+
+    '<section class="card"><div class="card-head"><div><h2 class="card-title">Personnes présentes dans la semaine</h2><p class="sub">'+metrics.people.length+' personne(s) dans le planning</p></div></div>'+
+    '<div class="live-person-list">'+(rows||'<div class="live-empty">Aucun résultat.</div>')+'</div></section>'+
+    '<p class="live-muted" style="margin-top:14px">Les profils désactivés visibles par l’administrateur sont masqués de cette interface. La création et la désactivation des comptes restent administrées par les outils existants.</p>';
 }
 function pageSettings(){
   return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>';
@@ -302,6 +318,7 @@ async function publish(){
   if(!window.confirm('Publier le planning du '+longDate(state.importModel.weekStart)+' et remplacer sa version actuelle ?'))return;
   state.busy=true;state.importError='';render();
   let uploadedPath=null;
+  let publicationAttempted=false;
   try{
     const gate=await checkSession();
     if(!gate||gate.access!=='manage')throw Error('Vos autorisations ont changé. Publication refusée.');
@@ -315,6 +332,7 @@ async function publish(){
     if(upload.error)throw Error('Archivage du fichier impossible : '+upload.error.message);
     uploadedPath=path;
     const data={...model,sourceFile:state.importFile.name,sourcePath:path,importedAt:new Date().toISOString()};
+    publicationAttempted=true;
     const outcome=await publishPlanningWeek(client,{weekStart:model.weekStart,expectedRevision:latest?.revision||null,model:data});
     if(outcome.status==='conflict')throw Error('Une autre publication a eu lieu. Rien n’a été écrasé.');
     const verified=await verifyPublishedWeek(client,model.weekStart,outcome.revision);
@@ -325,10 +343,29 @@ async function publish(){
     state.weekData=await getPlanningWeek(client,state.week);
   }catch(err){
     state.importError=String(err.message||err);
-    if(uploadedPath){
+    if(uploadedPath&&!publicationAttempted){
       try{await client.storage.from('planning-files').remove([uploadedPath]);}catch(e){console.warn('Archive temporaire à vérifier',e);}
     }
+    // Si une écriture a peut-être eu lieu, conserver l'original pour éviter une perte de traçabilité.
   }finally{state.busy=false;render();}
+}
+async function saveLink(name){
+  if(state.profile.role!=='admin'||!state.user)throw Error('Accès administrateur obligatoire.');
+  const select=[...ROOT.querySelectorAll('[data-link-select]')].find(el=>el.dataset.linkSelect===name);
+  const id=select?.value;
+  if(!id)throw Error('Sélectionne un compte.');
+  const profile=state.profiles.find(p=>p.id===id&&p.account_enabled===true);
+  if(!profile)throw Error('Compte désactivé ou introuvable.');
+  const duplicate=state.profiles.some(p=>p.id!==id&&p.account_enabled===true&&normalizeName(p.planning_name)===normalizeName(name));
+  if(duplicate)throw Error('Ce nom est déjà associé à un autre compte actif.');
+  if(!window.confirm('Associer '+name+' au compte '+(profile.display_name||'sélectionné')+' ?'))return;
+  const gate=await checkSession();
+  if(!gate||gate.gate.profile.role!=='admin')throw Error('Session administrateur non validée.');
+  const {data,error}=await client.from('profiles').update({planning_name:name}).eq('id',id).eq('account_enabled',true).select('id,planning_name').maybeSingle();
+  if(error||!data)throw Error(error?.message||'Association non confirmée.');
+  await loadProfiles();
+  state.notice='Association enregistrée pour '+name;state.error='';
+  render();
 }
 async function downloadHistory(path){
   if(state.profile.role!=='admin')return;
@@ -369,6 +406,8 @@ ROOT.addEventListener('click',async event=>{
   if(nav){go(nav.dataset.page);return;}
   const day=event.target.closest('[data-day]');
   if(day){state.day=day.dataset.day;state.view='day';render();return;}
+  const link=event.target.closest('[data-link-save]');
+  if(link){try{await saveLink(link.dataset.linkSave);}catch(err){state.error=String(err.message||err);render();}return;}
   const dl=event.target.closest('[data-download]');
   if(dl){await downloadHistory(dl.dataset.download);return;}
   const b=event.target.closest('[data-action]');
