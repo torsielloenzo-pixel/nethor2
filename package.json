@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-server.js",
-    "check": "node --check src/ui/app.js && node --check sw.js && node --check scripts/dev-server.js && node --test",
+    "check": "node --check src/ui/live.js && node --check sw.js && node --check scripts/dev-server.js && node --test",
     "test": "node --test"
   },
   "engines": {
