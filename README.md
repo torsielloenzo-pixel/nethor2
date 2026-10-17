@@ -1,52 +1,48 @@
-# Nethor 2 — Aperçu fonctionnel V1
+# Nethor 2 — Version officielle (V1)
 
-Refonte indépendante de Nethor, recentrée sur le planning. Cette version possède une **interface utilisable**, mais fonctionne **en mode démonstration** avec des données fictives par défaut. Aucun raccordement aux comptes réels ni écriture sur le Supabase de production n'est effectué.
+Application interne de gestion des plannings, distincte de l'ancien dépôt `nethor`.
 
-## Ouvrir l'aperçu
+## Accès
 
-- **Prévisualisation GitHub Pages** : `https://torsielloenzo-pixel.github.io/nethor2/` (si l'environnement Pages du dépôt privé est autorisé et configuré dans GitHub > Settings > Pages > Source: GitHub Actions).
-- **Localement** : installer Node.js 20+, puis exécuter `npm run dev` et ouvrir `http://127.0.0.1:4173`.
-- Sur mobile, ouvrir l'URL HTTPS GitHub Pages puis utiliser « Ajouter à l'écran d'accueil » lorsque le navigateur le permet.
+- [Ouvrir Nethor 2](https://torsielloenzo-pixel.github.io/nethor2/)
+- [Tests GitHub Actions](https://github.com/torsielloenzo-pixel/nethor2/actions)
+- [Déploiement GitHub Pages](https://github.com/torsielloenzo-pixel/nethor2/actions/workflows/preview-pages.yml)
 
-Le dépôt reste privé. Attention : **un site GitHub Pages peut être accessible publiquement même si le dépôt est privé**. L'artefact de déploiement ne contient que les fichiers statiques de la démo, pas les scripts d'administration, les données réelles, les tests, les fichiers SQL, ni les secrets.
+Le code est publié via GitHub Pages. **L'URL du site peut être publique même lorsque le dépôt est privé**, mais toutes les données du planning nécessitent une session autorisée dans Supabase. Ne jamais ajouter de secrets, de données RH, ni de fichiers Excel au dépôt.
 
-## Écrans déjà disponibles
+## Fonctionnalités raccordées
 
-- Vue d'ensemble : indicateurs, planning, couverture magasin et alertes.
-- Planning : navigation par semaine, vues jour et semaine, horaire par collaborateur.
-- Anomalies : contrôles de journées, courtes plages, longues coupures et écarts horaires.
-- Équipe : filtrage, état d'association des personnes présentes dans la grille.
-- Import Excel : sélection ou glisser-déposer, lecture locale des formats `.xls`, `.xlsx`, `.xlsm`, détection de la structure à 7 feuilles, aperçu des heures. Aucun envoi réseau du fichier ni publication.
-- PWA : manifeste, service worker du code statique, icône.
+- Connexion aux **comptes Nethor existants**, via Supabase Auth.
+- Contrôle de session active, compte non désactivé et permissions Planning via RPC serveur.
+- Lecture des semaines réelles `planning_weeks` (accès sous RLS).
+- Navigation jour/semaine, total par collaborateur et indicateur de couverture.
+- Détection indicative de créneaux très courts, longues coupures, longues journées et écarts contractuels.
+- Lecture des noms de planning avec association aux comptes visibles; modification des associations par un administrateur.
+- Import Excel `.xls`, `.xlsx`, `.xlsm` : lecture locale, prévisualisation et validation explicite.
+- Publication réservée au droit `manage`, protégée par le RPC existant `planning_save_week_if_revision`.
+- Upload original dans le bucket privé `planning-files` puis vérification de la version publiée. Historique des fichiers accessible aux administrateurs via les tables et policies déjà existantes.
+- PWA : manifest et cache strictement limité au code de l'application (aucune session, aucun fichier RH, aucune réponse API en cache).
 
-Le parseur Excel dépend du lecteur SheetJS CE v0.20.3 chargé depuis le CDN officiel. Il **refuse l'import** si la couleur des créneaux n'est pas identifiable avec fiabilité. La compatibilité avec chaque ancien modèle `.xls` du magasin reste à tester sur des fichiers réels anonymisés.
+## Points à tester avant adoption complète
 
-## Sécurité et périmètre actuel
+1. Connexion réelle avec un compte de chaque rôle (administrateur, point de vente, responsable et employé), ainsi qu'avec un compte désactivé.
+2. Export `.xls` représentatif des plannings historiques, en particulier **la lecture des couleurs Excel**. L'import échoue volontairement si un style est ambigu, pour éviter de publier des horaires erronés.
+3. Publication réelle d'un fichier validé, archivage, traçabilité, puis téléchargement de l'archive avec un compte administrateur. **Aucun import RH de production n'a été déclenché automatiquement au déploiement.**
+4. Vérifier les autorisations `view` / `operate` / `manage` avec des sessions d'utilisateurs réelles, ainsi que les profils désactivés. Le filtrage visuel des noms désactivés dépend des profils accessibles au client; l'isolation des données doit être réévaluée si l'exigence est de supprimer l'accès à ces noms dans toute l'API historique.
+5. Tests navigateur sur Chrome, iPhone et installation PWA.
+6. Vérification des paramètres GitHub Pages : préférer **Source: GitHub Actions** afin d'éviter la coexistence avec le workflow automatique « pages build and deployment ».
 
-- Les personnes de l'aperçu (Camille, Alex, Morgan, Lou, Noa, Sam) sont **fictives**.
-- La connexion à Supabase, les droits réels, la publication, la désactivation des comptes et la synchronisation automatique sont **désactivés** dans cette version.
-- Les fichiers Excel sont uniquement conservés **en mémoire dans l'onglet courant** ; l'application ne les enregistre pas dans le cache du service worker.
-- Le service worker n'intercepte que des chemins de ressources applicatives explicitement listés, **jamais les réponses API**.
-- Les contrôles d'anomalies sont **indicatifs** et ne qualifient pas juridiquement un horaire.
-- Aucun changement n'est appliqué au dépôt historique `nethor` ou au domaine `nethor.fr`.
+Le déploiement réussi ne constitue **pas** une validation complète du parcours d'authentification et d'import réel. Les fonctions et les accès ne doivent pas être considérés comme certifiés sans tests avec des comptes habilités.
 
-### Important avant raccordement des comptes
-
-Audit du 17 octobre 2026 : les tables `profiles`, `planning_weeks` et `planning_import_history` ont RLS activée, mais des politiques `ALL` utilisant `private.session_is_active()` existent. Les politiques PostgreSQL permissives pouvant se cumuler, il faut contrôler leur comportement réel avec un compte à privilèges minimaux avant de raccorder l'interface de préproduction. Ne pas considérer la présence de RLS seule comme une preuve d'isolation.
-
-## Tests
+## Développement et tests
 
 ```bash
 npm run check
 npm run dev
 ```
 
-`npm run check` contrôle la syntaxe JavaScript et les tests unitaires des modules métiers existants.
+`npm run check` vérifie la syntaxe et les tests du domaine. La version hébergée GitHub Pages utilise le workflow `preview-pages.yml`, qui ne déploie que les ressources web nécessaires.
 
-## Travaux suivants
+## Architecture
 
-1. Valider les permissions/RLS et les rôles au moyen de tests de comptes réels en environnement de préproduction.
-2. Vérifier le parseur sur les fichiers `.xls` historiques sans perdre les styles Excel.
-3. Ajouter un flux de publication atomique, la traçabilité et les vérifications de concurrence.
-4. Relier les profils/authentifications existants, uniquement après validation de l'accès par rôle.
-5. Réaliser les essais de PWA sur iPhone et desktop.
+La base historique Supabase est réutilisée sans migration destructive. La fonction `public.nethor2_my_planning_permission()` a été ajoutée comme RPC en lecture seule pour vérifier la permission Planning de la session active. Elle utilise `SECURITY INVOKER`, n'est accessible qu'au rôle `authenticated`, et son résultat n'autorise pas lui-même une écriture : le contrôle serveur du RPC de publication reste nécessaire.
