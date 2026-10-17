@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Nethor 2 — Planning",
   "short_name": "Nethor 2",
-  "description": "Aperçu du planning Nethor 2",
+  "description": "Application interne Nethor 2 pour le planning du personnel",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
