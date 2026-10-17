@@ -1,0 +1,39 @@
+name: Nethor 2 - Aperçu GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: nethor2-pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Télécharger le dépôt
+        uses: actions/checkout@v4
+      - name: Préparer uniquement les ressources publiques de démonstration
+        run: |
+          mkdir -p _site/assets _site/src/ui _site/src/import _site/src/domain
+          cp index.html styles.css sw.js manifest.webmanifest _site/
+          cp assets/icon.svg _site/assets/
+          cp src/ui/app.js _site/src/ui/
+          cp src/import/import-preview.js src/import/excel-structure.js _site/src/import/
+          cp src/domain/planning-core.js src/domain/employee-linker.js _site/src/domain/
+          test ! -e _site/.env
+      - name: Configurer Pages
+        uses: actions/configure-pages@v5
+      - name: Envoyer l'aperçu
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Publier l'aperçu
+        id: deployment
+        uses: actions/deploy-pages@v4
