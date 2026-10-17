@@ -222,8 +222,8 @@ function colorFor({cell,workbook}){
     if(g>r*1.17&&g>b*.9)return 'g';
     if(b>r*1.25&&b>g*1.12)return 'b';
     if(r>175&&g<125&&b<150)return 'r';
+    if(r>205&&g>205&&b<160)return 'y';
     if(r>175&&g>130&&b<125)return 'o';
-    if(r>175&&g>175&&b<145)return 'y';
   }
   if(s!==undefined&&s!==null&&s!==0)return undefined;
   return cell.v==null||cell.v===''||cell.v===0?null:undefined;
