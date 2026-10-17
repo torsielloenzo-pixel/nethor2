@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101f3e">
+  <meta name="description" content="Nethor 2 — aperçu indépendant de la gestion des plannings">
+  <title>Nethor 2 · Planning</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span><strong>NETHOR<span class="brand-number">2</span></strong><small>ESPACE PLANNING</small></span></div>
+      <p class="nav-caption">ESPACE DE TRAVAIL</p>
+      <nav aria-label="Navigation principale">
+        <button type="button" class="nav-item" data-page="dashboard"><span aria-hidden="true">▦</span> Vue d'ensemble</button>
+        <button type="button" class="nav-item" data-page="planning"><span aria-hidden="true">▤</span> Planning</button>
+        <button type="button" class="nav-item" data-page="anomalies"><span aria-hidden="true">◇</span> Anomalies</button>
+        <button type="button" class="nav-item" data-page="import"><span aria-hidden="true">⇧</span> Importer un planning</button>
+        <button type="button" class="nav-item" data-page="team"><span aria-hidden="true">♧</span> Équipe</button>
+      </nav>
+      <div class="side-bottom">
+        <button type="button" class="nav-item" data-page="settings"><span aria-hidden="true">⚙</span> Paramètres</button>
+        <div class="side-info"><span class="status-dot"></span> Environnement d'aperçu <small>Données fictives · aucune publication</small></div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="top-left">
+          <button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir le menu" aria-expanded="false">☰</button>
+          <div><span class="breadcrumb">NETHOR <span class="sep">/</span> <span id="breadcrumb">Vue d'ensemble</span></span><span class="top-context">Planning & organisation du magasin</span></div>
+        </div>
+        <div class="top-actions"><span class="demo-pill"><span class="status-dot"></span> MODE DÉMONSTRATION</span><div class="avatar" aria-label="Profil de démonstration">N2</div></div>
+      </header>
+      <main id="screen" tabindex="-1" aria-live="polite"></main>
+      <footer class="app-footer"><span>Nethor 2 · Aperçu V1</span><span>Application indépendante de nethor.fr</span></footer>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Navigation rapide">
+    <button type="button" data-page="dashboard"><span>▦</span>Accueil</button>
+    <button type="button" data-page="planning"><span>▤</span>Planning</button>
+    <button type="button" data-page="anomalies"><span>◇</span>Alertes</button>
+    <button type="button" data-page="import"><span>⇧</span>Importer</button>
+  </nav>
+  <script type="module" src="./src/ui/app.js"></script>
+</body>
+</html>
