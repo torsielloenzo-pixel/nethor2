@@ -17,5 +17,5 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Tests
-        run: npm test
+      - name: Vérifier la syntaxe et les tests
+        run: npm run check
