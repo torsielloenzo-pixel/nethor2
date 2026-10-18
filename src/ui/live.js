@@ -6,6 +6,7 @@ import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
+import {renderMobilePlanning} from './planning-mobile.js';
 import {readPlanningFile} from '../import/excel-structure.js';
 
 const ROOT=document.getElementById('app');
@@ -66,7 +67,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,mobilePlanning:{weekFilter:'all',dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let booted=false;
 let personalRequestId=0;
@@ -330,6 +331,12 @@ function pageHome(metrics){
   return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
 function pagePlanning(metrics){
+  if(isMobileHome())return renderMobilePlanning({
+    weekStart:state.week,selectedDay:state.day,view:state.view,
+    model:state.loading?null:visibleModel(),profiles:state.profiles,
+    currentProfile:state.profile,filter:state.view==='day'?state.mobilePlanning.dayFilter:state.mobilePlanning.weekFilter,
+    awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error
+  });
   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+planningCard(metrics);
 }
 function pageAnomalies(metrics){
@@ -382,6 +389,7 @@ function render(){
   if(state.page==='history'&&state.profile.role!=='admin')state.page='planning';
   if(!canNavigate(state.page,state.profile))state.page='planning';
   ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
+  ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&isMobileHome());
   document.title='Nethor · '+TITLES[state.page];
   ROOT.querySelector('#breadPage').textContent=TITLES[state.page];
   ROOT.querySelectorAll('[data-page]').forEach(el=>{
@@ -391,9 +399,9 @@ function render(){
   const model=visibleModel(),metrics=analyze(model);
   const pages={home:()=>pageHome(metrics),planning:()=>pagePlanning(metrics),anomalies:()=>pageAnomalies(metrics),import:pageImport,team:()=>pageTeam(metrics),history:pageHistory,settings:pageSettings};
   let top='';
-  if(state.loading&&!(state.page==='home'&&isMobileHome()))top+='<div class="live-message">Chargement du planning…</div>';
-  if(state.error&&!(state.page==='home'&&isMobileHome()))top+='<div class="live-error">'+escapeHtml(state.error)+'</div>';
-  if(state.notice&&!(state.page==='home'&&isMobileHome()))top+='<div class="live-message ok">'+escapeHtml(state.notice)+'</div>';
+  if(state.loading&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-message">Chargement du planning…</div>';
+  if(state.error&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-error">'+escapeHtml(state.error)+'</div>';
+  if(state.notice&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-message ok">'+escapeHtml(state.notice)+'</div>';
   screen.innerHTML=top+pages[state.page]();
 }
 function go(page){
@@ -563,6 +571,28 @@ ROOT.addEventListener('submit',async event=>{
 ROOT.addEventListener('click',async event=>{
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
+
+  const mobileDay=event.target.closest('[data-mobile-planning-day]');
+  if(mobileDay&&isMobileHome()){
+    state.day=mobileDay.dataset.mobilePlanningDay;render();return;
+  }
+  const mobileOpen=event.target.closest('[data-mobile-planning-open]');
+  if(mobileOpen&&isMobileHome()){
+    state.day=mobileOpen.dataset.mobilePlanningOpen;state.view='day';render();return;
+  }
+  const mobileFilter=event.target.closest('[data-mobile-planning-filter]');
+  if(mobileFilter&&isMobileHome()){
+    const isDay=mobileFilter.dataset.filterMode==='day';
+    const key=isDay?'dayFilter':'weekFilter';
+    state.mobilePlanning[key]=mobileFilter.dataset.mobilePlanningFilter;
+    const y=window.scrollY;render();window.scrollTo(0,y);return;
+  }
+  const mobileAway=event.target.closest('[data-mobile-planning-away]');
+  if(mobileAway&&isMobileHome()){
+    event.preventDefault();
+    state.mobilePlanning.awayExpanded=!state.mobilePlanning.awayExpanded;
+    const y=window.scrollY;render();window.scrollTo(0,y);return;
+  }
   const day=event.target.closest('[data-day]');
   if(day){state.day=day.dataset.day;state.view='day';render();return;}
   const link=event.target.closest('[data-link-save]');
@@ -576,7 +606,12 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='install-pwa')await installPwa();
   else if(action==='go-import')go('import');
   else if(action==='go-planning')go('planning');
-  else if(action==='prev'||action==='next'){state.week=plusDays(state.week,action==='prev'?-7:7);state.day=state.week;await loadWeek();}
+  else if(action==='prev'||action==='next'){
+    const dayIndex=datesFor(state.week).indexOf(state.day);
+    state.week=plusDays(state.week,action==='prev'?-7:7);
+    state.day=isMobileHome()&&dayIndex>=0?plusDays(state.week,dayIndex):state.week;
+    await loadWeek();
+  }
   else if(action==='refresh')await loadWeek();
   else if(action==='week-view'||action==='day-view'){state.view=action==='week-view'?'week':'day';render();}
   else if(action==='clear-import'){state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.importError='';render();}
