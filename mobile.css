@@ -70,6 +70,7 @@
   .live-day-nav{position:relative}
   .live-day-nav button{min-width:52px;padding:10px 6px}
   .live-navigator{display:grid;grid-template-columns:repeat(4,1fr);gap:0;min-height:65px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));}
+  .live-navigator.nav-count-3{grid-template-columns:repeat(3,minmax(0,1fr))}
   .live-navigator button{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-height:48px;font-size:22px;color:#8b99af;line-height:1.05}
   .live-navigator button span{font-size:10px;font-weight:750}
   .live-navigator button.active{color:#315fc9}
