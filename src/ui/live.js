@@ -7,6 +7,31 @@ import {normalizeName} from '../domain/employee-linker.js';
 import {readPlanningFile} from '../import/excel-structure.js';
 
 const ROOT=document.getElementById('app');
+let pendingInstall=null;
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();pendingInstall=event;});
+window.addEventListener('appinstalled',()=>{pendingInstall=null;});
+function mobileInstallInstructions(){
+  if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)return 'Nethor 2 est déjà ouvert en mode application.';
+  if(/iPhone|iPad|iPod/i.test(navigator.userAgent))return 'Sur iPhone : ouvre Nethor 2 dans Safari, touche Partager, puis « Sur l’écran d’accueil » et « Ajouter ».';
+  if(/Android/i.test(navigator.userAgent))return 'Sur Android : dans Chrome, ouvre ⋮ puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».';
+  return 'Dans Chrome ou Edge, utilise le menu puis « Installer l’application » si cette option est disponible.';
+}
+async function installPwa(){
+  if(pendingInstall){
+    const install=pendingInstall;pendingInstall=null;
+    try{await install.prompt();await install.userChoice;}catch(err){console.warn('Installation PWA indisponible',err);}
+  }else{
+    const note=ROOT.querySelector('#installInstructions');
+    if(note){note.hidden=false;note.textContent=mobileInstallInstructions();}
+    else window.alert(mobileInstallInstructions());
+  }
+}
+function closeMobileMenu(){
+  ROOT.querySelector('#sidebar')?.classList.remove('open');
+  ROOT.classList.remove('menu-open');
+  ROOT.querySelector('#mobileMenu')?.setAttribute('aria-expanded','false');
+}
+
 const DAYS=['Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.','Dim.'];
 const TITLES={home:'Vue d’ensemble',planning:'Planning',anomalies:'Anomalies',import:'Importer',team:'Équipe',history:'Historique',settings:'Paramètres'};
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -32,11 +57,12 @@ function showMessage(text,kind='error'){
   if(block){block.textContent=text;block.className=kind==='error'?'form-error':'live-message';block.hidden=false;}
 }
 function renderLogin(message=''){
+  ROOT.classList.remove('menu-open');
   document.title='Nethor 2 · Connexion';
-  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand">NETHOR²<small>PLANNING · LE THOR</small></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
+  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand">NETHOR²<small>PLANNING · LE THOR</small></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div><div class="login-install"><span>Accès rapide sur iPhone et Android</span><button class="login-install-btn" type="button" data-action="install-pwa">Installer Nethor 2 ↗</button><p class="pwa-help" id="installInstructions" hidden></p></div></form></div></div>';
 }
 function renderShell(){
-  ROOT.innerHTML='<div class="app"><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><span class="brand-symbol"><i></i><i></i><i></i><i></i></span><span><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"><span>'+({'home':'▦','planning':'▤','anomalies':'◇','import':'⇧','team':'♧','history':'▥','settings':'⚙'}[key])+'</span>'+name+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation">☰</button><div><span class="breadcrumb">NETHOR 2 <span class="sep">/</span><span id="breadPage">Accueil</span></span><span class="top-context">Netto Le Thor · Planning du personnel</span></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator" aria-label="Navigation rapide"><button data-page="home">▦ <span>Accueil</span></button><button data-page="planning">▤ <span>Planning</span></button><button data-page="anomalies">◇ <span>Alertes</span></button><button data-page="team">♧ <span>Équipe</span></button></nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><span class="brand-symbol"><i></i><i></i><i></i><i></i></span><span><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"><span>'+({'home':'▦','planning':'▤','anomalies':'◇','import':'⇧','team':'♧','history':'▥','settings':'⚙'}[key])+'</span>'+name+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout"><span>⇥</span> Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false">☰</button><div><span class="breadcrumb">NETHOR 2 <span class="sep">/</span><span id="breadPage">Accueil</span></span><span class="top-context">Netto Le Thor · Planning du personnel</span></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator" aria-label="Navigation rapide"><button data-page="home">▦ <span>Accueil</span></button><button data-page="planning">▤ <span>Planning</span></button><button data-page="anomalies">◇ <span>Alertes</span></button><button data-page="team">♧ <span>Équipe</span></button></nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -208,7 +234,7 @@ function pageTeam(metrics){
     '<p class="live-muted" style="margin-top:14px">Les profils désactivés visibles par l’administrateur sont masqués de cette interface. La création et la désactivation des comptes restent administrées par les outils existants.</p>';
 }
 function pageSettings(){
-  return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>';
+  return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="pwa-settings-row"><span class="pwa-settings-icon">▣</span><div><strong>Nethor 2 sur mobile</strong><small>Installer sur votre écran d’accueil</small></div><button class="btn" type="button" data-action="install-pwa">Installer</button></div><div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>';
 }
 function pageImport(){
   if(state.access!=='manage')return '<div class="live-error">Tu n’as pas les droits de gérer le planning.</div>';
@@ -249,7 +275,7 @@ function render(){
 function go(page){
   if(!(page in TITLES))return;
   state.page=page;state.notice='';state.error='';
-  ROOT.querySelector('#sidebar')?.classList.remove('open');
+  closeMobileMenu();
   if(page==='history')void loadHistory();else render();
   window.scrollTo({top:0,behavior:'instant'});
 }
@@ -417,6 +443,7 @@ ROOT.addEventListener('click',async event=>{
   if(!b)return;
   const action=b.dataset.action;
   if(action==='logout')await signOut();
+  else if(action==='install-pwa')await installPwa();
   else if(action==='go-import')go('import');
   else if(action==='go-planning')go('planning');
   else if(action==='prev'||action==='next'){state.week=plusDays(state.week,action==='prev'?-7:7);state.day=state.week;await loadWeek();}
@@ -437,11 +464,15 @@ ROOT.addEventListener('input',event=>{
 ROOT.addEventListener('dragover',event=>{if(event.target.closest('#importDrop'))event.preventDefault();});
 ROOT.addEventListener('drop',event=>{if(event.target.closest('#importDrop')){event.preventDefault();void selectFile(event.dataTransfer?.files?.[0]);}});
 ROOT.addEventListener('click',event=>{
-  if(event.target.id==='mobileMenu')ROOT.querySelector('#sidebar')?.classList.toggle('open');
+  if(event.target.id==='mobileMenu'){
+    const shown=ROOT.querySelector('#sidebar')?.classList.toggle('open')===true;
+    ROOT.classList.toggle('menu-open',shown);
+    event.target.setAttribute('aria-expanded',String(shown));
+  }else if(event.target.id==='sidebarBackdrop')closeMobileMenu();
 });
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void verifyResume();});
 window.addEventListener('focus',()=>void verifyResume());
-document.addEventListener('keydown',event=>{if(event.key==='Escape')ROOT.querySelector('#sidebar')?.classList.remove('open');});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileMenu();});
 async function boot(){
   if(booted)return;booted=true;
   try{
