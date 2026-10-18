@@ -1,5 +1,6 @@
 import {SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY} from '../config/public.js';
 import {loadAuthorizedSession} from '../auth/session-gate.js';
+import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
@@ -32,7 +33,7 @@ function showMessage(text,kind='error'){
 }
 function renderLogin(message=''){
   document.title='Nethor 2 · Connexion';
-  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand">NETHOR²<small>PLANNING · LE THOR</small></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Utilisez les identifiants de votre compte Nethor existant.</p><label for="loginEmail">Adresse e-mail</label><input type="email" id="loginEmail" required autocomplete="username" spellcheck="false"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
+  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand">NETHOR²<small>PLANNING · LE THOR</small></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
 }
 function renderShell(){
   ROOT.innerHTML='<div class="app"><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><span class="brand-symbol"><i></i><i></i><i></i><i></i></span><span><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"><span>'+({'home':'▦','planning':'▤','anomalies':'◇','import':'⇧','team':'♧','history':'▥','settings':'⚙'}[key])+'</span>'+name+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation">☰</button><div><span class="breadcrumb">NETHOR 2 <span class="sep">/</span><span id="breadPage">Accueil</span></span><span class="top-context">Netto Le Thor · Planning du personnel</span></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator" aria-label="Navigation rapide"><button data-page="home">▦ <span>Accueil</span></button><button data-page="planning">▤ <span>Planning</span></button><button data-page="anomalies">◇ <span>Alertes</span></button><button data-page="team">♧ <span>Équipe</span></button></nav>';
@@ -389,11 +390,12 @@ async function verifyResume(){
 ROOT.addEventListener('submit',async event=>{
   if(event.target.id!=='loginForm')return;
   event.preventDefault();
-  const email=ROOT.querySelector('#loginEmail')?.value?.trim()||'';
+  const identifier=ROOT.querySelector('#loginEmail')?.value||'';
   const password=ROOT.querySelector('#loginPassword')?.value||'';
   const submit=ROOT.querySelector('#loginSubmit');
   if(submit){submit.disabled=true;submit.textContent='Connexion…';}
   try{
+    const email=resolveLoginEmail(identifier);
     const {error}=await client.auth.signInWithPassword({email,password});
     if(error)throw Error('Identifiants incorrects ou accès indisponible.');
     const gate=await checkSession();
