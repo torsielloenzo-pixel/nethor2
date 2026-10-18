@@ -1,10 +1,12 @@
+<p align="center"><img src="assets/nethor-logo-192-v8.png" alt="Logo officiel Nethor" width="94" height="94"></p>
+
 # Nethor 2 — Version officielle (V1)
 
 Application interne de gestion des plannings, distincte de l'ancien dépôt `nethor`.
 
 ## Accès
 
-- [Ouvrir Nethor 2](https://torsielloenzo-pixel.github.io/nethor2/)
+- [Ouvrir Nethor](https://nethor.fr/)
 - [Tests GitHub Actions](https://github.com/torsielloenzo-pixel/nethor2/actions)
 - [Déploiement GitHub Pages](https://github.com/torsielloenzo-pixel/nethor2/actions/workflows/preview-pages.yml)
 
@@ -52,8 +54,8 @@ La base historique Supabase est réutilisée sans migration destructive. La fonc
 - **iPhone (Safari)** : ouvrir l'adresse HTTPS Nethor 2, choisir **Partager** puis **Sur l'écran d'accueil**, et valider **Ajouter**.
 - **Android (Chrome)** : ouvrir Nethor 2, puis **Installer l'application** ou **Ajouter à l'écran d'accueil** depuis le menu du navigateur (ou utiliser l'invite proposée lorsque disponible).
 - L'application peut s'ouvrir en plein écran et conserver les ressources graphiques, mais **la connexion et les plannings réels nécessitent une connexion Internet**. Les données RH ne sont pas conservées dans le service worker.
-- Le bouton « Installer Nethor 2 » explique ces étapes lorsque l'invite d'installation native n'est pas proposée par le navigateur.
+- Le bouton « Installer » de l’Accueil explique ces étapes lorsque l'invite d'installation native n'est pas proposée par le navigateur.
 
 L'identifiant fonctionne de la même manière que sur Nethor historique : normalisation en minuscules ; sans `@`, l'identifiant utilise l'alias interne `@stock-fl.local`. **Ne pas afficher cet alias dans l'interface et ne pas rechercher les adresses personnelles par identifiant.**
 
-Pour générer des icônes locales (Python 3 requis) : `npm run icons`. Les icônes de production sont générées automatiquement par GitHub Actions pendant la publication.
+Le SVG de référence `assets/icon.svg` reproduit le logo du fichier ICO fourni. `npm run icons` génère les PNG 16/32/48/180/192/256/512 pixels et le favicon multi-résolution `favicon.ico`. Les icônes sont synchronisées dans le dépôt afin que tous les modes de publication GitHub Pages y aient accès.
