@@ -12,16 +12,16 @@ Le code est publié via GitHub Pages. **L'URL du site peut être publique même 
 
 ## Fonctionnalités raccordées
 
-- Connexion aux **comptes Nethor existants**, via Supabase Auth.
+- Connexion aux **comptes Nethor existants**, par adresse e-mail **ou identifiant historique** (alias local compatible `@stock-fl.local`), via Supabase Auth.
 - Contrôle de session active, compte non désactivé et permissions Planning via RPC serveur.
 - Lecture des semaines réelles `planning_weeks` (accès sous RLS).
-- Navigation jour/semaine, total par collaborateur et indicateur de couverture.
+- Navigation jour/semaine, total par collaborateur et indicateur de couverture. Sur téléphone, la vue semaine affiche des cartes par collaborateur avec accès aux journées.
 - Détection indicative de créneaux très courts, longues coupures, longues journées et écarts contractuels.
 - Lecture des noms de planning avec association aux comptes visibles; modification des associations par un administrateur.
 - Import Excel `.xls`, `.xlsx`, `.xlsm` : lecture locale, prévisualisation et validation explicite.
 - Publication réservée au droit `manage`, protégée par le RPC existant `planning_save_week_if_revision`.
 - Upload original dans le bucket privé `planning-files` puis vérification de la version publiée. Historique des fichiers accessible aux administrateurs via les tables et policies déjà existantes.
-- PWA : manifest et cache strictement limité au code de l'application (aucune session, aucun fichier RH, aucune réponse API en cache).
+- PWA iPhone et Android : manifeste autonome, icônes PNG 180/192/512 px, intégration iOS, accès à l'installation depuis l'écran de connexion ou les Paramètres, cache strictement limité au code de l'application (aucune session, aucun fichier RH, aucune réponse API en cache).
 
 ## Points à tester avant adoption complète
 
@@ -46,3 +46,14 @@ npm run dev
 ## Architecture
 
 La base historique Supabase est réutilisée sans migration destructive. La fonction `public.nethor2_my_planning_permission()` a été ajoutée comme RPC en lecture seule pour vérifier la permission Planning de la session active. Elle utilise `SECURITY INVOKER`, n'est accessible qu'au rôle `authenticated`, et son résultat n'autorise pas lui-même une écriture : le contrôle serveur du RPC de publication reste nécessaire.
+
+## Installation sur mobile
+
+- **iPhone (Safari)** : ouvrir l'adresse HTTPS Nethor 2, choisir **Partager** puis **Sur l'écran d'accueil**, et valider **Ajouter**.
+- **Android (Chrome)** : ouvrir Nethor 2, puis **Installer l'application** ou **Ajouter à l'écran d'accueil** depuis le menu du navigateur (ou utiliser l'invite proposée lorsque disponible).
+- L'application peut s'ouvrir en plein écran et conserver les ressources graphiques, mais **la connexion et les plannings réels nécessitent une connexion Internet**. Les données RH ne sont pas conservées dans le service worker.
+- Le bouton « Installer Nethor 2 » explique ces étapes lorsque l'invite d'installation native n'est pas proposée par le navigateur.
+
+L'identifiant fonctionne de la même manière que sur Nethor historique : normalisation en minuscules ; sans `@`, l'identifiant utilise l'alias interne `@stock-fl.local`. **Ne pas afficher cet alias dans l'interface et ne pas rechercher les adresses personnelles par identifiant.**
+
+Pour générer des icônes locales (Python 3 requis) : `npm run icons`. Les icônes de production sont générées automatiquement par GitHub Actions pendant la publication.
