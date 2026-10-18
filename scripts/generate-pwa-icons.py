@@ -1,36 +1,42 @@
-"""Exporter les icônes PWA depuis le pictogramme bleu Planning de Nethor.
+"""Génère les déclinaisons du logo officiel Nethor.
 
-La source de vérité est assets/icon-planning-pwa.svg, identique à l’onglet Planning.
-Les variantes PNG restent des rendus rasterisés de CE fichier ; aucun pictogramme
-alternatif ou approximatif n'est dessiné par ce script.
+Source vectorielle : assets/icon.svg — même pictogramme que le .ico fourni
+(les légères différences d'anticrénelage sont inhérentes au format).
+Conserve le dessin, ses couleurs, son orientation et sa transparence.
 
-Usage: python3 scripts/generate-pwa-icons.py [dossier-sortie]
-Dépendance de génération uniquement: CairoSVG 2.8.2
+Usage : python3 scripts/generate-pwa-icons.py [dossier-assets]
+Nécessite CairoSVG et Pillow uniquement pour le build.
 """
+from io import BytesIO
 from pathlib import Path
 import struct
 import sys
 import xml.etree.ElementTree as ET
 
-try:
-    import cairosvg
-except ImportError as exc:
-    raise SystemExit("CairoSVG manque : python3 -m pip install CairoSVG==2.8.2") from exc
+import cairosvg
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-LOGO = ROOT / "assets" / "icon-planning-pwa.svg"
+SOURCE = ROOT / "assets" / "icon.svg"
 OUT = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "assets")
 OUT.mkdir(parents=True, exist_ok=True)
+SVG = SOURCE.read_bytes()
+root = ET.fromstring(SVG)
+if not root.tag.endswith("svg") or "viewBox" not in root.attrib:
+    raise SystemExit("Le logo source doit être un SVG valide avec viewBox.")
 
-source = LOGO.read_bytes()
-svg = ET.fromstring(source)
-if not svg.tag.endswith("svg") or not svg.attrib.get("viewBox"):
-    raise SystemExit("La source doit être le SVG officiel avec viewBox.")
-
-for size in (180, 192, 512):
-    png = cairosvg.svg2png(bytestring=source, output_width=size, output_height=size)
+for size in (16, 32, 48, 180, 192, 256, 512):
+    png = cairosvg.svg2png(bytestring=SVG, output_width=size, output_height=size)
     if png[:8] != b"\x89PNG\r\n\x1a\n" or struct.unpack(">II", png[16:24]) != (size, size):
-        raise SystemExit(f"Échec du rendu SVG vers PNG {size}px")
-    dest = OUT / f"icon-{size}-planning-v4.png"
-    dest.write_bytes(png)
-    print(f"Icône Nethor Planning bleue : {dest.name} ({size}×{size})")
+        raise SystemExit(f"Image invalide {size}x{size}")
+    filename = OUT / f"nethor-logo-{size}-v8.png"
+    filename.write_bytes(png)
+    print(f"Logo officiel Nethor {size}x{size} : {filename}")
+
+# Favicon ICO multirésolution pour navigateurs, Windows et raccourcis.
+source_ico = Image.open(BytesIO(cairosvg.svg2png(
+    bytestring=SVG, output_width=256, output_height=256
+))).convert("RGBA")
+favicon = OUT.parent / "favicon.ico"
+source_ico.save(favicon, format="ICO", sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])
+print(f"Favicon multirésolution : {favicon}")
