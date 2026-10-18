@@ -41,7 +41,7 @@ test("une seule commande d'installation, uniquement sur Accueil",()=>{
 
 test('service worker versionné, sans mise en cache des données RH',()=>{
   const sw=read('sw.js');
-  assert.match(sw,/nethor-personal-mobile-home-v6/);
+  assert.match(sw,/nethor-pwa-personal-home-v6/);
   assert.match(sw,/src\/domain\/personal-overview\.js/);
   assert.match(sw,/icon-planning-pwa\.svg/);
   assert.doesNotMatch(sw,/supabase\.co/);
