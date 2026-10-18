@@ -1,53 +1,36 @@
-"""Generate PWA icons (no third-party dependencies or private assets).
-Usage: python3 scripts/generate-pwa-icons.py output-directory
+"""Exporter sans retouche le logo officiel assets/icon.svg en icônes PWA PNG.
+
+La source de vérité est le logo SVG utilisé par Nethor 2 (favicon).
+Les variantes PNG restent des rendus rasterisés de CE fichier ; aucun pictogramme
+alternatif ou approximatif n'est dessiné par ce script.
+
+Usage: python3 scripts/generate-pwa-icons.py [dossier-sortie]
+Dépendance de génération uniquement: CairoSVG 2.8.2
 """
 from pathlib import Path
 import struct
 import sys
-import zlib
+import xml.etree.ElementTree as ET
 
-OUT = Path(sys.argv[1] if len(sys.argv) > 1 else "assets")
+try:
+    import cairosvg
+except ImportError as exc:
+    raise SystemExit("CairoSVG manque : python3 -m pip install CairoSVG==2.8.2") from exc
+
+ROOT = Path(__file__).resolve().parent.parent
+LOGO = ROOT / "assets" / "icon.svg"
+OUT = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "assets")
 OUT.mkdir(parents=True, exist_ok=True)
 
-def rounded(x, y, cx, cy, width, height, radius):
-    dx = max(abs(x-cx) - (width/2-radius), 0.0)
-    dy = max(abs(y-cy) - (height/2-radius), 0.0)
-    return dx*dx+dy*dy <= radius*radius
+source = LOGO.read_bytes()
+svg = ET.fromstring(source)
+if not svg.tag.endswith("svg") or not svg.attrib.get("viewBox"):
+    raise SystemExit("La source doit être le SVG officiel avec viewBox.")
 
-def pixel(x, y):
-    u, v = x, y
-    # Corporate navy foundation, opaque (iOS compliant).
-    base = (16, 31 + int(11*v), 62 + int(9*u), 255)
-    # Keep all foreground pixels in maskable 80% safe zone.
-    tiles = [
-        (.404, .404, (229, 239, 255, 255)),
-        (.596, .404, (109, 156, 242, 255)),
-        (.404, .596, (129, 173, 238, 255)),
-        (.596, .596, (255, 255, 255, 255)),
-    ]
-    for cx,cy,color in tiles:
-        if rounded(u, v, cx, cy, .166, .166, .025):
-            return color
-    return base
-
-def chunk(kind, data):
-    payload = kind + data
-    return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload) & 0xffffffff)
-
-def render(size):
-    rows = []
-    for y in range(size):
-        row = bytearray([0])
-        for x in range(size):
-            row.extend(pixel((x+.5)/size, (y+.5)/size))
-        rows.append(bytes(row))
-    raw = b"".join(rows)
-    return (bytes.fromhex("89504e470d0a1a0a")
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(raw, 9))
-        + chunk(b"IEND", b""))
-
-for dimension in (180, 192, 512):
-    dest = OUT / f"icon-{dimension}.png"
-    dest.write_bytes(render(dimension))
-    print(f"Created {dest} ({dimension}x{dimension})")
+for size in (180, 192, 512):
+    png = cairosvg.svg2png(bytestring=source, output_width=size, output_height=size)
+    if png[:8] != b"\x89PNG\r\n\x1a\n" or struct.unpack(">II", png[16:24]) != (size, size):
+        raise SystemExit(f"Échec du rendu SVG vers PNG {size}px")
+    dest = OUT / f"icon-{size}-v3.png"
+    dest.write_bytes(png)
+    print(f"Logo Nethor 2 officiel : {dest.name} ({size}×{size})")
