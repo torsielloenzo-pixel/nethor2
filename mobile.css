@@ -125,3 +125,33 @@
 @media(prefers-reduced-motion:no-preference){
  .live-sidebar .nav-icon-wrap,.live-navigator .nav-icon-wrap {transition:background .16s ease,color .16s ease}
 }
+
+/* Installation PWA unique : la carte est exclusivement sur Accueil mobile. */
+.pwa-home-install{display:none}
+@media(max-width:760px){
+  .pwa-home-install{
+    display:grid;
+    grid-template-columns:54px minmax(0,1fr) auto;
+    align-items:center;
+    column-gap:11px;
+    row-gap:11px;
+    padding:14px;
+    margin:0 0 17px;
+    border:1px solid #d6e3fb;
+    border-radius:15px;
+    background:linear-gradient(125deg,#f2f7ff 0%,#fff 85%);
+    box-shadow:0 4px 15px #234b9f0a;
+  }
+  .pwa-home-logo{display:block;width:54px;height:54px;border-radius:13px}
+  .pwa-home-copy{min-width:0;display:grid;gap:3px}
+  .pwa-home-copy strong{font-size:14px;font-weight:800;color:#214476}
+  .pwa-home-copy span{font-size:11px;line-height:1.35;color:#546e92}
+  .pwa-home-copy small{font-size:10px;color:#89a1bf}
+  .pwa-home-action{font-size:11px!important;padding:10px 11px!important;min-height:39px;white-space:nowrap}
+  .pwa-home-help{grid-column:1/-1;font-size:11px;line-height:1.65;color:#315b9d;margin:0;background:#e9f2ff;border-radius:9px;padding:10px 12px}
+}
+@media(max-width:355px){
+  .pwa-home-install{grid-template-columns:48px minmax(0,1fr);gap:9px}
+  .pwa-home-logo{height:48px;width:48px}
+  .pwa-home-action{grid-column:1/-1}
+}
