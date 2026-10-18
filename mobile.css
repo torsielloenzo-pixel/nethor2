@@ -209,3 +209,36 @@
   .n2h-schedule{padding:8px 9px 6px}
   .n2h-leave,.n2h-rest{padding:8px 10px}
 }
+
+/* Identité Nethor officielle : même logo que le favicon et les PWA. */
+.nethor-sidebar-logo,.nethor-header-logo,.nethor-login-logo{display:block;flex:none;object-fit:contain}
+.nethor-sidebar-logo{width:43px;height:43px;border-radius:12px}
+.nethor-header-logo{width:30px;height:30px;border-radius:8px}
+.login-brand .nethor-login-logo{width:50px;height:50px;border-radius:12px}
+.login-brand span{display:block}
+.login-brand small{display:block}
+.startup .start-logo{background:transparent!important;border-radius:17px}
+.startup .start-logo img{display:block;width:58px;height:58px;border-radius:13px}
+@media(max-width:760px){
+ .nethor-sidebar-logo{width:42px;height:42px}
+ .nethor-header-logo{width:28px;height:28px;border-radius:7px}
+ .topbar .top-left{gap:8px;min-width:0}
+ .login-brand .nethor-login-logo{width:40px;height:40px}
+ #app.personal-home-active .n2h-greeting{justify-content:space-between;gap:8px}
+ #app.personal-home-active .n2h-greeting>div:first-child{min-width:0;flex:1}
+ #app.personal-home-active .n2h-greeting .pwa-home-install{
+   display:flex;flex:0 0 auto;align-items:center;gap:6px;padding:5px 7px;margin:0;
+   border:1px solid #d9e5f6;border-radius:10px;background:#f7faff;box-shadow:none;
+ }
+ #app.personal-home-active .n2h-greeting .pwa-home-logo{width:27px;height:27px;border-radius:7px}
+ #app.personal-home-active .n2h-greeting .pwa-home-copy{display:none}
+ #app.personal-home-active .n2h-greeting .pwa-home-action{font-size:10px!important;min-height:27px;padding:6px 8px!important}
+ #app.personal-home-active .n2h-greeting .pwa-home-help{
+   position:fixed;z-index:30;top:calc(78px + env(safe-area-inset-top));left:12px;right:12px;
+   border:1px solid #ccdff7;background:#f0f6ff;box-shadow:0 6px 18px #172c5333;padding:12px 14px
+ }
+}
+@media(max-width:360px){
+ #app.personal-home-active .n2h-greeting .pwa-home-logo{display:none}
+ .nethor-header-logo{width:25px;height:25px}
+}
