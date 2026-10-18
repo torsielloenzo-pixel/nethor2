@@ -5,11 +5,11 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const allowed=new Set([
-  '/','/index.html','/styles.css','/live.css','/mobile.css','/sw.js','/manifest.webmanifest','/assets/icon.svg','/assets/icon-planning-pwa.svg','/assets/icon-180-planning-v4.png','/assets/icon-192-planning-v4.png','/assets/icon-512-planning-v4.png',
+  '/','/index.html','/styles.css','/live.css','/mobile.css','/sw.js','/manifest.webmanifest','/assets/icon.svg','/favicon.ico','/assets/nethor-logo-16-v8.png','/assets/nethor-logo-32-v8.png','/assets/nethor-logo-48-v8.png','/assets/nethor-logo-180-v8.png','/assets/nethor-logo-192-v8.png','/assets/nethor-logo-256-v8.png','/assets/nethor-logo-512-v8.png',
   '/src/ui/live.js','/src/ui/team-access.js','/src/auth/session-gate.js','/src/auth/login-identifier.js','/src/data/planning-repository.js','/src/config/public.js','/src/import/excel-structure.js',
   '/src/domain/planning-core.js','/src/domain/employee-linker.js'
 ]);
-const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
+const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.webmanifest':'application/manifest+json'};
 const port=Number(process.env.PORT||4173);
 if(!Number.isInteger(port)||port<1||port>65535)throw new Error('Port invalide');
 const server=createServer(async(req,res)=>{
