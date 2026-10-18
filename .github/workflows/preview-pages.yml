@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
@@ -23,18 +23,29 @@ jobs:
         run: |
           mkdir -p _site/assets _site/src/ui _site/src/import _site/src/domain _site/src/auth _site/src/data _site/src/config
           cp index.html styles.css live.css mobile.css sw.js manifest.webmanifest CNAME _site/
-          cp assets/icon.svg assets/icon-planning-pwa.svg _site/assets/
+          cp assets/icon.svg _site/assets/
           cp src/ui/live.js src/ui/team-access.js _site/src/ui/
           cp src/import/import-preview.js src/import/excel-structure.js _site/src/import/
           cp src/domain/planning-core.js src/domain/employee-linker.js src/domain/personal-overview.js _site/src/domain/
           cp src/auth/session-gate.js src/auth/login-identifier.js _site/src/auth/
           cp src/data/planning-repository.js _site/src/data/
           cp src/config/public.js _site/src/config/
-          python3 -m pip install --disable-pip-version-check --quiet 'CairoSVG==2.8.2'
+          python3 -m pip install --disable-pip-version-check --quiet 'CairoSVG==2.8.2' 'Pillow==11.3.0'
           python3 scripts/generate-pwa-icons.py _site/assets
-          test -s _site/assets/icon-180-planning-v4.png && test -s _site/assets/icon-192-planning-v4.png && test -s _site/assets/icon-512-planning-v4.png
+          test -s _site/assets/nethor-logo-180-v8.png && test -s _site/assets/nethor-logo-192-v8.png && test -s _site/assets/nethor-logo-512-v8.png && test -s _site/favicon.ico
           test "$(cat _site/CNAME)" = "nethor.fr"
           test ! -e _site/.env
+      - name: Synchroniser les icônes officielles Nethor dans le dépôt
+        run: |
+          python3 scripts/generate-pwa-icons.py assets
+          cp favicon.ico _site/favicon.ico
+          git add favicon.ico assets/nethor-logo-*-v8.png
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "assets(brand): synchroniser les icônes officielles Nethor"
+            git push origin HEAD:main
+          fi
       - name: Configurer Pages
         uses: actions/configure-pages@v5
         with:
