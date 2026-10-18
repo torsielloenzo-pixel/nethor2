@@ -1,49 +1,50 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const manifest=JSON.parse(read('manifest.webmanifest'));
 
-const read = path => readFileSync(new URL('../'+path,import.meta.url),'utf8');
-const manifest = JSON.parse(read('manifest.webmanifest'));
-
-test('PWA Nethor unique sur le domaine racine officiel',()=>{
-  assert.equal(manifest.name,'Nethor');
-  assert.equal(manifest.short_name,'Nethor');
-  for(const field of ['id','start_url','scope'])assert.equal(manifest[field],'https://nethor.fr/');
-  assert.equal(manifest.display,'standalone');
+test('identité Nethor unique pour PWA, iPhone et bureau',()=>{
+ assert.equal(manifest.name,'Nethor');assert.equal(manifest.short_name,'Nethor');
+ for(const field of ['id','scope','start_url'])assert.equal(manifest[field],'https://nethor.fr/');
+ assert.equal(manifest.display,'standalone');
 });
 
-test('toutes les tailles de PWA réutilisent le logo Planning bleu',()=>{
-  assert.ok(manifest.icons.length>=3);
-  assert.ok(manifest.icons.every(icon=>icon.src.includes('planning')));
-  for(const size of ['192x192','512x512'])assert.ok(manifest.icons.some(i=>i.sizes===size&&i.type==='image/png'));
-  assert.ok(manifest.icons.some(i=>i.purpose==='maskable'));
-  const html=read('index.html');
-  assert.match(html,/apple-touch-icon[^>]+icon-180-planning-v4\.png/);
-  assert.match(html,/rel="icon"[^>]+icon-planning-pwa\.svg/);
-  assert.match(html,/apple-mobile-web-app-title" content="Nethor"/);
-  assert.match(read('scripts/generate-pwa-icons.py'),/icon-planning-pwa\.svg/);
-  const icon=read('assets/icon-planning-pwa.svg');
-  assert.match(icon,/m9 16 2 2 4-4/); // même validation que dans le menu Planning
-  assert.match(icon,/#315fc9/);
+test('un seul logo dans favicon, Safari, PWA et partage des liens',()=>{
+ assert.equal(manifest.icons.length,4);
+ assert.ok(manifest.icons.every(icon=>icon.src.includes('nethor-logo-')||icon.src==='./assets/icon.svg'));
+ for(const size of ['192x192','512x512'])assert.ok(manifest.icons.some(i=>i.sizes===size&&i.type==='image/png'));
+ assert.ok(manifest.icons.some(i=>i.purpose==='maskable'));
+ const html=read('index.html');
+ assert.match(html,/apple-touch-icon[^>]+nethor-logo-180-v8\.png/);
+ assert.match(html,/favicon\.ico/);
+ assert.match(html,/rel="icon" type="image\/svg\+xml" href="\.\/assets\/icon\.svg"/);
+ assert.match(html,/apple-mobile-web-app-title" content="Nethor"/);
+ assert.match(html,/og:image" content="https:\/\/nethor\.fr\/assets\/nethor-logo-512-v8\.png"/);
+ assert.match(read('scripts/generate-pwa-icons.py'),/SOURCE = ROOT \/ "assets" \/ "icon\.svg"/);
 });
 
-test("une seule commande d'installation, uniquement sur Accueil",()=>{
-  const js=read('src/ui/live.js');
-  const actions=js.match(/data-action="install-pwa"/g)||[];
-  assert.equal(actions.length,1);
-  assert.match(js,/function homePwaInstall\(/);
-  assert.match(js,/personal\+homePwaInstall\(\)\+summary/);
-  const settings=js.slice(js.indexOf('function pageSettings(){'),js.indexOf('function pageImport(){'));
-  const login=js.slice(js.indexOf('function renderLogin('),js.indexOf('function renderShell(){'));
-  assert.doesNotMatch(settings,/install-pwa/);
-  assert.doesNotMatch(login,/install-pwa/);
+test('logo homogène dans connexion, entêtes, menu et installation',()=>{
+ const js=read('src/ui/live.js');
+ for(const cls of ['nethor-login-logo','nethor-sidebar-logo','nethor-header-logo'])
+  assert.ok(js.includes('class="'+cls+'" src="./assets/icon.svg"'),cls);
+ assert.ok(js.includes('class="pwa-home-logo" src="./assets/nethor-logo-192-v8.png"'));
+ assert.equal((js.match(/data-action="install-pwa"/g)||[]).length,1);
+ assert.match(js,/personal\+homePwaInstall\(\)\+summary/);
+ assert.match(js,/homePwaInstall\(\)\+'<\/header>'/);
+ const settings=js.slice(js.indexOf('function pageSettings(){'),js.indexOf('function pageImport(){'));
+ const login=js.slice(js.indexOf('function renderLogin('),js.indexOf('function renderShell(){'));
+ assert.doesNotMatch(settings,/data-action="install-pwa"/);
+ assert.doesNotMatch(login,/data-action="install-pwa"/);
 });
 
-test('service worker versionné, sans mise en cache des données RH',()=>{
-  const sw=read('sw.js');
-  assert.match(sw,/nethor-pwa-personal-home-v6/);
-  assert.match(sw,/src\/domain\/personal-overview\.js/);
-  assert.match(sw,/icon-planning-pwa\.svg/);
-  assert.doesNotMatch(sw,/supabase\.co/);
-  assert.match(read('.github/workflows/preview-pages.yml'),/manifest\.webmanifest CNAME _site/);
+test('service worker ne cache que la coquille statique et les nouveaux logos',()=>{
+ const sw=read('sw.js');
+ assert.match(sw,/nethor-brand-unified-v8/);
+ for(const file of ['nethor-logo-180-v8.png','nethor-logo-192-v8.png','nethor-logo-512-v8.png','favicon.ico'])
+   assert.ok(sw.includes(file));
+ assert.doesNotMatch(sw,/supabase\.co/);
+ const workflow=read('.github/workflows/preview-pages.yml');
+ assert.match(workflow,/generate-pwa-icons\.py/);
+ assert.match(workflow,/test -s _site\/favicon\.ico/);
 });
