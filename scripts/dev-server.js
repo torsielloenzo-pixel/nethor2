@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const allowed=new Set([
-  '/','/index.html','/styles.css','/live.css','/mobile.css','/sw.js','/manifest.webmanifest','/assets/icon.svg','/assets/icon-180.png','/assets/icon-192.png','/assets/icon-512.png',
+  '/','/index.html','/styles.css','/live.css','/mobile.css','/sw.js','/manifest.webmanifest','/assets/icon.svg','/assets/icon-180-v3.png','/assets/icon-192-v3.png','/assets/icon-512-v3.png',
   '/src/ui/live.js','/src/auth/session-gate.js','/src/auth/login-identifier.js','/src/data/planning-repository.js','/src/config/public.js','/src/import/excel-structure.js',
   '/src/domain/planning-core.js','/src/domain/employee-linker.js'
 ]);
