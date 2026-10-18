@@ -6,7 +6,7 @@ import {resolve} from 'node:path';
 const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const allowed=new Set([
   '/','/index.html','/styles.css','/live.css','/mobile.css','/sw.js','/manifest.webmanifest','/assets/icon.svg','/assets/icon-180-v3.png','/assets/icon-192-v3.png','/assets/icon-512-v3.png',
-  '/src/ui/live.js','/src/auth/session-gate.js','/src/auth/login-identifier.js','/src/data/planning-repository.js','/src/config/public.js','/src/import/excel-structure.js',
+  '/src/ui/live.js','/src/ui/team-access.js','/src/auth/session-gate.js','/src/auth/login-identifier.js','/src/data/planning-repository.js','/src/config/public.js','/src/import/excel-structure.js',
   '/src/domain/planning-core.js','/src/domain/employee-linker.js'
 ]);
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
