@@ -104,3 +104,23 @@
 @media(prefers-reduced-motion:no-preference){
   .mobile-week-day,.login-install-btn{transition:background .15s ease}
 }
+
+/* Navigation Nethor 2 — jeu SVG unique : desktop, mobile, PWA. */
+.live-sidebar .nav-item {gap:12px;padding:8px 11px;border:1px solid transparent;border-radius:13px}
+.live-sidebar .nav-icon-wrap,.live-navigator .nav-icon-wrap {display:grid;place-items:center;flex:none;line-height:0}
+.live-sidebar .nav-icon-wrap {width:36px;height:36px;border-radius:11px;background:rgba(183,207,255,.08);color:#acc5ee;border:1px solid rgba(169,200,255,.08)}
+.live-sidebar .nav-icon {display:block;width:20px;height:20px}
+.live-sidebar .nav-item:hover .nav-icon-wrap {background:rgba(160,190,249,.16);color:#f0f6ff}
+.live-sidebar .nav-item.active {background:linear-gradient(95deg,rgba(88,132,211,.30),rgba(68,110,187,.18));box-shadow:inset 3px 0 #89b6ff;border-color:rgba(171,204,255,.12);color:#fff}
+.live-sidebar .nav-item.active .nav-icon-wrap {background:#cfdefc;color:#244b88;border-color:transparent}
+.live-sidebar .drawer-signout .nav-icon-wrap {background:rgba(183,207,255,.05)}
+.live-navigator .nav-icon-wrap {width:30px;height:28px;border-radius:9px;color:inherit}
+.live-navigator .nav-icon {display:block;width:23px;height:23px}
+.live-navigator button.active .nav-icon-wrap {background:#eaf1ff;color:#315fc9}
+@media(max-width:760px){
+ .live-navigator button {gap:5px;min-width:0;padding:4px 3px}
+ .live-navigator .nav-label {font-size:10px;line-height:1.15;font-weight:750}
+}
+@media(prefers-reduced-motion:no-preference){
+ .live-sidebar .nav-icon-wrap,.live-navigator .nav-icon-wrap {transition:background .16s ease,color .16s ease}
+}
