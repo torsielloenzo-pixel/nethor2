@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-server.js",
-    "check": "node --check src/ui/live.js && node --check sw.js && node --check scripts/dev-server.js && node --test",
-    "test": "node --test"
+    "check": "node --check src/ui/live.js && node --check src/auth/login-identifier.js && node --check sw.js && node --check scripts/dev-server.js && node --test",
+    "test": "node --test",
+    "icons": "python3 scripts/generate-pwa-icons.py assets"
   },
   "engines": {
     "node": ">=20"
