@@ -1,4 +1,4 @@
-name: Nethor 2 - Aperçu GitHub Pages
+name: Nethor 2 - Publication PWA
 on:
   push:
     branches: [main]
@@ -19,17 +19,19 @@ jobs:
     steps:
       - name: Télécharger le dépôt
         uses: actions/checkout@v4
-      - name: Préparer uniquement les ressources publiques de démonstration
+      - name: Préparer les ressources publiques de la PWA Nethor 2
         run: |
           mkdir -p _site/assets _site/src/ui _site/src/import _site/src/domain _site/src/auth _site/src/data _site/src/config
-          cp index.html styles.css live.css sw.js manifest.webmanifest _site/
+          cp index.html styles.css live.css mobile.css sw.js manifest.webmanifest _site/
           cp assets/icon.svg _site/assets/
           cp src/ui/live.js _site/src/ui/
           cp src/import/import-preview.js src/import/excel-structure.js _site/src/import/
           cp src/domain/planning-core.js src/domain/employee-linker.js _site/src/domain/
-          cp src/auth/session-gate.js _site/src/auth/
+          cp src/auth/session-gate.js src/auth/login-identifier.js _site/src/auth/
           cp src/data/planning-repository.js _site/src/data/
           cp src/config/public.js _site/src/config/
+          python3 scripts/generate-pwa-icons.py _site/assets
+          test -s _site/assets/icon-180.png && test -s _site/assets/icon-192.png && test -s _site/assets/icon-512.png
           test ! -e _site/.env
       - name: Configurer Pages
         uses: actions/configure-pages@v5
