@@ -1,5 +1,5 @@
 // Nethor 2 — shell statique uniquement. Jamais de données RH, de tokens ou d'appels Supabase en cache.
-const CACHE_NAME='nethor2-shell-official-logo-v3';
+const CACHE_NAME='nethor2-shell-nav-svg-v3';
 const SHELL=['./','./index.html','./styles.css','./live.css','./mobile.css','./src/ui/live.js','./src/config/public.js','./src/auth/session-gate.js','./src/auth/login-identifier.js','./src/data/planning-repository.js','./src/import/excel-structure.js','./src/domain/planning-core.js','./src/domain/employee-linker.js','./assets/icon.svg','./assets/icon-180-v3.png','./assets/icon-192-v3.png','./assets/icon-512-v3.png','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL))));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
