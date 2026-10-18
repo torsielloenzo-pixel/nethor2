@@ -18,11 +18,19 @@ function mobileInstallInstructions(){
   return 'Sur nethor.fr, dans Chrome ou Edge, utilise le menu « Installer l’application » si cette option est disponible.';
 }
 async function installPwa(){
+  const note=ROOT.querySelector('#installInstructions');
+  if(location.origin!=='https://nethor.fr'){
+    if(note){note.hidden=false;note.textContent='Pour installer la seule application Nethor, ouvre d’abord https://nethor.fr/ puis utilise ce bouton depuis l’accueil.';}
+    return;
+  }
+  if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true){
+    if(note){note.hidden=false;note.textContent='Nethor est déjà installé sur cet appareil.';}
+    return;
+  }
   if(pendingInstall){
     const install=pendingInstall;pendingInstall=null;
     try{await install.prompt();await install.userChoice;}catch(err){console.warn('Installation PWA indisponible',err);}
   }else{
-    const note=ROOT.querySelector('#installInstructions');
     if(note){note.hidden=false;note.textContent=mobileInstallInstructions();}
     else window.alert(mobileInstallInstructions());
   }
@@ -210,12 +218,21 @@ function coverageCard(metrics){
   const max=Math.max(1,...metrics.coverage.map(d=>d.present));
   return '<section class="card"><div class="card-head"><div><h2 class="card-title">Couverture du magasin</h2><p class="sub">Effectifs planifiés par journée</p></div></div><div class="card-body">'+metrics.coverage.map((r,i)=>'<div class="live-coverage-row"><span><b>'+DAYS[i]+' '+shortDate(r.date)+'</b>'+r.present+' personne(s)</span><div class="live-progress"><div style="width:'+(r.present/max*100)+'%"></div></div></div>').join('')+'</div></section>';
 }
+function homePwaInstall(){
+  if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)return '';
+  return '<section class="pwa-home-install" id="pwaHomeCard" aria-label="Installer Nethor sur le téléphone">'+
+    '<img class="pwa-home-logo" src="./assets/icon-planning-pwa.svg" alt="" width="60" height="60">'+
+    '<div class="pwa-home-copy"><strong>Nethor</strong><span>Ajoute le planning à ton écran d’accueil.</span><small>nethor.fr · Une seule application</small></div>'+
+    '<button type="button" class="btn primary pwa-home-action" data-action="install-pwa">Installer</button>'+
+    '<p class="pwa-home-help" id="installInstructions" hidden aria-live="polite"></p>'+
+  '</section>';
+}
 function pageHome(metrics){
   const me=state.profile.planning_name||state.profile.display_name;
   const mine=metrics.people.find(p=>normalizeName(p.name)===normalizeName(me));
   let personal='';
   if(mine)personal='<div class="live-message ok">Mon planning cette semaine : <strong>'+hours(mine.total)+'</strong> · '+escapeHtml(mine.name)+'</div>';
-  return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
+  return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
 function pagePlanning(metrics){
   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+planningCard(metrics);
