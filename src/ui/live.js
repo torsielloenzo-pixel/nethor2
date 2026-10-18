@@ -1,5 +1,6 @@
 import {SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY} from '../config/public.js';
 import {loadAuthorizedSession} from '../auth/session-gate.js';
+import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
@@ -70,7 +71,7 @@ function renderLogin(message=''){
   ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand">NETHOR²<small>PLANNING · LE THOR</small></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div><div class="login-install"><span>Accès rapide sur iPhone et Android</span><button class="login-install-btn" type="button" data-action="install-pwa">Installer Nethor 2 ↗</button><p class="pwa-help" id="installInstructions" hidden></p></div></form></div></div>';
 }
 function renderShell(){
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><span class="brand-symbol"><i></i><i></i><i></i><i></i></span><span><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'">'+navIcon(key)+name+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false">☰</button><div><span class="breadcrumb">NETHOR 2 <span class="sep">/</span><span id="breadPage">Accueil</span></span><span class="top-context">Netto Le Thor · Planning du personnel</span></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon('anomalies')+'<span class="nav-label">Alertes</span></button><button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button></nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><span class="brand-symbol"><i></i><i></i><i></i><i></i></span><span><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'">'+navIcon(key)+name+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false">☰</button><div><span class="breadcrumb">NETHOR 2 <span class="sep">/</span><span id="breadPage">Accueil</span></span><span class="top-context">Netto Le Thor · Planning du personnel</span></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon('anomalies')+'<span class="nav-label">Alertes</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -223,6 +224,7 @@ function pageAnomalies(metrics){
   return renderPageHeader('ANALYSE','Points à vérifier','Contrôles indicatifs : créneaux, pauses, journées longues et heures contractuelles.')+summary(metrics)+alertsCard(metrics,false)+'<p class="live-muted" style="margin-top:17px">Une anomalie de planning n’équivaut pas nécessairement à une infraction. Les règles métier doivent être vérifiées.</p>';
 }
 function pageTeam(metrics){
+  if(!canViewTeam(state.profile))return '';
   const filter=normalizeName(state.search);
   const visible=metrics.people.filter(p=>normalizeName(p.name).includes(filter));
   const accounts=state.profiles.filter(p=>p.account_enabled===true);
@@ -266,6 +268,7 @@ function render(){
   if(!screen||!state.profile)return;
   if(state.page==='import'&&state.access!=='manage')state.page='planning';
   if(state.page==='history'&&state.profile.role!=='admin')state.page='planning';
+  if(!canNavigate(state.page,state.profile))state.page='planning';
   document.title='Nethor 2 · '+TITLES[state.page];
   ROOT.querySelector('#breadPage').textContent=TITLES[state.page];
   ROOT.querySelectorAll('[data-page]').forEach(el=>{
@@ -281,7 +284,7 @@ function render(){
   screen.innerHTML=top+pages[state.page]();
 }
 function go(page){
-  if(!(page in TITLES))return;
+  if(!(page in TITLES)||!canNavigate(page,state.profile))return;
   state.page=page;state.notice='';state.error='';
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
@@ -418,7 +421,11 @@ async function verifyResume(){
     const gate=await checkSession();
     if(!gate){await signOut();return;}
     state.access=gate.access;
+    const roleChanged=state.profile?.role!==gate.gate.profile?.role;
+    state.profile={...state.profile,...gate.gate.profile};
     if(state.access!=='manage'&&state.page==='import')state.page='planning';
+    if(!canNavigate(state.page,state.profile))state.page='planning';
+    if(roleChanged)renderShell();
     render();
   }catch{await signOut();}
 }
