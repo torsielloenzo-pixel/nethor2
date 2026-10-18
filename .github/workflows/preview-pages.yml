@@ -22,8 +22,8 @@ jobs:
       - name: Préparer les ressources publiques de la PWA Nethor 2
         run: |
           mkdir -p _site/assets _site/src/ui _site/src/import _site/src/domain _site/src/auth _site/src/data _site/src/config
-          cp index.html styles.css live.css mobile.css sw.js manifest.webmanifest _site/
-          cp assets/icon.svg _site/assets/
+          cp index.html styles.css live.css mobile.css sw.js manifest.webmanifest CNAME _site/
+          cp assets/icon.svg assets/icon-planning-pwa.svg _site/assets/
           cp src/ui/live.js src/ui/team-access.js _site/src/ui/
           cp src/import/import-preview.js src/import/excel-structure.js _site/src/import/
           cp src/domain/planning-core.js src/domain/employee-linker.js _site/src/domain/
@@ -32,7 +32,8 @@ jobs:
           cp src/config/public.js _site/src/config/
           python3 -m pip install --disable-pip-version-check --quiet 'CairoSVG==2.8.2'
           python3 scripts/generate-pwa-icons.py _site/assets
-          test -s _site/assets/icon-180-v3.png && test -s _site/assets/icon-192-v3.png && test -s _site/assets/icon-512-v3.png
+          test -s _site/assets/icon-180-planning-v4.png && test -s _site/assets/icon-192-planning-v4.png && test -s _site/assets/icon-512-planning-v4.png
+          test "$(cat _site/CNAME)" = "nethor.fr"
           test ! -e _site/.env
       - name: Configurer Pages
         uses: actions/configure-pages@v5
