@@ -5,6 +5,7 @@ import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
+import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {readPlanningFile} from '../import/excel-structure.js';
 
 const ROOT=document.getElementById('app');
@@ -65,9 +66,11 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let booted=false;
+let personalRequestId=0;
+const isMobileHome=()=>window.matchMedia('(max-width:760px)').matches;
 
 function showMessage(text,kind='error'){
   const block=ROOT.querySelector('#authMessage');
@@ -96,6 +99,8 @@ async function checkSession(){
   return {gate,access};
 }
 async function signOut(){
+  personalRequestId++;
+  state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
   state.user=null;state.profile=null;state.weekData=null;state.profiles=[];state.importFile=null;state.importModel=null;state.importAnalysis=null;
   renderLogin();
@@ -107,6 +112,7 @@ async function startAuthorized(access){
   state.lastCheck=Date.now();
   renderShell();
   await loadProfiles();
+  if(isMobileHome())void loadPersonalHome();
   await loadWeek();
 }
 async function loadProfiles(){
@@ -227,7 +233,96 @@ function homePwaInstall(){
     '<p class="pwa-home-help" id="installInstructions" hidden aria-live="polite"></p>'+
   '</section>';
 }
+
+/* Accueil compact personnel (mobile et PWA) : aucune donnée RH dans le cache PWA. */
+async function loadPersonalHome(){
+  if(!state.user||!isMobileHome()||state.personal.loading)return;
+  const requestId=++personalRequestId, userId=state.user.id, today=dateInParis();
+  state.personal.loading=true;
+  if(state.page==='home')render();
+  // Même période de recherche (12 semaines) que l'ancien accueil mobile.
+  const monday=mondayFor(today), until=moveDate(monday,77);
+  const [weeksRes,leaveRes]=await Promise.allSettled([
+    client.from('planning_weeks').select('week_start,data').gte('week_start',monday).lte('week_start',until).order('week_start',{ascending:true}).limit(12),
+    client.from('planning_absences').select('type,start_date,end_date,status')
+      .eq('user_id',userId).eq('type','leave').in('status',['pending','approved'])
+      .gte('end_date',today).order('start_date',{ascending:true}).limit(30)
+  ]);
+  if(requestId!==personalRequestId||state.user?.id!==userId)return;
+  const w=weeksRes.status==='fulfilled'?weeksRes.value:null;
+  const l=leaveRes.status==='fulfilled'?leaveRes.value:null;
+  state.personal={
+    weeks:!w?.error&&Array.isArray(w?.data)?w.data:[],
+    absences:!l?.error&&Array.isArray(l?.data)?l.data:[],
+    loadedAt:Date.now(),
+    today,
+    loading:false,
+    weeksError:!!w?.error||!w,
+    leaveError:!!l?.error||!l
+  };
+  if(state.page==='home')render();
+}
+function mobileOverviewDate(date,weekday=true){
+  const day=new Date(date+'T12:00:00Z');
+  return day.toLocaleDateString('fr-FR',{timeZone:'UTC',...(weekday?{weekday:'short'}:{}),day:'2-digit',month:'2-digit'}).replaceAll('.','');
+}
+function mobileOverviewHours(ranges){
+  return ranges.map(r=>hhmm(r.start)+'–'+hhmm(r.end)).join(' · ');
+}
+function mobileOverviewPage(){
+  const today=dateInParis(), name=String(state.profile?.display_name||'').split(' ')[0];
+  const snapshot=state.personal, ready=!!snapshot.loadedAt&&!snapshot.loading;
+  const data=ready?personalOverview(snapshot.weeks,state.profile,snapshot.absences,today):null;
+  const linked=data?.linked!==false;
+  const loadedPlanning=ready&&!snapshot.weeksError;
+  const schedule=(data?.days||Array.from({length:7},(_,i)=>({date:moveDate(today,i),kind:'unknown'})))
+    .map(row=>{
+      const weekday=mobileOverviewDate(row.date);
+      const now=row.date===today;
+      const kind=ready?row.kind:'unknown';
+      const description=kind==='work'?mobileOverviewHours(row.ranges):
+        kind==='leave'?'Congé planifié':kind==='rest'?'Repos':
+        kind==='unlinked'?'Compte non associé':ready?(snapshot.weeksError?'Planning indisponible':'Non publié'):'Chargement…';
+      const duration=kind==='work'?hours(row.hours):'';
+      return '<div class="n2h-day n2h-day-'+escapeHtml(kind)+(now?' today':'')+'">'+
+        '<span class="n2h-day-date">'+escapeHtml(weekday)+'</span>'+
+        '<strong class="n2h-day-value">'+escapeHtml(description)+'</strong>'+
+        '<span class="n2h-day-hours">'+escapeHtml(duration)+'</span></div>';
+    }).join('');
+  const leave=data?.nextLeave||null;
+  const leaveLabel=!loadedPlanning&&snapshot.weeksError&&snapshot.leaveError?'Données indisponibles':
+    !ready?'Chargement…':leave?(leave.start<=today&&leave.end>=today?'En cours':mobileOverviewDate(leave.start,false)):'Aucun congé renseigné';
+  const leaveRange=leave?(leave.start===leave.end?'Le '+mobileOverviewDate(leave.start,false):
+    'Du '+mobileOverviewDate(leave.start,false)+' au '+mobileOverviewDate(leave.end,false)):'Aucune date connue';
+  const leaveStatus=leave?.status==='approved'?'Validé':leave?.status==='pending'?'En attente':
+    leave?.status==='planned'?'Inscrit au planning':snapshot.leaveError?'Statut indisponible':'Non renseigné';
+  const leaveTone=leave?.status==='approved'?'approved':leave?.status==='pending'?'pending':
+    leave?.status==='planned'?'planned':'unknown';
+  const rest=data?.nextRest||null;
+  const restLabel=!ready?'Chargement…':snapshot.weeksError?'Planning indisponible':
+    rest?(rest===moveDate(today,1)?'Demain':mobileOverviewDate(rest)):'Non déterminé';
+  const restDetail=rest?'Prochain jour sans horaire de travail':
+    'Selon les plannings publiés';
+  const dayWord=new Date(today+'T12:00:00Z').toLocaleDateString('fr-FR',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long'});
+  return '<div class="n2h-home" aria-label="Mon accueil personnel">'+
+    '<header class="n2h-greeting"><div><span class="n2h-overline">MON ESPACE · NETTO LE THOR</span><h1>Bonjour'+(name?' '+escapeHtml(name):'')+'</h1><p>'+escapeHtml(dayWord)+'</p></div></header>'+
+    '<section class="n2h-card n2h-schedule" aria-label="Mes horaires">'+
+       '<div class="n2h-heading"><div>'+navIcon('planning')+'<h2>Mes horaires</h2></div><span class="n2h-week-total">'+(ready&&loadedPlanning&&linked?escapeHtml(hours(data.hours)):'7 jours')+'</span></div>'+
+       '<div class="n2h-days">'+schedule+'</div>'+
+    '</section>'+
+    '<section class="n2h-card n2h-leave" aria-label="Prochains congés">'+
+       '<div class="n2h-meta"><div class="n2h-meta-label">'+navIcon('planning')+'<h2>Prochains congés</h2></div><span class="n2h-leave-state '+leaveTone+'">'+escapeHtml(leaveStatus)+'</span></div>'+
+       '<strong class="n2h-meta-value">'+escapeHtml(leaveLabel)+'</strong><small>'+escapeHtml(leave?leaveRange:ready?'Selon les demandes et plannings accessibles':'Vérification en cours')+'</small>'+
+    '</section>'+
+    '<section class="n2h-card n2h-rest" aria-label="Prochain jour de repos">'+
+       '<div class="n2h-meta"><div class="n2h-meta-label">'+navIcon('history')+'<h2>Prochain repos</h2></div></div>'+
+       '<strong class="n2h-meta-value">'+escapeHtml(restLabel)+'</strong><small>'+escapeHtml(restDetail)+'</small>'+
+    '</section>'+
+    '</div>';
+}
+
 function pageHome(metrics){
+  if(isMobileHome())return mobileOverviewPage();
   const me=state.profile.planning_name||state.profile.display_name;
   const mine=metrics.people.find(p=>normalizeName(p.name)===normalizeName(me));
   let personal='';
@@ -286,6 +381,7 @@ function render(){
   if(state.page==='import'&&state.access!=='manage')state.page='planning';
   if(state.page==='history'&&state.profile.role!=='admin')state.page='planning';
   if(!canNavigate(state.page,state.profile))state.page='planning';
+  ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
   document.title='Nethor · '+TITLES[state.page];
   ROOT.querySelector('#breadPage').textContent=TITLES[state.page];
   ROOT.querySelectorAll('[data-page]').forEach(el=>{
@@ -295,9 +391,9 @@ function render(){
   const model=visibleModel(),metrics=analyze(model);
   const pages={home:()=>pageHome(metrics),planning:()=>pagePlanning(metrics),anomalies:()=>pageAnomalies(metrics),import:pageImport,team:()=>pageTeam(metrics),history:pageHistory,settings:pageSettings};
   let top='';
-  if(state.loading)top+='<div class="live-message">Chargement du planning…</div>';
-  if(state.error)top+='<div class="live-error">'+escapeHtml(state.error)+'</div>';
-  if(state.notice)top+='<div class="live-message ok">'+escapeHtml(state.notice)+'</div>';
+  if(state.loading&&!(state.page==='home'&&isMobileHome()))top+='<div class="live-message">Chargement du planning…</div>';
+  if(state.error&&!(state.page==='home'&&isMobileHome()))top+='<div class="live-error">'+escapeHtml(state.error)+'</div>';
+  if(state.notice&&!(state.page==='home'&&isMobileHome()))top+='<div class="live-message ok">'+escapeHtml(state.notice)+'</div>';
   screen.innerHTML=top+pages[state.page]();
 }
 function go(page){
@@ -305,6 +401,7 @@ function go(page){
   state.page=page;state.notice='';state.error='';
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
+  if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadHistory(){
@@ -444,6 +541,7 @@ async function verifyResume(){
     if(!canNavigate(state.page,state.profile))state.page='planning';
     if(roleChanged)renderShell();
     render();
+    if(state.page==='home'&&isMobileHome()&&!state.personal.loading&&(Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   }catch{await signOut();}
 }
 ROOT.addEventListener('submit',async event=>{
@@ -504,6 +602,11 @@ ROOT.addEventListener('click',event=>{
 });
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void verifyResume();});
 window.addEventListener('focus',()=>void verifyResume());
+window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
+  if(!state.user)return;
+  render();
+  if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
+});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileMenu();});
 async function boot(){
   if(booted)return;booted=true;
