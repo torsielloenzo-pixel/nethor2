@@ -40,7 +40,7 @@ test('logo homogène dans connexion, entêtes, menu et installation',()=>{
 
 test('service worker ne cache que la coquille statique et les nouveaux logos',()=>{
  const sw=read('sw.js');
- assert.match(sw,/nethor-staff-account-settings-v13/);
+ assert.match(sw,/nethor-staff-desktop-brand-v14/);
  assert.ok(sw.includes('src/ui/planning-mobile.js'));
  assert.ok(sw.includes('src/ui/layout-role.js'));
  assert.ok(sw.includes('staff-desktop.css'));
