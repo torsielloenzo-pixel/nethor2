@@ -29,8 +29,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
 <script type="module" src="./src/ui/live.js"></script>
 <style>
-@media(max-width:760px){
-  #app:has(> .startup){min-height:100dvh}
+#app:has(> .startup){min-height:100dvh}
   #app > .startup{position:fixed;inset:0;z-index:9999;background:#101f40!important;display:flex!important;align-items:center;justify-content:center;min-height:100dvh;margin:0!important;padding:0!important}
   #app > .startup > :not(.nethor-mobile-loader){display:none!important}
   .nethor-mobile-loader{display:grid;place-items:center;width:100%;height:100%;background:#101f40}
@@ -42,8 +41,6 @@
   .nethor-loader-mark i:nth-child(4){background:#fff;animation-delay:.8s}
   @keyframes nethor-light{0%,100%{opacity:.4;transform:rotate(-8deg) scale(.88)}50%{opacity:1;transform:rotate(-8deg) scale(1.08)}}
   @media(prefers-reduced-motion:reduce){.nethor-loader-mark i{animation:none;opacity:1}}
-}
-@media(min-width:761px){.nethor-mobile-loader{display:none}}
 </style>
 </head>
 <body>
