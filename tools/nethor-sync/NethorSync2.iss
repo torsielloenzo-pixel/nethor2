@@ -1,6 +1,6 @@
 ; Nethor Sync 2 - installation par utilisateur Windows, sans elevation.
 ; Le dossier des plannings est choisi explicitement ; il n'est ni copié ni modifié.
-#define AppVersion "2.1.0"
+#define AppVersion "2.1.1"
 [Setup]
 AppId={{B29F5D58-538F-40C2-9FA2-1A6B5926A4F8}
 AppName=NethorSync 2
@@ -31,6 +31,8 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Source: "NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Connect-NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Installer-Sync.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Register-NethorSyncTasks.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Verify-NethorSyncBinding.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "NethorSyncRunner.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "config.example.json"; DestDir: "{app}"; Flags: onlyifdoesntexist
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -74,27 +76,52 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
   Cmd: String;
+  Details: AnsiString;
+  Diagnostic: String;
+  ErrorFile: String;
+  Reply: Integer;
+  Success: Boolean;
 begin
   if CurStep <> ssPostInstall then Exit;
-
   Cmd := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\Installer-Sync.ps1') +
     '" -PlanningFolder "' + PlanningPage.Values[0] + '"';
-  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-    Cmd, ExpandConstant('{app}'), SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
+  ErrorFile := ExpandConstant('{localappdata}\NethorSync2\install-result.txt');
+  Success := False;
+  repeat
+    ResultCode := -1;
+    if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+      Cmd, ExpandConstant('{app}'), SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
+    begin
+      Diagnostic := 'Impossible de démarrer la configuration Windows.';
+    end
+    else if ResultCode = 0 then
+    begin
+      Success := True;
+      break;
+    end
+    else
+    begin
+      Diagnostic := 'La configuration est incomplète (code ' + IntToStr(ResultCode) + ').';
+    end;
+    if FileExists(ErrorFile) then
+    begin
+      if LoadStringFromFile(ErrorFile, Details) then
+        Diagnostic := Diagnostic + #13#10#13#10 + UTF8Decode(Details);
+    end;
+    Reply := MsgBox(Diagnostic + #13#10#13#10 +
+      'La liaison déjà créée est conservée. Réessayer maintenant ?',
+      mbError, MB_RETRYCANCEL);
+  until Reply <> IDRETRY;
+  if Success then
   begin
-    MsgBox('L''assistant de configuration NethorSync n''a pas pu démarrer. ' +
-      'Le poste n''est pas opérationnel. Vous pouvez réessayer depuis le programme installé.',
-      mbError, MB_OK);
-  end
-  else if ResultCode <> 0 then
-  begin
-    MsgBox('NethorSync a été copié sur ce poste mais la configuration n''a pas abouti (code ' +
-      IntToStr(ResultCode) + '). Aucune synchronisation automatique n''a été activée.',
-      mbError, MB_OK);
+    MsgBox('NethorSync est opérationnel : installation et horaires Windows confirmés.' + #13#10 +
+      'Les prochains contrôles se feront sans fenêtre visible.',
+      mbInformation, MB_OK);
   end
   else
   begin
-    MsgBox('Installation terminée. NethorSync fonctionnera discrètement en arrière-plan. ' +
-      'Vous pouvez vérifier son état depuis Nethor2.', mbInformation, MB_OK);
+    MsgBox('La configuration n''est pas achevée : aucune synchronisation automatique n''a été activée.' +
+      #13#10 + 'Relancez cet installateur pour reprendre là où il s''est arrêté.',
+      mbInformation, MB_OK);
   end;
 end;
