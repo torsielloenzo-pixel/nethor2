@@ -4,8 +4,11 @@ Verifie la liaison existante avec Supabase pour reprendre une installation
 interrompue sans ressaisir le mot de passe. Aucun secret n'est journalise.
 #>
 [CmdletBinding()]
-param([string]$ConfigPath = (Join-Path $PSScriptRoot 'config.json'))
+param([string]$ConfigPath = '')
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+  $ConfigPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json'
+}
 $config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $stateDir = if ($config.statePath) { [string]$config.statePath } else { Join-Path $env:LOCALAPPDATA 'NethorSync2' }
 $authPath = Join-Path $stateDir 'auth.dat'
