@@ -53,7 +53,7 @@ export function renderPlanningYear({year,weeks=[],loading=false,error='',today=d
  }
  const legend='<div class="n2py-legend"><span><i class="available"></i>Planning disponible</span>'+
   '<span><i class="today"></i>Aujourd’hui</span><span><i class="unavailable"></i>Non publié</span></div>';
- return '<section class="n2py" aria-label="Calendrier annuel des plannings">'+header+toolbar+legend+
+ return '<section class="n2py" aria-label="Calendrier annuel des plannings"><div class="n2py-fixed">'+header+toolbar+legend+'</div>'+
   (error?'<p class="n2py-error" role="alert">'+esc(error)+'</p>':'')+
   '<div class="n2py-grid">'+grid+'</div></section>';
 }
