@@ -78,5 +78,5 @@ test('la page Alertes est NethorSync seulement sur mobile et le scroll est bloqu
  assert.doesNotMatch(rule,/overflow-y:auto/);
  const workflow=read('.github/workflows/preview-pages.yml'),sw=read('sw.js');
  for(const item of [workflow,sw])for(const file of ['mobile-sync-summary.js'])assert.ok(item.includes(file));
- assert.match(sw,/nethor-mobile-drawer-recovery-sync-v\\d+/);
+ assert.match(sw,/nethor-mobile-drawer-recovery-sync-v\d+/);
 });
