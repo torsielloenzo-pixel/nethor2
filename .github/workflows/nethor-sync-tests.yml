@@ -25,6 +25,7 @@ jobs:
             '.\tools\nethor-sync\Installer-Sync.ps1',
             '.\tools\nethor-sync\Register-NethorSyncTasks.ps1',
             '.\tools\nethor-sync\Verify-NethorSyncBinding.ps1',
+            '.\tools\nethor-sync\Watch-NethorSync.ps1',
             '.\tools\nethor-sync\Connect-NethorSync.ps1',
             '.\tools\nethor-sync\NethorSync.ps1'
           )
@@ -39,12 +40,12 @@ jobs:
       - name: Tester création réelle des tâches sous Windows puis nettoyer le runner
         shell: powershell
         run: |
-          $names = @('Nethor Sync 2 - Lundi-Samedi','Nethor Sync 2 - Dimanche','Nethor Sync 2 - Controle Manuel')
+          $names = @('Nethor Sync 2 - Lundi-Samedi','Nethor Sync 2 - Dimanche','Nethor Sync 2 - Controle Manuel','Nethor Sync 2 - Ecoute')
           $service = New-Object -ComObject 'Schedule.Service'
           $service.Connect()
           $folder = $service.GetFolder('\')
           try {
-            & .\tools\nethor-sync\Register-NethorSyncTasks.ps1 -AppPath (Resolve-Path .\tools\nethor-sync)
+            & .\tools\nethor-sync\Register-NethorSyncTasks.ps1 -AppPath (Resolve-Path .\tools\nethor-sync) -SkipStart
             if (-not $?) { throw 'Le planificateur Windows a refuse une tâche.' }
             foreach ($name in $names) {
               $registered = $folder.GetTask($name)
