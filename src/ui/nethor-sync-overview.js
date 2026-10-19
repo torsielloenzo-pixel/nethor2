@@ -1,6 +1,6 @@
 import {canManageSync,syncHealth} from '../data/nethor-sync-control.js';
 
-// Version de compatibilité validée sur MSI (2.1.1) publiée comme NethorSync-Setup.exe.
+// Installateur MSI 2.1.2 compatible : le traitement des nouveaux fichiers est assuré côté Supabase.
 // Le téléchargement est direct depuis GitHub Releases ; installation manuelle sur Windows.
 export const NETHOR_SYNC_INSTALLER_URL='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 
@@ -30,7 +30,7 @@ function renderAutoPublication(snapshot){
  if(snapshot?.autoError)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Suivi des publications temporairement indisponible.</p></section>';
  const entries=Array.isArray(snapshot?.autoPublications)?snapshot.autoPublications:[];
  const last=entries[0];
- if(!last)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Activée pour les fichiers réellement modifiés et récents. Aucune nouvelle version traitée pour le moment.</p></section>';
+ if(!last)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Active côté Supabase : les nouveaux transferts sont comparés aux semaines déjà publiées. Aucune nouvelle version traitée pour le moment.</p></section>';
  const labels={queued:'En attente de traitement',processing:'Analyse Excel en cours',published:'Planning publié pour toute l’équipe',unchanged:'Horaires déjà à jour',skipped:'Publication ignorée pour sécurité',rejected:'Fichier Excel refusé',failed:'Échec de traitement'};
  const state=String(last.status||'');
  const when=formatSyncTimestamp(last.when);
@@ -66,7 +66,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
   '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>';
  const guide=showInstall?
   '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte Nethor autorisé.</p>':
-  bound?'<p class="n2sync-footnote">Un poste peut être associé à la fois. L’état opérationnel dépend de son dernier contact avec Supabase (moins de 30 minutes).</p>':'';
+  bound?'<p class="n2sync-footnote">Un poste peut être associé à la fois. Les nouveaux transferts sont analysés et publiés côté Supabase, sans réinstallation de NethorSync 2.1.2. L’état opérationnel dépend du dernier contact du poste (moins de 30 minutes).</p>':'';
  return '<section class="card n2sync-card" id="nethorSyncHomeCard" aria-labelledby="n2sync-title">'+
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+
    '<span class="n2sync-status" data-state="'+escapeHtml(current)+'"><i aria-hidden="true"></i>'+escapeHtml(titles[current]||'État inconnu')+'</span></div>'+
