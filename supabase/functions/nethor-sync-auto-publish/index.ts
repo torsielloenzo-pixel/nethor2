@@ -14,7 +14,7 @@ const digest=async (bytes:ArrayBuffer):Promise<string>=>{
  const result=await crypto.subtle.digest("SHA-256",bytes);
  return Array.from(new Uint8Array(result),b=>b.toString(16).padStart(2,"0")).join("");
 };
-function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:string) {
+function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:string,uploadedAt:string,sourceKind:string) {
  const workbook=XLSX.read(new Uint8Array(buffer),{type:"array",cellDates:true,cellStyles:true});
  const model=parsePlanningWorkbook(workbook,XLSX,resolveExcelColor);
  if(model.employees.length>200)throw new Error("Nombre de salariés supérieur à 200");
@@ -23,7 +23,8 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
    throw new Error("Aucun horaire exploitable : les couleurs du classeur doivent être vérifiées");
  const label=/SEMAINE[ _-]*([ABC])/i.exec(fileName);
  return {...model,sourceFile:fileName,sourcePath:path,
-  sourceModifiedAt:modifiedAt,weekLabel:label?"SEMAINE "+label[1].toUpperCase():null,
+  ...(sourceKind==="storage" ? {sourceUploadedAt:uploadedAt} : {sourceModifiedAt:modifiedAt}),
+  weekLabel:label?"SEMAINE "+label[1].toUpperCase():null,
   importedAt:new Date().toISOString()};
 }
 Deno.serve(async req=>{
@@ -50,6 +51,8 @@ Deno.serve(async req=>{
    const hash=String(job.sha256||"").toLowerCase();
    const name=String(job.fileName||"");
    const modified=String(job.modifiedAt||"");
+   const uploaded=String(job.uploadedAt||"");
+   const sourceKind=String(job.sourceKind||"change");
    const invalid=!/^sync-inbox\/[0-9a-f]{64}-[^/]+$/i.test(key)
      ||!/^([a-f0-9]{64})$/.test(hash)||!key.startsWith("sync-inbox/"+hash+"-")
      ||!/\.(xls|xlsx|xlsm)$/i.test(name);
@@ -65,7 +68,7 @@ Deno.serve(async req=>{
        if(await digest(bytes)!==hash){
          result="rejected";detail="Empreinte SHA-256 du classeur incorrecte";
        }else{
-         try{model=parseFile(bytes,name,key,modified);}
+         try{model=parseFile(bytes,name,key,modified,uploaded,sourceKind);}
          catch(e){result="rejected";detail="Lecture du planning refusée : "+String((e as Error)?.message||e).slice(0,180);}
        }
      }
