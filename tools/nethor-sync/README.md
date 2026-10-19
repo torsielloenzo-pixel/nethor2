@@ -24,12 +24,14 @@ L'identité du poste et son secret local sont stockés sous `%LOCALAPPDATA%\Neth
 
 **Réinstaller sur un deuxième PC sans délier le premier est refusé par le serveur.** L'administrateur doit d'abord utiliser **Paramètres > NethorSync > Réinitialiser la liaison**. Cela protège du retour des anciennes versions depuis un ordinateur de test.
 
-## Modes de fonctionnement
+## Un seul mode : automatique
 
-- **Automatique :** lundi au samedi à 19h, dimanche à 12h, à l'heure locale Windows (configurer le PC sur le fuseau Paris).
-- **Manuel :** envoi d'une demande depuis la barre latérale; l'agent la détecte au plus tard lors de son prochain contrôle Windows toutes les 5 minutes (s'il est allumé et connecté).
-- Les modes sont réglables dans les paramètres du site. Le mode manuel suspend les exécutions programmées, mais conserve l'écoute des demandes manuelles.
-- Aucune promesse d'exécution à l'heure exacte si le PC est éteint, en veille ou hors ligne.
+- **Planification permanente** : lundi au samedi à 19 h, dimanche à 12 h, heure locale Windows (Europe/Paris).
+- **Bouton « Synchroniser »** : déclenche une seule vérification ponctuelle, sans changer les horaires. Une nouvelle demande n'est pas empilée si une demande précédente attend encore un résultat.
+- **Écoute rapide** : `Watch-NethorSync.ps1` tourne sans fenêtre pendant la session Windows, et consulte les demandes environ toutes les 8 secondes. La tâche de contrôle toutes les 5 minutes reste un secours.
+- **Installation mise à jour obligatoire** : pour bénéficier de l'écoute immédiate, réexécuter `NethorSync2-Setup.exe` version 2.2.0 sur le PC déjà associé, sans réinitialiser sa liaison Supabase.
+- Les demandes ne peuvent être exécutées qu'avec le PC allumé, l'utilisateur Windows connecté et un accès Supabase fonctionnel.
+- Une « synchronisation » compare les fichiers et les transfère dans la boîte de réception privée si leur contenu a changé ; **elle ne les publie pas automatiquement aux utilisateurs**.
 
 Le programme calcule une empreinte SHA-256 des fichiers `.xls`, `.xlsx`, `.xlsm` :
 - **Même contenu déjà envoyé** : rien n'est retransmis.
