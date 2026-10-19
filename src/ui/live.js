@@ -448,7 +448,7 @@ function pagePlanning(metrics){
   if(isMobileHome())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:state.loading?null:visibleModel(),profiles:state.profiles,
-    currentProfile:state.profile,filter:state.mobilePlanning.dayFilter,
+    currentProfile:state.profile,allowYear:smallScreen(),filter:state.mobilePlanning.dayFilter,
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error
   });
   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+planningCard(metrics);
@@ -968,7 +968,7 @@ ROOT.addEventListener('click',async event=>{
   const yearDate=event.target.closest('[data-year-day]');
   if(yearDate&&state.page==='planning'&&state.view==='year'&&smallScreen()){
     const day=yearDate.dataset.yearDay;
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(day))return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
     state.day=day;
     state.week=mondayFor(day);
     state.view='week';
@@ -1017,7 +1017,7 @@ ROOT.addEventListener('click',async event=>{
       state.mobilePlanning.year=Number((state.day||dateInParis()).slice(0,4));
       state.view='year';
       render();
-      void loadAnnualWeeks();
+      void loadAnnualWeeks(true);
       return;
     }
     if(action==='year-current')state.mobilePlanning.year=Number(dateInParis().slice(0,4));
