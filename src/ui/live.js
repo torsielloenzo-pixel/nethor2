@@ -11,7 +11,7 @@ import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.j
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
-import {readSyncStatus} from '../data/nethor-sync-control.js';
+import {readSyncStatus,readSyncHistory} from '../data/nethor-sync-control.js';
 import {createSyncController} from './nethor-sync-ui.js';
 import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
 import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
@@ -80,6 +80,7 @@ const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de 
 const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
+let syncChartPeriod=7;
 let booted=false;
 let personalRequestId=0;
 let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
@@ -374,16 +375,18 @@ async function loadNethorSyncStatus(){
  const userId=state.user.id;
  state.nethorSync.loading=true;
  if(state.page==='home')render();
- try{
-  const status=await readSyncStatus(client);
-  if(state.user?.id!==userId)return;
-  state.nethorSync={loaded:true,loading:false,status,error:'',checkedAt:Date.now()};
- }catch(_){
-  if(state.user?.id!==userId)return;
-  state.nethorSync={loaded:false,loading:false,status:null,error:'État temporairement indisponible',checkedAt:Date.now()};
- }finally{
-  if(state.user?.id===userId&&state.page==='home')render();
- }
+ const [current,history]=await Promise.allSettled([readSyncStatus(client),readSyncHistory(client)]);
+ if(state.user?.id!==userId)return;
+ state.nethorSync={
+  loaded:current.status==='fulfilled',loading:false,
+  status:current.status==='fulfilled'?current.value:null,
+  error:current.status==='fulfilled'?'':'État temporairement indisponible',
+  checkedAt:Date.now(),
+  historyLoaded:history.status==='fulfilled',
+  history:history.status==='fulfilled'?history.value:[],
+  historyError:history.status==='fulfilled'?'':'Historique temporairement indisponible'
+ };
+ if(state.page==='home')render();
 }
 
 function pageHome(metrics){
@@ -396,14 +399,11 @@ function pageHome(metrics){
     const top=renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',',
       'Le planning de la semaine et l’état de synchronisation NethorSync.',
       state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true));
-    const planned=metrics.people.filter(p=>p.total>0).length;
-    const total=metrics.people.reduce((sum,p)=>sum+p.total,0);
-    const kpis='<section class="live-summary n2sync-home-summary">'+
-      '<article class="live-stat"><label>Collaborateurs planifiés</label><strong>'+planned+'</strong><small>Sur la semaine</small></article>'+
-      '<article class="live-stat"><label>Heures planifiées</label><strong>'+hours(total)+'</strong><small>Total calculé</small></article></section>';
-    return top+personal+kpis+
-      '<div class="layout n2sync-home-layout"><div class="stack">'+planningCard(metrics)+'</div>'+
-      '<div class="stack">'+renderSyncOverviewCard(state.nethorSync)+'</div></div>';
+    // Vue d'ensemble Admin / Point de vente : planning complet d'abord,
+    // NethorSync et son historique en pleine largeur ensuite, sans KPIs en double.
+    return top+personal+
+      '<div class="n2sync-home-content">'+planningCard(metrics)+
+      renderSyncOverviewCard(state.nethorSync,Date.now(),syncChartPeriod)+'</div>';
   }
   return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
@@ -880,6 +880,11 @@ ROOT.addEventListener('click',async event=>{
   if(!b)return;
   const action=b.dataset.action;
   if(action==='nethor-sync-refresh'){await loadNethorSyncStatus();return;}
+   if(action==='nethor-sync-chart-7'||action==='nethor-sync-chart-30'){
+     if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.page!=='home')return;
+     syncChartPeriod=action==='nethor-sync-chart-30'?30:7;
+     const scrollY=window.scrollY;render();window.scrollTo(0,scrollY);return;
+   }
   if(action==='nethor-sync-install'){
     if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.nethorSync.status?.installed!==false)return;
     const download=document.createElement('a');
