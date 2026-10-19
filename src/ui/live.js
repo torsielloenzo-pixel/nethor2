@@ -148,11 +148,12 @@ async function startAuthorized(access){
   renderShell();
   syncController=createSyncController(client,ROOT,state.profile);
   syncController?.mount();
-  // Vérification serveur une fois connecté, exclusivement en contexte téléphone/PWA mobile.
-  if(shouldCheckRecoveryOnLogin())void maybeOfferRecoveryAfterLogin();
   await loadProfiles();
   if(isMobileHome())void loadPersonalHome();
   await loadWeek();
+  // Vérifier une fois la page mobile complètement montée : aucun écran de chargement
+  // ni rendu du planning ne doit masquer la fenêtre de récupération.
+  if(shouldCheckRecoveryOnLogin())void maybeOfferRecoveryAfterLogin();
   if(state.page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen()))void loadNethorSyncStatus();
 }
 async function loadProfiles(){
@@ -454,7 +455,8 @@ async function loadAccountRecoveryStatus(){
  try{
   const response=await invokeAccountFunction('profile-email',{action:'status'});
   if(state.user?.id!==userId)return;
-  state.accountSecurity.configured=response.configured===true;
+  if(response.success!==true||typeof response.configured!=='boolean')throw Error('Réponse de vérification invalide.');
+  state.accountSecurity.configured=response.configured;
   state.accountSecurity.loaded=true;
  }catch(_){
   if(state.user?.id!==userId)return;
@@ -470,7 +472,7 @@ function shouldCheckRecoveryOnLogin(){
  return smallScreen()&&(state.profile?.role==='employe'||state.profile?.role==='responsable')&&!recoveryPrompt.dismissed;
 }
 function closeFirstLoginRecovery(remember=false){
- ROOT.querySelector('#firstLoginRecoveryPrompt')?.remove();
+ document.getElementById('firstLoginRecoveryPrompt')?.remove();
  recoveryPrompt.step='closed';
  recoveryPrompt.error='';
  if(remember){
@@ -485,13 +487,13 @@ function presentFirstLoginRecovery(step='offer'){
   configured:state.accountSecurity.configured,error:state.accountSecurity.error,dismissed:recoveryPrompt.dismissed
  }))return;
  recoveryPrompt.step=step;
- const current=ROOT.querySelector('#firstLoginRecoveryPrompt');
+ const current=document.getElementById('firstLoginRecoveryPrompt');
  if(current)current.remove();
- ROOT.insertAdjacentHTML('beforeend',renderRecoveryPrompt({
+ document.body.insertAdjacentHTML('beforeend',renderRecoveryPrompt({
   step,busy:recoveryPrompt.saving,error:recoveryPrompt.error,mailStatus:recoveryPrompt.mailStatus
  }));
- const dialog=ROOT.querySelector('#firstLoginRecoveryPrompt');
- (step==='form'?dialog?.querySelector('#firstLoginRecoveryEmail'):dialog?.querySelector('button'))?.focus({preventScroll:true});
+ const dialog=document.getElementById('firstLoginRecoveryPrompt');
+ (step='form'?dialog?.querySelector('#firstLoginRecoveryEmail'):dialog?.querySelector('button'))?.focus({preventScroll:true});
 }
 async function maybeOfferRecoveryAfterLogin(){
  if(!shouldCheckRecoveryOnLogin())return;
@@ -501,7 +503,7 @@ async function maybeOfferRecoveryAfterLogin(){
  presentFirstLoginRecovery('offer');
 }
 function setFirstLoginRecoveryError(message){
- const form=ROOT.querySelector('#firstLoginRecoveryForm');
+ const form=document.getElementById('firstLoginRecoveryForm');
  if(!form)return;
  let error=form.querySelector('.n2rp-error');
  if(!error){error=document.createElement('p');error.className='n2rp-error';error.setAttribute('role','alert');form.querySelector('#firstLoginRecoveryEmail')?.insertAdjacentElement('afterend',error);}
@@ -799,10 +801,25 @@ async function verifyResume(){
     if(state.page==='home'&&isMobileHome()&&!state.personal.loading&&(Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   }catch{await signOut();}
 }
-ROOT.addEventListener('submit',async event=>{
+// Le dialogue est monté directement sur <body> : hors des conteneurs à overflow
+// hidden de l'accueil mobile, et au-dessus du menu et du planning.
+document.addEventListener('submit',async event=>{
   if(event.target.id==='firstLoginRecoveryForm'){
-    event.preventDefault();await saveFirstLoginRecovery(event.target);return;
+    event.preventDefault();
+    await saveFirstLoginRecovery(event.target);
   }
+});
+document.addEventListener('click',event=>{
+  const actionButton=event.target.closest('#firstLoginRecoveryPrompt [data-action^="recovery-"]');
+  if(!actionButton)return;
+  const action=actionButton.dataset.action;
+  if(action==='recovery-add')presentFirstLoginRecovery('form');
+  else if(action==='recovery-back')presentFirstLoginRecovery('offer');
+  else if(action==='recovery-later')closeFirstLoginRecovery(true);
+  else if(action==='recovery-done')closeFirstLoginRecovery();
+});
+
+ROOT.addEventListener('submit',async event=>{
   if(event.target.id==='recoveryEmailForm'){
     event.preventDefault();await saveRecoveryEmail(event.target);return;
   }
@@ -826,15 +843,6 @@ ROOT.addEventListener('submit',async event=>{
   }catch(err){showMessage(String(err.message||err));if(submit){submit.disabled=false;submit.textContent='Se connecter';}}
 });
 ROOT.addEventListener('click',async event=>{
-  const firstLoginAction=event.target.closest('[data-action^="recovery-"]');
-  if(firstLoginAction){
-    const action=firstLoginAction.dataset.action;
-    if(action==='recovery-add')presentFirstLoginRecovery('form');
-    else if(action==='recovery-back')presentFirstLoginRecovery('offer');
-    else if(action==='recovery-later')closeFirstLoginRecovery(true);
-    else if(action==='recovery-done')closeFirstLoginRecovery();
-    return;
-  }
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
 
@@ -912,11 +920,14 @@ ROOT.addEventListener('input',event=>{
 ROOT.addEventListener('dragover',event=>{if(event.target.closest('#importDrop'))event.preventDefault();});
 ROOT.addEventListener('drop',event=>{if(event.target.closest('#importDrop')){event.preventDefault();void selectFile(event.dataTransfer?.files?.[0]);}});
 ROOT.addEventListener('click',event=>{
-  if(event.target.id==='mobileMenu'){
+  // Un appui sur le symbole ≡ touche le span enfant, et non le bouton lui-même.
+  // closest() corrige aussi les clics sur l'icône intérieure du bouton.
+  const menuButton=event.target.closest('#mobileMenu');
+  if(menuButton){
     const shown=ROOT.querySelector('#sidebar')?.classList.toggle('open')===true;
     ROOT.classList.toggle('menu-open',shown);
-    event.target.setAttribute('aria-expanded',String(shown));
-  }else if(event.target.id==='sidebarBackdrop')closeMobileMenu();
+    menuButton.setAttribute('aria-expanded',String(shown));
+  }else if(event.target.closest('#sidebarBackdrop'))closeMobileMenu();
 });
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void verifyResume();});
 window.addEventListener('focus',()=>void verifyResume());
@@ -927,10 +938,10 @@ window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
   if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
 });
 document.addEventListener('keydown',event=>{
- if(!ROOT.querySelector('#firstLoginRecoveryPrompt')){if(event.key==='Escape')closeMobileMenu();return;}
+ if(!document.getElementById('firstLoginRecoveryPrompt')){if(event.key==='Escape')closeMobileMenu();return;}
  if(event.key==='Escape'){event.preventDefault();closeFirstLoginRecovery(true);return;}
  if(event.key==='Tab'){
-  const buttons=[...ROOT.querySelectorAll('#firstLoginRecoveryPrompt button:not(:disabled),#firstLoginRecoveryPrompt input:not(:disabled)')];
+  const buttons=[...document.querySelectorAll('#firstLoginRecoveryPrompt button:not(:disabled),#firstLoginRecoveryPrompt input:not(:disabled)')];
   if(!buttons.length)return;
   const first=buttons[0],last=buttons[buttons.length-1];
   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
