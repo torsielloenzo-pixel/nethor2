@@ -137,6 +137,7 @@ async function signOut(){
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
+  syncController?.dispose();
   syncController=null;
   state.user=null;state.profile=null;state.weekData=null;state.profiles=[];state.importFile=null;state.importModel=null;state.importAnalysis=null;
   renderLogin();
