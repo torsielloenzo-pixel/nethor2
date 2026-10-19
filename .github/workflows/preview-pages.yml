@@ -34,6 +34,18 @@ jobs:
           python3 scripts/generate-pwa-icons.py _site/assets
           test -s _site/assets/nethor-logo-180-v8.png && test -s _site/assets/nethor-logo-192-v8.png && test -s _site/assets/nethor-logo-512-v8.png && test -s _site/favicon.ico
           test "$(cat _site/CNAME)" = "nethor.fr"
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          files = ['Installer-Sync.ps1', 'Connect-NethorSync.ps1', 'NethorSync.ps1', 'config.example.json', 'README.md']
+          with ZipFile('_site/nethor-sync-2.zip', 'w', ZIP_DEFLATED) as archive:
+              for name in files:
+                  path = Path('tools/nethor-sync') / name
+                  if not path.is_file():
+                      raise SystemExit(f'Fichier absent dans le programme NethorSync : {name}')
+                  archive.write(path, arcname=name)
+          PY
+          test -s _site/nethor-sync-2.zip
           test -s _site/reset-password.html && test -s _site/src/auth/password-recovery-page.js
           test ! -e _site/.env
       - name: Configurer Pages
