@@ -65,18 +65,15 @@ jobs:
           path: build/installer/NethorSync2-Setup-Compatibility-211.exe
           if-no-files-found: error
           retention-days: 30
-      - name: Publier une release de comparaison independante
+      - name: Joindre la variante à la release NethorSync existante
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          $tag='nethor-sync2-compat-211'
+          $tag='nethor-sync2-latest'
           $exe='build/installer/NethorSync2-Setup-Compatibility-211.exe'
-          gh release view $tag --repo $env:GH_REPO *> $null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo $env:GH_REPO --target '55b1d728aa770d2e4bd875f62521c7a6271fbcd4' --title 'NethorSync 2.1.1 - Diagnostic compatibilité' --notes 'Recompilation de la dernière version ayant fonctionné sur le MSI, sans écoute continue et sans changement de stratégie de synchronisation. EXE non signé : peut encore être bloqué par Smart App Control. Cette variante fonctionne avec les horaires automatiques et une vérification ponctuelle à la prochaine interrogation du poste (5 minutes maximum si actif).' --latest=false
-            if ($LASTEXITCODE -ne 0) {throw 'Impossible de créer la release'}
-          }
+          gh release view $tag --repo $env:GH_REPO --json tagName
+          if ($LASTEXITCODE -ne 0) {throw 'Release NethorSync existante introuvable'}
           gh release upload $tag $exe --repo $env:GH_REPO --clobber
-          if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier la comparaison'}
+          if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier le fichier de comparaison'}
