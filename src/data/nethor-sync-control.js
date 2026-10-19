@@ -37,6 +37,16 @@ export async function readSyncAutoPublications(client,{limit=20}={}){
  return data;
 }
 
+// Rapports techniques expurgés (30 jours). Les jetons, chemins et noms de
+// fichiers ne sont jamais transférés par cette RPC.
+export async function readSyncDiagnostics(client,{limit=20}={}){
+ if(!Number.isInteger(limit)||limit<1||limit>50)throw new RangeError('Limite invalide');
+ const {data,error}=await client.rpc('nethor_sync_diagnostic_history',{p_limit:limit});
+ if(error)throw Error(error.message||'Diagnostics NethorSync indisponibles');
+ if(!Array.isArray(data))throw Error('Format des diagnostics invalide');
+ return data;
+}
+
 export async function requestManualSync(client) {
   return rpcResult(await client.rpc('nethor_sync_request_manual'));
 }
