@@ -28,8 +28,8 @@ L'identité du poste et son secret local sont stockés sous `%LOCALAPPDATA%\Neth
 
 - **Planification permanente** : lundi au samedi à 19 h, dimanche à 12 h, heure locale Windows (Europe/Paris).
 - **Bouton « Synchroniser »** : déclenche une seule vérification ponctuelle, sans changer les horaires. Une nouvelle demande n'est pas empilée si une demande précédente attend encore un résultat.
-- **Agent compatible MSI 2.1.3** : vérifie les demandes ponctuelles environ toutes les 5 minutes, sans processus d'écoute permanent.
-- **Mise à jour nécessaire** : réexécuter `NethorSync-Setup.exe` version 2.1.3 sur le MSI pour transmettre les anciennes/nouvelles dates de modification des fichiers au moteur automatique.
+- **Correctif Windows 2.1.4** : disponible depuis « Installer NethorSync », « Télécharger la correction » et Paramètres. Conserve la planification 19 h / 12 h et le contrôle des demandes toutes les cinq minutes, sans écoute permanente.
+- **Correctif des doublons** : vérifie dans Supabase qu'un fichier est déjà archivé avant de tenter de l'envoyer. Les codes HTTP 400/409 ne sont considérés comme des doublons que si le serveur confirme la présence de l'objet exact. La liaison existante et les Excel ne sont pas supprimés.
 - Les demandes ne peuvent être exécutées qu'avec le PC allumé, l'utilisateur Windows connecté et un accès Supabase fonctionnel.
 - Une synchronisation calcule les empreintes SHA-256, dépose les fichiers modifiés dans le stockage privé, puis enregistre les versions Windows. Le serveur analyse et publie automatiquement **les vrais remplacements récents et valides**.
 
@@ -65,7 +65,7 @@ L'écran NethorSync Mobile/PWA affiche séparément les heures de l'audit Supaba
 
 **Limitation connue de la 2.1.2 :** Supabase connaît la date de **réception** du fichier, mais pas son horodatage Windows `LastWriteTimeUtc`. Un ancien fichier recopié après coup peut être transféré comme une nouveauté : il est impossible de prouver sa fraîcheur absolue à partir du seul dépôt. Les contrôles de période, de nom, de version déjà publiée et d'ordre des arrivées réduisent ce risque sans l'éliminer totalement. En cas de doute, vérifier le planning dans Nethor2.
 
-Aucun ancien fichier ne peut être supprimé ou modifié sur le MSI par le traitement serveur. La 2.1.3 n'est pas requise.
+Aucun ancien fichier ne peut être supprimé ou modifié sur le MSI par le traitement serveur. La mise à jour locale 2.1.4 n'est requise que pour réparer les erreurs Windows de doublons ; la publication automatique des plannings reste exclusivement côté Supabase.
 
 ## Désinstallation et transfert
 
@@ -80,6 +80,6 @@ Pour arrêter localement, désactiver les tâches « Nethor Sync 2 » dans le Pl
 
 ## Diffusion Windows
 
-L'installateur **2.1.2**, conservé pour compatibilité avec le MSI, est publié sous le nom [NethorSync-Setup.exe](https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe). Le programme local reste un simple scanner et transporteur de fichiers. Les règles de publication évoluent sur Supabase, sans reconfiguration Windows.
+L'installateur compatible **2.1.4**, construit sur le socle Windows 2.1.1/2.1.2, est publié sous le nom [NethorSync-Setup.exe](https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe). Le programme local reste un simple scanner et transporteur de fichiers. Le correctif 2.1.4 prend en charge les objets déjà stockés, sans forcer une nouvelle liaison. Les règles de publication évoluent séparément sur Supabase.
 
 Le logiciel est non signé : Smart App Control peut bloquer un nouvel exécutable. Ne désactivez pas les protections Windows pour l'installer. Seule l'exécution programmée est discrète : les tâches restent visibles dans le Planificateur Windows.
