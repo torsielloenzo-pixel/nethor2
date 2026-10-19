@@ -1,11 +1,11 @@
-import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth,setSyncMode} from '../data/nethor-sync-control.js';
+import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
 const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync2-Setup.exe';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
 export function createSyncController(client,root,profile){
  if(!canManageSync(profile?.role))return null;
  const admin=profile.role==='admin';
- let status=null,error='',loading=false,notice='';
+ let status=null,error='',loading=false,notice='',watchTimer=null,requestStartedAt=0;
  const isInstalled=()=>status?.installed===true;
  function markup(){
   const state=syncHealth(status);
@@ -17,19 +17,19 @@ export function createSyncController(client,root,profile){
    ? '<button class="sync-action" type="button" data-action="sync-state-refresh">Réessayer la vérification</button>'
    : !isInstalled()
    ? '<button class="sync-action" type="button" data-action="sync-download">Installer NethorSync</button>'
-   : '<button class="sync-action" type="button" data-action="sync-request-manual">Synchroniser manuellement</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button>';
+   : '<button class="sync-action" type="button" data-action="sync-request-manual"'+(status?.pendingManual?' disabled':'')+'>'+(status?.pendingManual?'Synchronisation demandée…':'Synchroniser')+'</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button>';
   return '<div class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><strong>'+label+'</strong></div>'+details+
    (error?'<p class="sync-side-small sync-error">'+esc(error)+'</p>':'')+
    (notice?'<p class="sync-side-small">'+esc(notice)+'</p>':'')+
-   (status?.pendingManual?'<p class="sync-side-small">Demande manuelle en attente du poste.</p>':'')+actions;
+   (status?.pendingManual?'<p class="sync-side-small">Synchronisation ponctuelle en attente du poste.</p>':'')+actions;
  }
  function settingsMarkup(){
   return '<section class="card nethor-sync-settings" id="syncSettings"><div class="card-head"><div><h2 class="card-title">NethorSync · Poste maître</h2><p class="sub">Un seul ordinateur peut être lié à la fois.</p></div></div><div class="card-body">'+
    '<p>Poste : <strong>'+esc(isInstalled()?status.deviceLabel||'Inconnu':'Non installé/configuré')+'</strong></p>'+
    '<p>Lié par : '+esc(status?.registeredBy||'—')+'</p>'+
    '<p>Dernier contrôle : '+esc(time(status?.lastCheckAt))+' · Dernier transfert : '+esc(time(status?.lastTransferAt))+'</p>'+
-   '<p class="live-muted">Automatique : lundi au samedi 19 h ; dimanche 12 h (heure du poste réglée sur Europe/Paris). Manuel : via demande, contrôlée toutes les 5 minutes lorsque le PC est allumé.</p>'+
-   (isInstalled()?'<p>Mode : <strong>'+esc(status.mode==='manual'?'Manuel':'Automatique')+'</strong></p><button type="button" class="btn" data-action="sync-mode-manual">Manuel</button> <button type="button" class="btn" data-action="sync-mode-automatic">Automatique</button>':'')+
+   '<p class="live-muted">Mode unique : automatique, du lundi au samedi à 19 h et le dimanche à 12 h (heure du poste, fuseau France). Le bouton « Synchroniser » demande une seule vérification immédiate, sans modifier ces horaires.</p>'+
+   '<p><strong>Mode : Automatique</strong></p>'+
    '<p class="live-muted">Les fichiers transférés restent soumis à la validation du planning dans Nethor2.</p>'+
    (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+'</div></section>';
  }
@@ -42,12 +42,13 @@ export function createSyncController(client,root,profile){
   loading=true;
   try{status=await readSyncStatus(client);error='';}
   catch(e){error=String(e.message||e);status=null;}
-  finally{loading=false;paint();}
+  finally{loading=false;if(!status?.pendingManual)requestStartedAt=0;paint();}
  }
  function mount(){
   const container=root.querySelector('.side-bottom');if(!container)return;
   container.insertAdjacentHTML('afterbegin','<section class="nethor-sync-side" id="syncSideCard" aria-live="polite"></section>');
   paint();void refresh();
+  if(!watchTimer)watchTimer=setInterval(()=>{if(status?.pendingManual&&!loading){void refresh();}},5000);
  }
  async function action(name){
   if(name==='sync-download'){
@@ -57,13 +58,8 @@ export function createSyncController(client,root,profile){
   }
   if(name==='sync-state-refresh'){await refresh();return true;}
   if(name==='sync-request-manual'){
-    if(!isInstalled())return true;
-    try{await requestManualSync(client);notice='Synchronisation demandée au poste actif.';error='';await refresh();}
-    catch(e){error=String(e.message||e);}paint();return true;
-  }
-  if(name==='sync-mode-manual'||name==='sync-mode-automatic'){
-    if(!isInstalled())return true;
-    try{await setSyncMode(client,name==='sync-mode-manual'?'manual':'automatic');notice='Mode de synchronisation mis à jour.';error='';await refresh();}
+    if(!isInstalled()||status?.pendingManual)return true;
+    try{await requestManualSync(client);requestStartedAt=Date.now();notice='Vérification ponctuelle demandée à '+(status.deviceLabel||'ce poste')+' ; le mode automatique reste actif.';error='';await refresh();}
     catch(e){error=String(e.message||e);}paint();return true;
   }
   if(name==='sync-reset-device'){
@@ -75,5 +71,5 @@ export function createSyncController(client,root,profile){
   }
   return false;
  }
- return {mount,refresh,settingsMarkup,paint,action};
+ return {mount,refresh,settingsMarkup,paint,action,dispose(){if(watchTimer){clearInterval(watchTimer);watchTimer=null;}}};
 }
