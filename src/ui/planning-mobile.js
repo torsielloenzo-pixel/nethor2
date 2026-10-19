@@ -112,18 +112,12 @@ function weekCard(emp,chosen){
  }).join('');
  return '<article class="n2pm-week-card'+(emp.isMe?' is-me':'')+'">'+header+'<div class="n2pm-slots">'+slots+'</div></article>';
 }
-function weekView(data,selected,today,filter){
- const index=data.dates.indexOf(selected),idx=index>=0?index:0;
- const count=data.employees.length,present=data.employees.filter(e=>e.days[idx].kind==='work').length;
- const leave=data.employees.filter(e=>e.days[idx].kind==='leave').length;
- const me=data.employees.some(e=>e.isMe);
- const options=[['all','Tous'],['working','En poste'],['off','Autres'],...(me?[['mine','Moi']]:[])];
- if(filter==='mine'&&!me)filter='all';
- const visible=data.employees.filter(e=>filter==='all'||filter==='mine'&&e.isMe||filter==='working'&&e.days[idx].kind==='work'||filter==='off'&&e.days[idx].kind!=='work');
+function weekView(data,selected,today){
+ // Vue semaine épurée : garder les jours, les cartes de l'équipe et la légende.
+ // Pas de compteurs ni de filtres sur mobile/PWA.
  const legend='<div class="n2pm-legend"><span><i class="g"></i>Matin</span><span><i class="b"></i>Après-midi</span><span><i class="y"></i>Congé</span><span><i class="r"></i>Repos</span><span><i class="w"></i>Indisponibilité</span></div>';
- return strip(data.dates,selected,today)+summary([['Équipe',count],['En poste',present],['Congés',leave]])+
-  pills(options,filter,'week')+'<div class="n2pm-week-list">'+
-  (visible.length?visible.map(e=>weekCard(e,selected)).join(''):'<p class="n2pm-empty">Aucun collaborateur pour ce filtre.</p>')+
+ return strip(data.dates,selected,today)+'<div class="n2pm-week-list">'+
+  (data.employees.length?data.employees.map(e=>weekCard(e,selected)).join(''):'<p class="n2pm-empty">Aucun collaborateur planifié.</p>')+
   '</div>'+legend;
 }
 function effectiveState(row,selected,today,clock){
@@ -179,7 +173,7 @@ export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,
  if(loading&&!model)content='<div class="n2pm-empty">Chargement du planning…</div>';
  else if(!result.available)content='<div class="n2pm-empty"><strong>Aucun planning publié pour cette semaine.</strong><p>Choisis une autre semaine avec les flèches.</p></div>';
  else if(view==='day')content=dayView(result,selected,clock.key,clock.minute,filter,awayExpanded);
- else content=weekView(result,selected,clock.key,filter);
+ else content=weekView(result,selected,clock.key);
  return '<section class="n2pm" aria-label="Planning mobile de l’équipe">'+
   '<header class="n2pm-page-heading"><div><span>NETTO LE THOR</span><h1>Planning</h1></div>'+
   '<button type="button" data-action="refresh" aria-label="Actualiser le planning" title="Actualiser">↻</button></header>'+
