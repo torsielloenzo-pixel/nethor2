@@ -22,3 +22,8 @@ export function syncHealth(status,now=Date.now()){
   if(!Number.isFinite(seen))return 'not-seen';
   return now-seen<=30*60*1000 && now>=seen-60000 ? 'online':'offline';
 }
+
+export async function setSyncMode(client,mode){
+ if(!['manual','automatic'].includes(mode))throw new Error('Mode invalide');
+ return rpcResult(await client.rpc('nethor_sync_set_mode',{p_mode:mode}));
+}
