@@ -13,6 +13,7 @@ import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/persona
 import {renderMobilePlanning} from './planning-mobile.js';
 import {renderPlanningYear} from './planning-year.js';
 import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics} from '../data/nethor-sync-control.js';
+import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
 import {mergeImportHistory,renderImportHistory} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
@@ -81,7 +82,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
 let syncChartPeriod=7;
@@ -141,6 +142,7 @@ async function signOut(){
   if(state.user?.id)clearRecoveryDismissed(state.user.id);
   recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
   state.nethorSync={loaded:false,loading:false,status:null,error:''};
+  state.importSync={loaded:false,loading:false,status:null,error:'',checkedAt:0};
   state.mobileSync={loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
@@ -158,6 +160,7 @@ async function startAuthorized(access){
   state.profile=access.gate.profile;
   recoveryPrompt={step:'closed',dismissed:recoveryDismissed(state.user.id),saving:false,error:'',mailStatus:''};
   state.nethorSync={loaded:false,loading:false,status:null,error:''};
+  state.importSync={loaded:false,loading:false,status:null,error:'',checkedAt:0};
   state.mobileSync={loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.access=access.access;
@@ -402,6 +405,20 @@ async function loadNethorSyncStatus(){
   diagnostics:diags.status==='fulfilled'?diags.value:[]
  };
  if(state.page==='home')render();
+}
+
+async function loadImportSyncStatus(force=false){
+  if(!state.user||state.page!=='import'||smallScreen()||state.importSync.loading)return;
+  if(!force&&state.importSync.checkedAt&&Date.now()-state.importSync.checkedAt<60000)return;
+  const userId=state.user.id;
+  state.importSync={...state.importSync,loading:true,error:''};
+  render();
+  let status=null,error='';
+  try{status=await readSyncStatus(client);}
+  catch(_){error='État NethorSync non vérifiable';}
+  if(state.user?.id!==userId)return;
+  state.importSync={loaded:!error,loading:false,status,error,checkedAt:Date.now()};
+  if(state.page==='import'&&!smallScreen())render();
 }
 
 function pageHome(metrics){
@@ -672,6 +689,7 @@ function pageSettings(){
 function pageImport(){
   if(state.access!=='manage')return '<div class="live-error">Tu n’as pas les droits de gérer le planning.</div>';
   let body='<section class="card"><div class="card-head"><div><h2 class="card-title">Fichier Excel</h2><p class="sub">Glisser-déposer ou sélection · .xls / .xlsx / .xlsm · maximum 10 Mo</p></div></div><label class="live-import-drop" id="importDrop"><strong>⇧ Importer un fichier planning</strong><span>Le fichier est analysé localement avant validation</span><input type="file" id="excelFile" accept=".xls,.xlsx,.xlsm"></label></section>';
+  if(!smallScreen())body+=renderImportSyncGuide(state.importSync);
   if(state.busy)body+='<div class="live-message">Traitement en cours…</div>';
   if(state.importError)body+='<div class="live-error">'+escapeHtml(state.importError)+'</div>';
   if(state.importAnalysis){
@@ -725,6 +743,7 @@ function go(page){
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
   if(page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
+  if(page==='import'&&!smallScreen())void loadImportSyncStatus();
   if(page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&!state.nethorSync.loading)void loadNethorSyncStatus();
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
@@ -809,7 +828,20 @@ async function publish(){
   if(state.busy||state.access!=='manage'||!state.importModel||!state.importFile)return;
   const ack=ROOT.querySelector('#publishAck');
   if(!ack?.checked){state.importError='Veuillez confirmer la vérification du planning.';render();return;}
-  if(!window.confirm('Publier le planning du '+longDate(state.importModel.weekStart)+' et remplacer sa version actuelle ?'))return;
+  const selectedFile=state.importFile,selectedModel=state.importModel;
+  if(!smallScreen()){
+    // Lire le poste au moment de publier, pas uniquement lors de l'ouverture de la page.
+    let health='error';
+    try{
+      const status=await readSyncStatus(client);
+      state.importSync={loaded:true,loading:false,status,error:'',checkedAt:Date.now()};
+      health=importSyncHealth(state.importSync);
+    }catch(_){
+      state.importSync={loaded:false,loading:false,status:null,error:'État NethorSync non vérifiable',checkedAt:Date.now()};
+    }
+    if(!await confirmImportManually({health,weekLabel:longDate(selectedModel.weekStart),fileName:selectedFile.name}))return;
+  }else if(!window.confirm('Publier le planning du '+longDate(selectedModel.weekStart)+' et remplacer sa version actuelle ?'))return;
+  if(state.page!=='import'||state.busy||state.importFile!==selectedFile||state.importModel!==selectedModel)return;
   state.busy=true;state.importError='';render();
   let uploadedPath=null;
   let publicationAttempted=false;
@@ -897,6 +929,9 @@ setInterval(()=>{
     !state.nethorSync.loading&&Date.now()-(state.nethorSync.checkedAt||0)>60000){
    void loadNethorSyncStatus();
  }
+  if(state.page==='import'&&!smallScreen()&&!state.importSync.loading&&Date.now()-(state.importSync.checkedAt||0)>60000){
+   void loadImportSyncStatus();
+  }
 },60000);
 
 async function verifyResume(){
