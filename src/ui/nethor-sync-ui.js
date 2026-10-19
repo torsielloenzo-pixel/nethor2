@@ -1,5 +1,5 @@
 import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
-const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync2-Setup.exe';
+const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
 export function createSyncController(client,root,profile){
@@ -28,7 +28,7 @@ export function createSyncController(client,root,profile){
    '<p>Poste : <strong>'+esc(isInstalled()?status.deviceLabel||'Inconnu':'Non installé/configuré')+'</strong></p>'+
    '<p>Lié par : '+esc(status?.registeredBy||'—')+'</p>'+
    '<p>Dernier contrôle : '+esc(time(status?.lastCheckAt))+' · Dernier transfert : '+esc(time(status?.lastTransferAt))+'</p>'+
-   '<p class="live-muted">Mode unique : automatique, du lundi au samedi à 19 h et le dimanche à 12 h (heure du poste, fuseau France). Le bouton « Synchroniser » demande une seule vérification immédiate, sans modifier ces horaires.</p>'+
+   '<p class="live-muted">Mode unique : automatique, du lundi au samedi à 19 h et le dimanche à 12 h (heure du poste, fuseau France). Le bouton « Synchroniser » demande une vérification ponctuelle, traitée au prochain contrôle du poste (jusqu’à 5 minutes), sans modifier ces horaires.</p>'+
    '<p><strong>Mode : Automatique</strong></p>'+
    '<p class="live-muted">Les fichiers transférés restent soumis à la validation du planning dans Nethor2.</p>'+
    (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+'</div></section>';
@@ -53,7 +53,7 @@ export function createSyncController(client,root,profile){
  async function action(name){
   if(name==='sync-download'){
     window.open(INSTALLER,'_blank','noopener,noreferrer');
-    notice='Ouvrez NethorSync2-Setup.exe sur Windows pour sélectionner le dossier des plannings.';
+    notice='Ouvrez NethorSync-Setup.exe sur Windows pour sélectionner le dossier des plannings.';
     paint();return true;
   }
   if(name==='sync-state-refresh'){await refresh();return true;}
