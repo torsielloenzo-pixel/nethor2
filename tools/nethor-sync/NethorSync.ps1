@@ -256,11 +256,11 @@ if ($networkEnabled) {
     }
     # Reprise idempotente : un transfert effectué mais non confirmé est repris
     # sans dupliquer les versions grâce à l'index unique côté Supabase.
-    foreach ($batch in @($changes | Group-Object { [Math]::Floor([Array]::IndexOf($changes, $_) / 100) })) {
-      if ($null -eq $batch -or @($batch.Group).Count -eq 0) { continue }
+    for ($offset = 0; $offset -lt $changes.Count; $offset += 100) {
+      $batch = @($changes | Select-Object -Skip $offset -First 100)
       $null = Invoke-SyncRpc $config $token 'nethor_sync_record_file_changes' @{
         p_device_id=$device.id; p_secret=$device.secret
-        p_generation=$device.generation; p_changes=@($batch.Group)
+        p_generation=$device.generation; p_changes=$batch
       }
     }
   }
