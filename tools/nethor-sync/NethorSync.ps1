@@ -87,7 +87,7 @@ function Check-ActiveDevice($Settings,[string]$AccessToken,$Device) {
     p_generation=$Device.generation
   }
 }
-function Upload-Candidate($Settings, [string]$Token, $File, [string]$Hash) {
+function Upload-Candidate($Settings, [string]$Token, $File, [string]$Hash, $Device) {
   $name = [IO.Path]::GetFileName($File.Name)
   $safeName = [regex]::Replace($name, "[^a-zA-Z0-9._-]", "_")
   if ($safeName.Length -gt 85) {
@@ -106,13 +106,30 @@ function Upload-Candidate($Settings, [string]$Token, $File, [string]$Hash) {
     Authorization = "Bearer " + $Token
     "x-upsert" = "false"
   }
+  # Vérifier l'existence exacte du fichier avant tout nouvel envoi. Supabase
+  # peut retourner HTTP 400 "Duplicate" au lieu de HTTP 409.
+  $existsParams = @{
+    p_device_id=$Device.id; p_secret=$Device.secret
+    p_generation=$Device.generation; p_storage_key=$key
+  }
+  $exists = Invoke-SyncRpc $Settings $Token 'nethor_sync_staged_exists' $existsParams
+  if ($exists -eq $true) {
+    return @{ status = "already_staged"; key = $key }
+  }
   try {
     Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -ContentType $mime -InFile $File.FullName | Out-Null
     return @{ status = "staged"; key = $key }
   } catch {
     $code = 0
     if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
-    if ($code -eq 409) { return @{ status = "already_staged"; key = $key } }
+    if ($code -eq 400 -or $code -eq 409) {
+      # Ne jamais interpréter n'importe quel HTTP 400 comme un doublon.
+      # Reprendre uniquement si Supabase confirme que cette empreinte existe.
+      $confirmed = Invoke-SyncRpc $Settings $Token 'nethor_sync_staged_exists' $existsParams
+      if ($confirmed -eq $true) {
+        return @{ status = "already_staged"; key = $key }
+      }
+    }
     throw
   }
 }
@@ -191,7 +208,12 @@ foreach ($file in $files) {
     $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     $entry.sha256 = $hash
     $old = $previousByPath[$relative]
-    if ($null -ne $old -and $old.sha256 -eq $hash) { $entry.status = "unchanged" }
+    if ($null -ne $old -and $old.sha256 -eq $hash -and $old.upload -eq "error") {
+      # Une erreur précédente ne confirme PAS que le fichier a été transféré.
+      # Reprendre l'historisation, même si le contenu local n'a pas changé.
+      $entry.status = "new"
+    }
+    elseif ($null -ne $old -and $old.sha256 -eq $hash) { $entry.status = "unchanged" }
     elseif ($null -ne $old) { $entry.status = "modified" }
     elseif ($oldHashes.ContainsKey($hash)) { $entry.status = "moved_or_copied" }
     else { $entry.status = "new" }
@@ -201,7 +223,7 @@ foreach ($file in $files) {
 
       # Le poste revoque ne peut poursuivre les transferts avec notre agent.
       $null = Check-ActiveDevice $config $token $device
-      $result = Upload-Candidate $config $token $file $hash
+      $result = Upload-Candidate $config $token $file $hash $device
       $entry.upload = $result.status
       $entry.storageKey = $result.key
       $uploaded[$hash] = $true
