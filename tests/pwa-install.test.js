@@ -40,7 +40,7 @@ test('logo homogène dans connexion, entêtes, menu et installation',()=>{
 
 test('service worker ne cache que la coquille statique et les nouveaux logos',()=>{
  const sw=read('sw.js');
- assert.match(sw,/nethor-brand-mobile-header-v10/);
+ assert.match(sw,/nethor-brand-planning-clean-v11/);
  assert.ok(sw.includes('src/ui/planning-mobile.js'));
  for(const file of ['nethor-logo-180-v8.png','nethor-logo-192-v8.png','nethor-logo-512-v8.png','favicon.ico'])
    assert.ok(sw.includes(file));
