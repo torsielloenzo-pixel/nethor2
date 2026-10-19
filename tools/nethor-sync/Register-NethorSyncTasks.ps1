@@ -82,6 +82,11 @@ if ($ProbeOnly) { return }
 # interrompait auparavant l'installation (code 1).
 foreach ($legacy in @('Nethor Sync 2 - Toutes les 3h','Nethor Sync 2 - Ouverture de session')) {
   try { $null = $folder.GetTask($legacy); $folder.DeleteTask($legacy,0) }
-  catch [System.Runtime.InteropServices.COMException] { }
+  catch {
+    # Certaines éditions Windows emballent l'absence de tâche en
+    # MethodInvocationException plutôt qu'en COMException.
+    # Ce nettoyage facultatif ne doit JAMAIS annuler l'installation.
+    Write-Output ('Ancienne tâche absente ou impossible à supprimer : ' + $legacy)
+  }
 }
 Write-Output 'Planification NethorSync 2 activée pour l’utilisateur Windows courant.'
