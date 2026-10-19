@@ -11,7 +11,7 @@ import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.j
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
-import {readSyncStatus,readSyncHistory,readSyncFileChanges} from '../data/nethor-sync-control.js';
+import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications} from '../data/nethor-sync-control.js';
 import {mergeImportHistory,renderImportHistory} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
@@ -380,7 +380,7 @@ async function loadNethorSyncStatus(){
  const userId=state.user.id;
  state.nethorSync.loading=true;
  if(state.page==='home')render();
- const [current,history]=await Promise.allSettled([readSyncStatus(client),readSyncHistory(client)]);
+ const [current,history,auto]=await Promise.allSettled([readSyncStatus(client),readSyncHistory(client),readSyncAutoPublications(client,{limit:20})]);
  if(state.user?.id!==userId)return;
  state.nethorSync={
   loaded:current.status==='fulfilled',loading:false,
@@ -389,7 +389,10 @@ async function loadNethorSyncStatus(){
   checkedAt:Date.now(),
   historyLoaded:history.status==='fulfilled',
   history:history.status==='fulfilled'?history.value:[],
-  historyError:history.status==='fulfilled'?'':'Historique temporairement indisponible'
+  historyError:history.status==='fulfilled'?'':'Historique temporairement indisponible',
+  autoLoaded:auto.status==='fulfilled',
+  autoPublications:auto.status==='fulfilled'?auto.value:[],
+  autoError:auto.status==='fulfilled'?'':'Suivi temporairement indisponible'
  };
  if(state.page==='home')render();
 }
@@ -653,7 +656,7 @@ function pageHistory(){
   if(state.profile.role!=='admin')return '<div class="live-error">Historique réservé à l’administration.</div>';
   return renderPageHeader('TRAÇABILITÉ','Historique des imports','Imports manuels et transferts NethorSync · versions et remplacements.',button('Actualiser','history-refresh'))+
     '<section class="card n2hist-card"><div class="card-head"><div><h2 class="card-title">Historique des fichiers</h2>'+
-    '<p class="sub">Les transferts NethorSync ne publient pas automatiquement le planning.</p></div></div>'+
+    '<p class="sub">Les plannings récents remplacés peuvent être publiés automatiquement après une analyse complète. Une version refusée reste archivée sans modifier les horaires.</p></div></div>'+
     '<div class="n2hist-list">'+renderImportHistory(state.history)+'</div></section>';
 }
 function render(){
@@ -836,6 +839,36 @@ async function downloadHistory(path){
   if(error){state.error='Téléchargement refusé : '+error.message;render();return;}
   const u=URL.createObjectURL(data);const a=document.createElement('a');a.href=u;a.download=record.file_name||'planning.xls';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);
 }
+// Lorsqu'une semaine est remplacée depuis le MSI, les écrans ouverts doivent
+// recevoir la nouvelle révision sans rechargement manuel de l'application.
+let weekRefreshBusy=false;
+let lastWeekRefresh=0;
+async function refreshPublishedWeekQuietly(){
+ if(!state.user||weekRefreshBusy||state.loading||state.busy||document.visibilityState!=='visible')return;
+ if(state.page!=='planning'&&state.page!=='home')return;
+ if(Date.now()-lastWeekRefresh<45000)return;
+ weekRefreshBusy=true;lastWeekRefresh=Date.now();
+ const requestedWeek=state.week,requestedUser=state.user.id;
+ try{
+  const updated=await getPlanningWeek(client,requestedWeek);
+  if(state.user?.id!==requestedUser||state.week!==requestedWeek)return;
+  if((state.weekData?.revision||null)!==(updated?.revision||null)){
+    state.weekData=updated;
+    render();
+    if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
+  }
+ }catch(err){console.warn('Actualisation silencieuse du planning indisponible',String(err?.message||err));}
+ finally{weekRefreshBusy=false;}
+}
+setInterval(()=>{
+ if(!state.user||document.visibilityState!=='visible')return;
+ void refreshPublishedWeekQuietly();
+ if(state.page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&
+    !state.nethorSync.loading&&Date.now()-(state.nethorSync.checkedAt||0)>60000){
+   void loadNethorSyncStatus();
+ }
+},60000);
+
 async function verifyResume(){
   if(!state.user||Date.now()-state.lastCheck<30000)return;
   state.lastCheck=Date.now();
@@ -852,6 +885,7 @@ async function verifyResume(){
       renderShell();
     }
     render();
+    void refreshPublishedWeekQuietly();
     if(state.page==='home'&&isMobileHome()&&!state.personal.loading&&(Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
     if(state.page==='anomalies'&&smallScreen()&&(!state.mobileSync.loaded||Date.now()-state.mobileSync.checkedAt>120000))void loadMobileSyncStatus(true);
   }catch{await signOut();}
