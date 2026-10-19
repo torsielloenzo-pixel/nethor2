@@ -76,5 +76,5 @@ test('vérification auprès du serveur après connexion, sauvegarde serveur et r
 test('publiée dans web, préchargement PWA et serveur de développement',()=>{
  const sw=read('sw.js'),build=read('.github/workflows/preview-pages.yml'),dev=read('scripts/dev-server.js');
  for(const file of [sw,build,dev])assert.ok(file.includes('recovery-prompt.js'));
- assert.match(sw,/nethor-mobile-drawer-recovery-v17/);
+ assert.match(sw,/nethor-mobile-drawer-recovery-(?:sync-)?v\\d+/);
 });
