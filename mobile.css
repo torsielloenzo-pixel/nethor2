@@ -903,3 +903,10 @@ html.nethor-zoom-locked select {
  #app.mobile-planning-active .n2py-day{min-height:36px}
  #app.mobile-planning-active .n2py-blank{min-height:36px}
 }
+
+/* Les trois onglets Jour/Semaine/Année restent accessibles même sur iPhone étroit. */
+@media(max-width:430px){
+ #app.mobile-planning-active .n2pm-toolbar{grid-template-columns:minmax(0,1fr);gap:7px}
+ #app.mobile-planning-active .n2pm-segmented{width:100%}
+ #app.mobile-planning-active .n2pm-segmented button{flex:1;min-width:0}
+}
