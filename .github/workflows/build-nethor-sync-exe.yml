@@ -1,0 +1,70 @@
+name: NethorSync 2 - Installateur Windows EXE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/nethor-sync/**'
+      - '.github/workflows/build-nethor-sync-exe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nethor-sync2-installer
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Recuperer les sources
+        uses: actions/checkout@v4
+      - name: Installer le compilateur Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress --limit-output
+          if ($LASTEXITCODE -ne 0) { throw "Installation d'Inno Setup impossible : $LASTEXITCODE" }
+      - name: Compiler le programme Windows (.exe)
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path -LiteralPath $compiler)) {
+            $compiler = "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          }
+          if (-not (Test-Path -LiteralPath $compiler)) { throw "Compilateur ISCC absent" }
+          & $compiler "tools\nethor-sync\NethorSync2.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Compilation Inno Setup echouee: $LASTEXITCODE" }
+          if (-not (Test-Path "build\installer\NethorSync2-Setup.exe")) { throw "Executable attendu absent" }
+      - name: Vérifier le contenu et l'empreinte SHA-256
+        shell: pwsh
+        run: |
+          $path = "build\installer\NethorSync2-Setup.exe"
+          $file = Get-Item $path
+          if ($file.Length -lt 200000) { throw "Executable de taille incoherente" }
+          Get-FileHash -Algorithm SHA256 $path | Format-List
+      - name: Conserver l'installateur comme artefact GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: NethorSync2-Setup-Windows
+          path: build/installer/NethorSync2-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publier le telechargement permanent GitHub Releases
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $tag = "nethor-sync2-latest"
+          $path = "build/installer/NethorSync2-Setup.exe"
+          gh release view $tag --repo $env:GH_REPO *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo $env:GH_REPO --target $env:GITHUB_SHA --title "NethorSync 2 - Installateur Windows" --notes "Installateur pour Windows : choisir le dossier des plannings et connecter un compte autorise. Un seul PC actif a la fois. Le programme est non signe : verifier son origine avant execution." --latest=false
+            if ($LASTEXITCODE -ne 0) { throw "Creation de la release echouee" }
+          }
+          gh release upload $tag $path --repo $env:GH_REPO --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Publication de l'EXE echouee" }
+          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync2-Setup.exe") | .url'
