@@ -2,6 +2,41 @@ import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealt
 const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
+// Le succès de la liaison Windows n'est PAS une preuve de synchronisation complète.
+export function renderManualSyncPipeline(status){
+ const stage=String(status?.manualStage||'none');
+ if(stage==='none')return '';
+ const pcDone=Boolean(status?.manualPcCompletedAt);
+ const cloudStarted=Boolean(status?.manualCloudCheckId);
+ const completed=['done','cloud_review'].includes(stage);
+ const pcLabel=stage==='pc_error'?'Échec du traitement Windows':
+   pcDone?'Fichiers vérifiés et transférés':
+   stage==='pc_contact'?'Poste en contact · traitement non terminé':'En attente du poste Windows';
+ const cloudLabel=stage==='cloud_error'?'Contrôle Supabase en échec':
+   cloudStarted?(completed?'Contrôle Supabase terminé':'Contrôle Supabase en cours'):
+   pcDone?'Contrôle Supabase à lancer':'Après confirmation du poste';
+ const published=Number(status?.manualCloudProcessed||0);
+ const refused=Number(status?.manualCloudRefused||0);
+ const publishLabel=completed?
+   (refused>0?'Publication partielle · fichiers à vérifier':
+   published>0?published+' planning'+(published>1?'s':'')+' publié'+(published>1?'s':''):
+   'Plannings vérifiés · aucun remplacement nécessaire'):
+   'Après vérification serveur';
+ const items=[
+  ['Demande manuelle enregistrée','done'],
+  [pcLabel,stage==='pc_error'?'error':pcDone?'done':stage==='pc_contact'?'current':'waiting'],
+  [cloudLabel,stage==='cloud_error'?'error':completed?'done':cloudStarted?'current':'waiting'],
+  [publishLabel,completed?'done':'waiting']
+ ];
+ return '<div class="sync-manual-pipeline" role="status" aria-label="Avancement synchronisation manuelle">'+
+   '<strong>Synchronisation manuelle · suivi réel</strong>'+
+   items.map(([label,flag],i)=>'<span class="sync-manual-step" data-step="'+esc(flag)+'">'+
+     '<b>'+(i+1)+'</b>'+esc(label)+'</span>').join('')+
+   (stage==='pc_error'?'<small class="sync-error">Le poste a signalé une erreur. La demande est conservée : consulter le rapport NethorSync sur Windows.</small>':'')+
+   (status?.manualCloudError?'<small>Contrôle Supabase : '+esc(status.manualCloudError)+'</small>':'')+
+   '</div>';
+}
+
 export function createSyncController(client,root,profile){
  if(!canManageSync(profile?.role))return null;
  const admin=profile.role==='admin';
@@ -17,11 +52,11 @@ export function createSyncController(client,root,profile){
    ? '<button class="sync-action" type="button" data-action="sync-state-refresh">Réessayer la vérification</button>'
    : !isInstalled()
    ? '<button class="sync-action" type="button" data-action="sync-download">Installer NethorSync</button>'
-   : '<button class="sync-action" type="button" data-action="sync-request-manual"'+(status?.pendingManual?' disabled':'')+'>'+(status?.pendingManual?'Synchronisation demandée…':'Synchroniser')+'</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button>';
+   : '<button class="sync-action" type="button" data-action="sync-request-manual"'+(status?.pendingManual&&status?.manualStage!=='pc_error'?' disabled':'')+'>'+(status?.manualStage==='pc_error'?'Réessayer la vérification':status?.pendingManual?'Traitement en cours…':'Synchroniser')+'</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button>';
   return '<div class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><strong>'+label+'</strong></div>'+details+
    (error?'<p class="sync-side-small sync-error">'+esc(error)+'</p>':'')+
    (notice?'<p class="sync-side-small">'+esc(notice)+'</p>':'')+
-   (status?.pendingManual?'<p class="sync-side-small">Synchronisation ponctuelle en attente du poste.</p>':'')+actions;
+   renderManualSyncPipeline(status)+actions;
  }
  function settingsMarkup(){
   return '<section class="card nethor-sync-settings" id="syncSettings"><div class="card-head"><div><h2 class="card-title">NethorSync · Poste maître</h2><p class="sub">Un seul ordinateur peut être lié à la fois.</p></div></div><div class="card-body">'+
@@ -48,7 +83,7 @@ export function createSyncController(client,root,profile){
   const container=root.querySelector('.side-bottom');if(!container)return;
   container.insertAdjacentHTML('afterbegin','<section class="nethor-sync-side" id="syncSideCard" aria-live="polite"></section>');
   paint();void refresh();
-  if(!watchTimer)watchTimer=setInterval(()=>{if(status?.pendingManual&&!loading){void refresh();}},5000);
+  if(!watchTimer)watchTimer=setInterval(()=>{if((status?.pendingManual||['cloud_processing','cloud_pending','cloud_review'].includes(status?.manualStage))&&!loading){void refresh();}},5000);
  }
  async function action(name){
   if(name==='sync-download'){
@@ -58,8 +93,8 @@ export function createSyncController(client,root,profile){
   }
   if(name==='sync-state-refresh'){await refresh();return true;}
   if(name==='sync-request-manual'){
-    if(!isInstalled()||status?.pendingManual)return true;
-    try{await requestManualSync(client);requestStartedAt=Date.now();notice='Vérification ponctuelle demandée à '+(status.deviceLabel||'ce poste')+' ; le mode automatique reste actif.';error='';await refresh();}
+    if(!isInstalled()||(status?.pendingManual&&status?.manualStage!=='pc_error'))return true;
+    try{await requestManualSync(client);requestStartedAt=Date.now();notice='Demande conservée pour '+(status.deviceLabel||'le poste')+' : nouvelle tentative au prochain passage du contrôle Windows.';error='';await refresh();}
     catch(e){error=String(e.message||e);}paint();return true;
   }
   if(name==='sync-reset-device'){
