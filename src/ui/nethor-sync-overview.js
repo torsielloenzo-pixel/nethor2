@@ -1,6 +1,6 @@
 import {canManageSync,syncHealth} from '../data/nethor-sync-control.js';
 
-// Installateur MSI 2.1.2 compatible : le traitement des nouveaux fichiers est assuré côté Supabase.
+// Version Windows compatible 2.1.4 : les fichiers déjà transmis sont reconnus sans nouvel upload.
 // Le téléchargement est direct depuis GitHub Releases ; installation manuelle sur Windows.
 export const NETHOR_SYNC_INSTALLER_URL='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 
@@ -62,11 +62,12 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
     'Aucun poste Windows n’est actuellement enregistré pour synchroniser les plannings.')+'</div>';
  const showInstall=current==='not-configured';
  const action=showInstall?
-  '<button type="button" class="btn primary" data-action="nethor-sync-install">Installer NethorSync</button>':
-  '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>';
+  '<button type="button" class="btn primary" data-action="nethor-sync-install">Installer NethorSync 2.1.4</button>':
+  '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>'+
+  (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger la correction 2.1.4</button>':'');
  const guide=showInstall?
   '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte Nethor autorisé.</p>':
-  bound?'<p class="n2sync-footnote">Un poste peut être associé à la fois. Les nouveaux transferts sont analysés et publiés côté Supabase, sans réinstallation de NethorSync 2.1.2. L’état opérationnel dépend du dernier contact du poste (moins de 30 minutes).</p>':'';
+  bound?'<p class="n2sync-footnote">Correctif Windows 2.1.4 disponible : réutilise la liaison existante et reconnaît les fichiers déjà envoyés. Les plannings sont publiés côté Supabase. L’état du poste dépend de son dernier contact (moins de 30 minutes).</p>':'';
  return '<section class="card n2sync-card" id="nethorSyncHomeCard" aria-labelledby="n2sync-title">'+
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+
    '<span class="n2sync-status" data-state="'+escapeHtml(current)+'"><i aria-hidden="true"></i>'+escapeHtml(titles[current]||'État inconnu')+'</span></div>'+
