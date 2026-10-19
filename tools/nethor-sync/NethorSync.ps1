@@ -7,7 +7,8 @@ No planning is published by this script. Publication stays in Nethor2.
 param(
   [string]$ConfigPath = (Join-Path $PSScriptRoot "config.json"),
   [switch]$DryRun,
-  [switch]$PollOnly
+  [switch]$PollOnly,
+  [switch]$Scheduled
 )
 $ErrorActionPreference = "Stop"
 
@@ -159,6 +160,10 @@ if ($networkEnabled) {
   # Le controle du serveur DOIT preceder meme la comparaison locale.
   $remote = Check-ActiveDevice $config $token $device
   $manualVersion = [long]$remote.manualRequestVersion
+  if ($Scheduled -and $remote.mode -eq "manual") {
+    Write-Host "Mode manuel actif sur Nethor : passage programme ignore."
+    exit 0
+  }
   if ($PollOnly -and -not $remote.pendingManual) {
     Write-Host "Aucune synchronisation manuelle demandee; dossier non analyse."
     exit 0
