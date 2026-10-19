@@ -76,3 +76,16 @@
  .n2sync-auto[data-state=rejected],.n2sync-auto[data-state=failed]{background:#fff8f7;border-color:#f3d0cd}
  .n2sync-auto[data-state=rejected] strong,.n2sync-auto[data-state=failed] strong{color:#a04848}
 }
+
+/* Avancement manuel : une erreur du poste ne doit pas ressembler à une attente infinie. */
+.sync-manual-pipeline{display:grid;gap:6px;margin:12px 0;padding:11px;border:1px solid #dbe7f5;border-radius:12px;background:#f8fbff}
+.sync-manual-pipeline>strong{font-size:11px;color:#28446a}
+.sync-manual-step{display:flex;align-items:center;gap:8px;font-size:11px;color:#7b8798;line-height:1.35}
+.sync-manual-step>b{height:19px;width:19px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:10px;border:1px solid #d8e1ee;background:white;color:#64748b}
+.sync-manual-step[data-step=done]{color:#207454;font-weight:750}
+.sync-manual-step[data-step=done]>b{color:#167650;border-color:#bce2cc;background:#e9f8ed}
+.sync-manual-step[data-step=current]{color:#265d9c;font-weight:750}
+.sync-manual-step[data-step=current]>b{background:#dcecff;color:#255c9b}
+.sync-manual-step[data-step=error]{color:#af4550;font-weight:800}
+.sync-manual-step[data-step=error]>b{background:#ffe9e9;color:#a73945;border-color:#f1c2c4}
+.sync-manual-pipeline>small{font-size:10px;line-height:1.45;color:#9b4b55}
