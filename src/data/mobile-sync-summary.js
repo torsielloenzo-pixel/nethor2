@@ -25,11 +25,16 @@ export async function readStaffSyncStatus(client){
    controlIntervalHours:data.controlIntervalHours===4?4:null,
    controlLocalHours:Array.isArray(data.controlLocalHours)?data.controlLocalHours.filter(x=>/^([01][0-9]|2[0-3]):00$/.test(String(x))).slice(0,6):[],
    nextControlAt:data.nextControlAt||null,
-   lastScheduledAt:data.lastScheduledAt||null,
-   lastRequestedAt:data.lastRequestedAt||null,
-   lastRequestedKind:['immediate','scheduled'].includes(data.lastRequestedKind)?data.lastRequestedKind:null,
-   lastRequestStatus:['none','pending','completed','error'].includes(data.lastRequestStatus)?data.lastRequestStatus:'none',
-   controlPending:data.controlPending===true
+   lastCloudCheckAt:data.lastCloudCheckAt||null,
+   lastCloudCheckStatus:['none','running','completed','failed'].includes(data.lastCloudCheckStatus)?data.lastCloudCheckStatus:'none',
+   lastCloudScanned:Number.isSafeInteger(data.lastCloudScanned)&&data.lastCloudScanned>=0?data.lastCloudScanned:0,
+   lastCloudCandidates:Number.isSafeInteger(data.lastCloudCandidates)&&data.lastCloudCandidates>=0?data.lastCloudCandidates:0,
+   lastCloudQueued:Number.isSafeInteger(data.lastCloudQueued)&&data.lastCloudQueued>=0?data.lastCloudQueued:0,
+   lastCloudPending:Number.isSafeInteger(data.lastCloudPending)&&data.lastCloudPending>=0?data.lastCloudPending:0,
+   lastCloudPublished:Number.isSafeInteger(data.lastCloudPublished)&&data.lastCloudPublished>=0?data.lastCloudPublished:0,
+   lastCloudRejected:Number.isSafeInteger(data.lastCloudRejected)&&data.lastCloudRejected>=0?data.lastCloudRejected:0,
+   lastCloudPublishedAt:data.lastCloudPublishedAt||null
+
  };
 }
 export async function readMobileSyncSummary(client){
