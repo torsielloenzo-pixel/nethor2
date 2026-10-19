@@ -789,3 +789,39 @@ html.nethor-zoom-locked select {
  .n2ms-tile{padding:7px;gap:3px}
  .n2ms-foot{padding:6px 9px}
 }
+
+
+/* HISTORIQUE UNIFIÉ : imports manuels et versions de fichiers NethorSync.
+   Historique admin ; conserve les téléchargements existants. */
+.n2hist-list{padding:15px;display:grid;gap:12px;min-width:0}
+.n2hist-entry{
+  padding:15px;border:1px solid #e2eaf5;background:#fff;border-radius:14px;
+  min-width:0;box-shadow:0 3px 12px #18365309
+}
+.n2hist-entry.sync{background:#f8fbff;border-color:#d8e6f8}
+.n2hist-top{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.n2hist-source{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;
+  font-size:10px;font-weight:850;letter-spacing:.1px}
+.n2hist-source.manual{color:#3361a7;background:#e9f1ff}
+.n2hist-source.sync{color:#197f54;background:#e2f6eb}
+.n2hist-top time{font-size:11px;color:#8293aa;font-variant-numeric:tabular-nums}
+.n2hist-entry h3{margin:11px 0 8px;font-size:14px;line-height:1.35;color:#213b60;font-weight:850;overflow-wrap:anywhere}
+.n2hist-meta,.n2hist-note{color:#7a8ca5;font-size:11px;line-height:1.45;margin:0 0 10px}
+.n2hist-note{margin:10px 0 0}
+.n2hist-entry.manual button{font-size:11px;min-height:36px}
+.n2hist-version-flow{display:grid;grid-template-columns:minmax(0,1fr) 25px minmax(0,1fr);gap:8px;align-items:stretch}
+.n2hist-version{background:#fff;border:1px solid #e4eaf2;border-radius:10px;padding:11px;min-width:0}
+.n2hist-version.latest{background:#eaf3ff;border-color:#b9d3f6}
+.n2hist-version>span{display:block;font-size:10px;color:#778ba8;font-weight:800;margin-bottom:6px}
+.n2hist-version strong,.n2hist-single strong{display:block;color:#2c4367;font-size:12px;line-height:1.35;font-weight:850;overflow-wrap:anywhere}
+.n2hist-version small,.n2hist-single small{display:block;color:#7b8da7;font-size:11px;line-height:1.5;margin-top:5px;overflow-wrap:anywhere}
+.n2hist-arrow{display:flex;align-items:center;justify-content:center;font-size:19px;color:#4573b8;font-weight:700}
+.n2hist-single{border:1px solid #e4eaf2;border-radius:10px;padding:11px;background:#fff}
+@media(max-width:600px){
+ .n2hist-list{padding:10px;gap:9px}
+ .n2hist-entry{padding:11px}
+ .n2hist-version-flow{grid-template-columns:minmax(0,1fr);gap:5px}
+ .n2hist-arrow{transform:rotate(90deg);height:18px}
+ .n2hist-version{padding:9px 10px}
+ .n2hist-version strong{font-size:11px}
+}
