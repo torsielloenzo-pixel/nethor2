@@ -7,6 +7,7 @@ import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.j
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
+import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
 import {readPlanningFile} from '../import/excel-structure.js';
 
 const ROOT=document.getElementById('app');
@@ -72,18 +73,23 @@ const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view
 let client;
 let booted=false;
 let personalRequestId=0;
-const isMobileHome=()=>window.matchMedia('(max-width:760px)').matches;
+// Le même contenu personnel et la même logique Jour/Semaine sur desktop
+// pour Responsable et Employé seulement, sans toucher aux administrateurs/PDV.
+const smallScreen=()=>window.matchMedia('(max-width:760px)').matches;
+const isMobileHome=()=>usesCompactLayout(state.profile?.role,smallScreen());
+const isStaffDesktop=()=>isStaffDesktopLayout(state.profile?.role,smallScreen());
 
 function showMessage(text,kind='error'){
   const block=ROOT.querySelector('#authMessage');
   if(block){block.textContent=text;block.className=kind==='error'?'form-error':'live-message';block.hidden=false;}
 }
 function renderLogin(message=''){
-  ROOT.classList.remove('menu-open');
+  ROOT.classList.remove('menu-open','staff-desktop-layout','personal-home-active','mobile-planning-active');
   document.title='Nethor · Connexion';
   ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand"><img class="nethor-login-logo" src="./assets/icon.svg" width="50" height="50" alt=""><span>NETHOR²<small>PLANNING · LE THOR</small></span></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
 }
 function renderShell(){
+  ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
   ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'">'+navIcon(key)+name+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb">NETHOR 2 <span class="sep">/</span><span id="breadPage">Accueil</span></span><span class="top-context">Netto Le Thor · Planning du personnel</span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon('anomalies')+'<span class="nav-label">Alertes</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
@@ -389,6 +395,7 @@ function render(){
   if(state.page==='import'&&state.access!=='manage')state.page='planning';
   if(state.page==='history'&&state.profile.role!=='admin')state.page='planning';
   if(!canNavigate(state.page,state.profile))state.page='planning';
+  ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
   ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
   ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&isMobileHome());
   document.title='Nethor · '+TITLES[state.page];
