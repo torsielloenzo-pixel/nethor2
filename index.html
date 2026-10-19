@@ -28,9 +28,26 @@
 <link rel="stylesheet" href="./mobile.css">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
 <script type="module" src="./src/ui/live.js"></script>
+<style>
+@media(max-width:760px){
+  #app:has(> .startup){min-height:100dvh}
+  #app > .startup{position:fixed;inset:0;z-index:9999;background:#101f40!important;display:flex!important;align-items:center;justify-content:center;min-height:100dvh;margin:0!important;padding:0!important}
+  #app > .startup > :not(.nethor-mobile-loader){display:none!important}
+  .nethor-mobile-loader{display:grid;place-items:center;width:100%;height:100%;background:#101f40}
+  .nethor-loader-mark{width:152px;height:152px;border-radius:34px;background:#0c1934;display:grid;grid-template-columns:repeat(2,36px);grid-template-rows:repeat(2,36px);gap:14px;place-content:center;transform:scale(1)}
+  .nethor-loader-mark i{display:block;width:36px;height:36px;border-radius:8px;transform:rotate(-8deg);animation:nethor-light 1.6s ease-in-out infinite}
+  .nethor-loader-mark i:nth-child(1){background:#c1d5fa;animation-delay:0s}
+  .nethor-loader-mark i:nth-child(2){background:#72a3f3;animation-delay:.4s}
+  .nethor-loader-mark i:nth-child(3){background:#82adeb;animation-delay:1.2s}
+  .nethor-loader-mark i:nth-child(4){background:#fff;animation-delay:.8s}
+  @keyframes nethor-light{0%,100%{opacity:.4;transform:rotate(-8deg) scale(.88)}50%{opacity:1;transform:rotate(-8deg) scale(1.08)}}
+  @media(prefers-reduced-motion:reduce){.nethor-loader-mark i{animation:none;opacity:1}}
+}
+@media(min-width:761px){.nethor-mobile-loader{display:none}}
+</style>
 </head>
 <body>
-<div id="app" role="main"><div class="startup"><span class="start-logo" aria-hidden="true"><img src="./assets/icon.svg" width="52" height="52" alt=""></span><strong>Nethor</strong><p>Ouverture sécurisée de votre espace planning…</p></div></div>
+<div id="app" role="main"><div class="startup"><span class="start-logo" aria-hidden="true"><img src="./assets/icon.svg" width="52" height="52" alt=""></span><strong>Nethor</strong><p>Ouverture sécurisée de votre espace planning…</p><div class="nethor-mobile-loader" role="status" aria-label="Chargement de Nethor"><div class="nethor-loader-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div></div></div>
 <noscript>L'application Nethor nécessite JavaScript.</noscript>
 </body>
 </html>
