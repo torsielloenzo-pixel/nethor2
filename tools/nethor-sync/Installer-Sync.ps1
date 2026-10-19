@@ -19,7 +19,7 @@ if (-not $PlanningFolder) {
 $root = [IO.Path]::GetFullPath($PlanningFolder)
 if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw "Le dossier de plannings n'existe pas." }
 if (-not (Test-Path -LiteralPath $target)) { New-Item -ItemType Directory -Force -Path $target | Out-Null }
-foreach ($name in @("NethorSync.ps1","Connect-NethorSync.ps1","config.example.json")) {
+foreach ($name in @("NethorSync.ps1","Connect-NethorSync.ps1","NethorSyncRunner.vbs","config.example.json")) {
   $source = Join-Path $PSScriptRoot $name
   $destination = Join-Path $target $name
   if (-not (Test-Path -LiteralPath $source)) { throw "Fichier manquant : $name. Extraire d'abord le dossier ZIP." }
@@ -43,19 +43,20 @@ $config | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $configPath -Encod
 if (-not $?) { throw "Liaison Supabase echouee. Aucune tache installee." }
 $config.uploadEnabled = $true
 $config | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $configPath -Encoding UTF8
-$exe = Join-Path $PSHOME "powershell.exe"
-$script = Join-Path $target "NethorSync.ps1"
+$exe = Join-Path $env:WINDIR "System32\wscript.exe"
+$script = Join-Path $target "NethorSyncRunner.vbs"
+if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Hote Windows Script Host indisponible." }
 function Add-Task([string]$Name,[string]$Args,[string[]]$Schedule) {
-  $command = '"' + $exe + '" -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $script + '" ' + $Args
+  $command = '"' + $exe + '" //B //Nologo "' + $script + '" ' + $Args
   & schtasks.exe /Create /F /TN $Name /TR $command @Schedule
   if ($LASTEXITCODE -ne 0) { throw "Installation de la tache Windows impossible: $Name" }
 }
 # Supprimer l'ancien passage toutes les 3 heures (conservé par Nethor Sync Lite).
 & schtasks.exe /Delete /F /TN "Nethor Sync 2 - Toutes les 3h" 2>$null | Out-Null
 & schtasks.exe /Delete /F /TN "Nethor Sync 2 - Ouverture de session" 2>$null | Out-Null
-Add-Task "Nethor Sync 2 - Lundi-Samedi" "-Scheduled" @("/SC","WEEKLY","/D","MON,TUE,WED,THU,FRI,SAT","/ST","19:00")
-Add-Task "Nethor Sync 2 - Dimanche" "-Scheduled" @("/SC","WEEKLY","/D","SUN","/ST","12:00")
-Add-Task "Nethor Sync 2 - Controle Manuel" "-PollOnly" @("/SC","MINUTE","/MO","5")
+Add-Task "Nethor Sync 2 - Lundi-Samedi" "scheduled" @("/SC","WEEKLY","/D","MON,TUE,WED,THU,FRI,SAT","/ST","19:00")
+Add-Task "Nethor Sync 2 - Dimanche" "scheduled" @("/SC","WEEKLY","/D","SUN","/ST","12:00")
+Add-Task "Nethor Sync 2 - Controle Manuel" "poll" @("/SC","MINUTE","/MO","5")
 Write-Host "Nethor Sync 2 installe et lie sur $([Environment]::MachineName)."
 Write-Host "Dossier controle : $root"
 Write-Host "Automatique lundi-samedi 19 h, dimanche 12 h; demande manuelle verifiee toutes les 5 min."
