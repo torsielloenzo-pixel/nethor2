@@ -201,6 +201,58 @@ function Upload-Candidate($Settings, [string]$Token, $File, [string]$Hash, $Devi
   }
 }
 
+# En cas de rejet d'un lot d'historique, isoler les entrees en echec plutot
+# que perdre l'historique de toutes les autres versions. La RPC reste atomique
+# par lot et sa contrainte unique permet de reprendre sans doublons.
+$script:historyRetryBudget = 64
+function Mark-FileHistoryFailure([object[]]$Batch,[string]$Reason) {
+  foreach ($item in $Batch) {
+    $script:errors += [pscustomobject]@{
+      file=[string]$item.relativePath
+      reason=('Historique non confirme : ' + $Reason)
+    }
+    foreach ($row in @($script:entries)) {
+      if ($row.path -eq $item.relativePath -and $row.sha256 -eq $item.sha256) {
+        $row.upload = 'history_error'
+        break
+      }
+    }
+  }
+}
+function Submit-FileHistoryBatch($Settings,[string]$Token,$Device,[object[]]$Batch) {
+  if (-not $Batch -or $Batch.Count -eq 0) { return }
+  if ($script:historyRetryBudget -le 0) {
+    Mark-FileHistoryFailure $Batch 'Limite des reprises du lot atteinte.'
+    return
+  }
+  $script:historyRetryBudget--
+  try {
+    $reply = Invoke-SyncRpc $Settings $Token 'nethor_sync_record_file_changes' @{
+      p_device_id=$Device.id; p_secret=$Device.secret
+      p_generation=$Device.generation; p_changes=$Batch
+    }
+    if ($null -eq $reply -or $reply.accepted -ne $true) {
+      throw 'Historique non confirme par Supabase.'
+    }
+  } catch {
+    Add-SafeSyncError $_ 'file_history'
+    if ($Batch.Count -eq 1) {
+      # Seul ce fichier reste non confirme ; il sera retente au prochain scan.
+      Mark-FileHistoryFailure $Batch $_.Exception.Message
+      return
+    }
+    $middle=[int][math]::Floor($Batch.Count / 2)
+    $left=@()
+    $right=@()
+    for ($i=0; $i -lt $Batch.Count; $i++) {
+      if ($i -lt $middle) { $left += $Batch[$i] }
+      else { $right += $Batch[$i] }
+    }
+    Submit-FileHistoryBatch $Settings $Token $Device $left
+    Submit-FileHistoryBatch $Settings $Token $Device $right
+  }
+}
+
 # Une seule instance pour eviter la rotation simultanee du jeton Supabase.
 $mutex = [System.Threading.Mutex]::new($false, "Local\NethorSync2")
 if (-not $mutex.WaitOne(0)) {
@@ -278,7 +330,7 @@ foreach ($file in $files) {
     $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     $entry.sha256 = $hash
     $old = $previousByPath[$relative]
-    if ($null -ne $old -and $old.sha256 -eq $hash -and $old.upload -eq "error") {
+    if ($null -ne $old -and $old.sha256 -eq $hash -and $old.upload -in @("error","history_error")) {
       # Une erreur précédente ne confirme PAS que le fichier a été transféré.
       # Reprendre l'historisation, même si le contenu local n'a pas changé.
       $entry.status = "new"
@@ -358,10 +410,7 @@ if ($networkEnabled) {
     $script:syncStage='file_history'
     for ($offset = 0; $offset -lt $changes.Count; $offset += 100) {
       $batch = @($changes | Select-Object -Skip $offset -First 100)
-      $null = Invoke-SyncRpc $config $token 'nethor_sync_record_file_changes' @{
-        p_device_id=$device.id; p_secret=$device.secret
-        p_generation=$device.generation; p_changes=$batch
-      }
+      Submit-FileHistoryBatch $config $token $device $batch
     }
   # Les erreurs du scan sont agrégées (sans nom de fichiers).
   # Le rapport est transmis même lorsque l'accusé de réception reste en attente.
@@ -398,6 +447,22 @@ Write-Host ("Nethor Sync 2 - {0} fichier(s), {1} erreur(s), mode {2}" -f $files.
 Write-Host "Rapport: $reportPath"
 if ($errors.Count -gt 0) { exit 1 }
 } catch {
+  # Conserver un rapport meme si la session, l'historisation ou l'accuse final
+  # echoue avant le chemin normal de sauvegarde.
+  try {
+    if ($reportPath) {
+      $failureMessage=$_.Exception.Message
+      $failedReport=[ordered]@{
+        generatedUtc=(Get-Date).ToUniversalTime().ToString('o')
+        root=$root; simulated=(-not $networkEnabled)
+        scanned=@($entries).Count; entries=@($entries)
+        errors=@(@($errors) + @([pscustomobject]@{
+          file=$null; reason=('Erreur globale ('+$script:syncStage+') : '+$failureMessage)
+        }))
+      }
+      Save-JsonAtomic $reportPath $failedReport
+    }
+  } catch { }
   # Un échec global (historique RPC, accusé de réception, etc.) est aussi
   # traçable, mais les détails et secrets ne quittent jamais le PC.
   if ($networkEnabled -and $token -and $device) {
