@@ -21,7 +21,7 @@ test('Poste non installé : bouton installer, jamais un faux état actif',()=>{
  assert.match(html,/Non installé \/ configuré/);
  assert.match(html,/data-action="nethor-sync-install"/);
  assert.doesNotMatch(html,/Dernière synchronisation/);
- assert.equal(NETHOR_SYNC_INSTALLER_URL,'./nethor-sync-2.zip');
+ assert.match(NETHOR_SYNC_INSTALLER_URL,/releases\/download\/nethor-sync2-latest\/NethorSync2-Setup\.exe$/);
 });
 test('Poste opérationnel : date, heure, dernier transfert et nom de poste',()=>{
  const snapshot={loaded:true,status:{
@@ -80,4 +80,18 @@ test('Zip installer publié sans exposer de secret et sans cache PWA',()=>{
  assert.match(installer,/19:00/);
  assert.match(installer,/12:00/);
  assert.doesNotMatch(installer,/service_role|SUPABASE_SERVICE_ROLE/i);
+});
+
+test('EXE autonome : le packaging demande explicitement le dossier et travaille en arrière-plan',()=>{
+ const spec=read('tools/nethor-sync/NethorSync2.iss');
+ const runner=read('tools/nethor-sync/NethorSyncRunner.vbs');
+ const workflow=read('.github/workflows/build-nethor-sync-exe.yml');
+ assert.match(spec,/CreateInputDirPage/);
+ assert.match(spec,/NethorSyncRunner.vbs/);
+ assert.match(spec,/PrivilegesRequired=lowest/);
+ assert.match(spec,/SW_SHOWNORMAL/);
+ assert.match(runner,/shell.Run\(command, 0, True\)/i);
+ assert.match(workflow,/gh release upload/);
+ assert.match(workflow,/NethorSync2-Setup.exe/);
+ assert.doesNotMatch(runner,/service_role|password|refresh_token/i);
 });
