@@ -12,6 +12,8 @@ import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
 import {readSyncStatus,readSyncHistory} from '../data/nethor-sync-control.js';
+import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
+import {renderMobileSyncSummary} from './mobile-sync-summary.js';
 import {createSyncController} from './nethor-sync-ui.js';
 import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
 import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
@@ -54,10 +56,10 @@ function closeMobileMenu(){
 
 const DAYS=['Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.','Dim.'];
 const TITLES={home:'Vue d’ensemble',planning:'Planning',anomalies:'Anomalies',import:'Importer',team:'Équipe',history:'Historique',settings:'Paramètres'};
-const MOBILE_PAGE_TITLES={home:'Accueil',planning:'Planning',anomalies:'Alertes',import:'Importer',team:'Équipe',history:'Historique',settings:'Paramètres'};
+const MOBILE_PAGE_TITLES={home:'Accueil',planning:'Planning',anomalies:'NethorSync',import:'Importer',team:'Équipe',history:'Historique',settings:'Paramètres'};
 
 // Pictogrammes SVG communs : desktop, mobile et PWA.
-const NAV_ICON_PATHS=Object.freeze({"home":"<path d=\"m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"/><path d=\"M9 21v-8h6v8\"/>","planning":"<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M16 3v4M8 3v4M3 10h18\"/><path d=\"m9 16 2 2 4-4\"/>","anomalies":"<path d=\"M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z\"/><path d=\"M12 9v4M12 17h.01\"/>","import":"<path d=\"M12 16V3m-5 5 5-5 5 5\"/><path d=\"M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3\"/>","team":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","history":"<path d=\"M3 12a9 9 0 1 0 3-6.71L3 8\"/><path d=\"M3 3v5h5M12 7v5l4 2\"/>","settings":"<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"M16 17l5-5-5-5M21 12H9\"/>"});
+const NAV_ICON_PATHS=Object.freeze({"sync":"<path d=\\"M3 12a9 9 0 0 1 15.4-6.3L21 8m0-5v5h-5\\"/><path d=\\"M21 12A9 9 0 0 1 5.6 18.3L3 16m0 5v-5h5\\"/>","home":"<path d=\"m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"/><path d=\"M9 21v-8h6v8\"/>","planning":"<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M16 3v4M8 3v4M3 10h18\"/><path d=\"m9 16 2 2 4-4\"/>","anomalies":"<path d=\"M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z\"/><path d=\"M12 9v4M12 17h.01\"/>","import":"<path d=\"M12 16V3m-5 5 5-5 5 5\"/><path d=\"M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3\"/>","team":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","history":"<path d=\"M3 12a9 9 0 1 0 3-6.71L3 8\"/><path d=\"M3 3v5h5M12 7v5l4 2\"/>","settings":"<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"M16 17l5-5-5-5M21 12H9\"/>"});
 function navIcon(name){
   const paths=NAV_ICON_PATHS[name];
   if(!paths)return "";
@@ -77,7 +79,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
 let syncChartPeriod=7;
@@ -113,7 +115,7 @@ function renderLogin(message=''){
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>Nethor</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'">'+navIcon(key)+name+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">Nethor</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon('anomalies')+'<span class="nav-label">Alertes</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>Nethor</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'">'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">Nethor</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -135,6 +137,7 @@ async function signOut(){
   if(state.user?.id)clearRecoveryDismissed(state.user.id);
   recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
   state.nethorSync={loaded:false,loading:false,status:null,error:''};
+  state.mobileSync={loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
@@ -148,6 +151,7 @@ async function startAuthorized(access){
   state.profile=access.gate.profile;
   recoveryPrompt={step:'closed',dismissed:recoveryDismissed(state.user.id),saving:false,error:'',mailStatus:''};
   state.nethorSync={loaded:false,loading:false,status:null,error:''};
+  state.mobileSync={loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.access=access.access;
   state.lastCheck=Date.now();
@@ -416,7 +420,27 @@ function pagePlanning(metrics){
   });
   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+planningCard(metrics);
 }
+
+async function loadMobileSyncStatus(force=false){
+ if(!state.user||!smallScreen()||state.page!=='anomalies'||state.mobileSync.loading)return;
+ if(!force&&state.mobileSync.loaded&&Date.now()-state.mobileSync.checkedAt<120000)return;
+ const userId=state.user.id;
+ state.mobileSync.loading=true;
+ render();
+ try{
+  const result=await readMobileSyncSummary(client);
+  if(state.user?.id!==userId)return;
+  state.mobileSync={...result,loading:false};
+ }catch(_){
+  if(state.user?.id!==userId)return;
+  state.mobileSync={loaded:true,loading:false,planning:null,planningError:true,sync:null,syncError:true,checkedAt:Date.now()};
+ }finally{
+  if(state.user?.id===userId){state.mobileSync.loading=false;if(state.page==='anomalies'&&smallScreen())render();}
+ }
+}
+
 function pageAnomalies(metrics){
+  if(smallScreen())return renderMobileSyncSummary(state.mobileSync);
   return renderPageHeader('ANALYSE','Points à vérifier','Contrôles indicatifs : créneaux, pauses, journées longues et heures contractuelles.')+summary(metrics)+alertsCard(metrics,false)+'<p class="live-muted" style="margin-top:17px">Une anomalie de planning n’équivaut pas nécessairement à une infraction. Les règles métier doivent être vérifiées.</p>';
 }
 function pageTeam(metrics){
@@ -637,9 +661,14 @@ function render(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
   ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
   ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&isMobileHome());
-  document.title='Nethor · '+TITLES[state.page];
-  ROOT.querySelector('#breadPage').textContent=MOBILE_PAGE_TITLES[state.page]||TITLES[state.page];
+  ROOT.classList.toggle('mobile-sync-active',state.page==='anomalies'&&smallScreen());
+  document.title='Nethor · '+(smallScreen()?MOBILE_PAGE_TITLES[state.page]:TITLES[state.page]);
+  ROOT.querySelector('#breadPage').textContent=TITLES[state.page];
   ROOT.querySelector('#mobileCurrentPage').textContent=MOBILE_PAGE_TITLES[state.page]||TITLES[state.page];
+  const anomaliesNav=ROOT.querySelector('[data-nav="anomalies"]');
+  if(anomaliesNav?.lastChild?.nodeType===3)anomaliesNav.lastChild.textContent=smallScreen()?'NethorSync':'Anomalies';
+  const syncTab=ROOT.querySelector('.live-navigator [data-page="anomalies"] .nav-label');
+  if(syncTab)syncTab.textContent=smallScreen()?'NethorSync':'Alertes';
   ROOT.querySelectorAll('[data-page]').forEach(el=>{
     el.classList.toggle('active',el.dataset.page===state.page);
     if(el.dataset.page===state.page)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
@@ -658,6 +687,7 @@ function go(page){
   state.page=page;state.notice='';state.error='';
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
+  if(page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
   if(page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&!state.nethorSync.loading)void loadNethorSyncStatus();
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
@@ -806,6 +836,7 @@ async function verifyResume(){
     }
     render();
     if(state.page==='home'&&isMobileHome()&&!state.personal.loading&&(Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
+    if(state.page==='anomalies'&&smallScreen()&&(!state.mobileSync.loaded||Date.now()-state.mobileSync.checkedAt>120000))void loadMobileSyncStatus(true);
   }catch{await signOut();}
 }
 // Le dialogue est monté directement sur <body> : hors des conteneurs à overflow
@@ -887,6 +918,10 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(action==='nethor-sync-mobile-refresh'){
+    if(state.page==='anomalies'&&smallScreen())await loadMobileSyncStatus(true);
+    return;
+  }
   if(action==='nethor-sync-refresh'){await loadNethorSyncStatus();return;}
    if(action==='nethor-sync-chart-7'||action==='nethor-sync-chart-30'){
      if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.page!=='home')return;
@@ -953,6 +988,7 @@ window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
   if(!smallScreen())closeFirstLoginRecovery();
   if(!state.user)return;
   render();
+  if(state.page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
   if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
 });
 document.addEventListener('keydown',event=>{
