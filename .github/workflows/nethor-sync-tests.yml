@@ -36,3 +36,25 @@ jobs:
           }
           & .\tools\nethor-sync\Register-NethorSyncTasks.ps1 -AppPath (Resolve-Path .\tools\nethor-sync) -ProbeOnly
           if (-not $?) { throw 'La définition des tâches Windows a échoué.' }
+      - name: Tester création réelle des tâches sous Windows puis nettoyer le runner
+        shell: powershell
+        run: |
+          $names = @('Nethor Sync 2 - Lundi-Samedi','Nethor Sync 2 - Dimanche','Nethor Sync 2 - Controle Manuel')
+          $service = New-Object -ComObject 'Schedule.Service'
+          $service.Connect()
+          $folder = $service.GetFolder('\')
+          try {
+            & .\tools\nethor-sync\Register-NethorSyncTasks.ps1 -AppPath (Resolve-Path .\tools\nethor-sync)
+            if (-not $?) { throw 'Le planificateur Windows a refuse une tâche.' }
+            foreach ($name in $names) {
+              $registered = $folder.GetTask($name)
+              if (-not $registered) { throw "Tache absente : $name" }
+              if ($registered.Definition.Principal.LogonType -ne 3) { throw "Logon interactif non configure : $name" }
+            }
+          }
+          finally {
+            foreach ($name in $names) {
+              try { $folder.DeleteTask($name,0) }
+              catch { Write-Host "Nettoyage facultatif : $name" }
+            }
+          }
