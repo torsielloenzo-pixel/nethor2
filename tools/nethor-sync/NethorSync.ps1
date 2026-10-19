@@ -114,7 +114,6 @@ function Send-SafeSyncDiagnostic($Settings,[string]$Token,$Device,[int]$Scanned,
     $groups=@($script:diagnosticGroups.Values | Sort-Object { -[int]$_.count } |
       Select-Object -First 12)
     $primary=$groups[0]
-    $sum=@($groups | Measure-Object -Property count -Sum)[0].Sum
     $majorStage=[string]$primary.stage
     $majorCode=if ($script:diagnosticGroups.Count -gt 1) { 'mixed' } else { [string]$primary.code }
     $topStatus=$null
@@ -403,7 +402,10 @@ if ($errors.Count -gt 0) { exit 1 }
   # traçable, mais les détails et secrets ne quittent jamais le PC.
   if ($networkEnabled -and $token -and $device) {
     Add-SafeSyncError $_ $script:syncStage
-    Send-SafeSyncDiagnostic $config $token $device @($entries).Count ([Math]::Max(1,@($errors).Count)) @($entries | Where-Object { $_.upload -eq 'staged' }).Count
+    $scannedCount=@($entries).Count
+    $failedCount=[Math]::Max(1,@($errors).Count)
+    $transferredCount=@($entries | Where-Object { $_.upload -eq 'staged' }).Count
+    Send-SafeSyncDiagnostic $config $token $device $scannedCount $failedCount $transferredCount
   }
   throw
 } finally {
