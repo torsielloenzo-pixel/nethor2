@@ -980,13 +980,13 @@ ROOT.addEventListener('click',async event=>{
      const scrollY=window.scrollY;render();window.scrollTo(0,scrollY);return;
    }
   if(action==='nethor-sync-install'){
-    if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.nethorSync.status?.installed!==false)return;
+    if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.nethorSync.error||!state.nethorSync.loaded)return;
     const download=document.createElement('a');
     download.href=NETHOR_SYNC_INSTALLER_URL;
     download.rel='noopener noreferrer';
     document.body.appendChild(download);download.click();download.remove();
     const help=ROOT.querySelector('#n2sync-install-help');
-    if(help){help.hidden=false;help.textContent='L’installateur NethorSync-Setup.exe (version compatible MSI) est téléchargé depuis GitHub Releases. Ouvre-le sur ce PC Windows puis sélectionne le dossier de tes plannings.';}
+    if(help){help.hidden=false;help.textContent='L’installateur NethorSync-Setup.exe (version corrigée 2.1.4) est téléchargé depuis GitHub Releases. Ouvre-le sur ce PC Windows puis sélectionne le dossier de tes plannings.';}
     return;
   }
   if(action==='forgot-password')await requestRecoveryEmail(ROOT.querySelector('#loginEmail')?.value,true);
