@@ -1,8 +1,11 @@
 #requires -Version 5.1
 # Login interactif: ne conserve que le refresh token, chiffre pour cet utilisateur Windows via DPAPI.
 [CmdletBinding()]
-param([string]$ConfigPath = (Join-Path $PSScriptRoot "config.json"))
+param([string]$ConfigPath = "")
 $ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+  $ConfigPath = Join-Path -Path $PSScriptRoot -ChildPath "config.json"
+}
 if (-not (Test-Path -LiteralPath $ConfigPath)) { throw "Copier config.example.json vers config.json avant la connexion." }
 $config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if (-not $config.supabaseUrl -or -not $config.publishableKey) { throw "Configuration Supabase incomplete." }
