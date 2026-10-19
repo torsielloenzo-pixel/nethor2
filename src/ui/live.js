@@ -102,6 +102,9 @@ function showMessage(text,kind='error'){
   if(block){block.textContent=text;block.className=kind==='error'?'form-error':'live-message';block.hidden=false;}
 }
 function renderLogin(message=''){
+  // La fenêtre est montée dans body : elle doit être retirée à toute déconnexion,
+  // perte de session ou retour sur l'écran de connexion.
+  document.getElementById('firstLoginRecoveryPrompt')?.remove();
   recoveryPrompt.step='closed';
   ROOT.classList.remove('menu-open','staff-desktop-layout','personal-home-active','mobile-planning-active');
   document.title='Nethor · Connexion';
@@ -126,6 +129,7 @@ async function checkSession(){
   return {gate,access};
 }
 async function signOut(){
+  closeFirstLoginRecovery();
   personalRequestId++;
   if(state.user?.id)clearRecoveryDismissed(state.user.id);
   recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
