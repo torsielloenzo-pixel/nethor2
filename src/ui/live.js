@@ -12,6 +12,7 @@ import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
 import {readSyncStatus} from '../data/nethor-sync-control.js';
+import {createSyncController} from './nethor-sync-ui.js';
 import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
 import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
 import {readPlanningFile} from '../import/excel-structure.js';
@@ -78,6 +79,7 @@ const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
 const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
+let syncController=null;
 let booted=false;
 let personalRequestId=0;
 let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
@@ -131,6 +133,7 @@ async function signOut(){
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
+  syncController=null;
   state.user=null;state.profile=null;state.weekData=null;state.profiles=[];state.importFile=null;state.importModel=null;state.importAnalysis=null;
   renderLogin();
 }
@@ -143,6 +146,8 @@ async function startAuthorized(access){
   state.access=access.access;
   state.lastCheck=Date.now();
   renderShell();
+  syncController=createSyncController(client,ROOT,state.profile);
+  syncController?.mount();
   // Vérification serveur une fois connecté, exclusivement en contexte téléphone/PWA mobile.
   if(shouldCheckRecoveryOnLogin())void maybeOfferRecoveryAfterLogin();
   await loadProfiles();
@@ -597,7 +602,7 @@ async function requestRecoveryEmail(identifier,fromLogin=false){
 }
 
 function pageSettings(){
-  return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>'+renderSecuritySettings(state.accountSecurity);
+  return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>'+renderSecuritySettings(state.accountSecurity)+(syncController?.settingsMarkup()||'');
 }
 function pageImport(){
   if(state.access!=='manage')return '<div class="live-error">Tu n’as pas les droits de gérer le planning.</div>';
@@ -639,6 +644,7 @@ function render(){
   if(state.error&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-error">'+escapeHtml(state.error)+'</div>';
   if(state.notice&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-message ok">'+escapeHtml(state.notice)+'</div>';
   screen.innerHTML=top+pages[state.page]();
+  syncController?.paint();
 }
 function go(page){
   if(!(page in TITLES)||!canNavigate(page,state.profile))return;
@@ -893,6 +899,7 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='clear-import'){state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.importError='';render();}
   else if(action==='publish')await publish();
   else if(action==='history-refresh')await loadHistory();
+  else if(action.startsWith('sync-')&&syncController)await syncController.action(action);
 });
 ROOT.addEventListener('change',event=>{if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);});
 ROOT.addEventListener('input',event=>{
