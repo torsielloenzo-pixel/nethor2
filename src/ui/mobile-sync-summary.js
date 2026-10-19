@@ -1,7 +1,7 @@
 import {syncHealth} from '../data/nethor-sync-control.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-const validDate=value=>{const n=Date.parse(String(value||''));return Number.isFinite(n)?new Date(n):null;};
+const validDate=value=>{const n=typeof value==='number'?value:Date.parse(String(value||''));return Number.isFinite(n)?new Date(n):null;};
 
 export function formatPublicSyncTime(value,{includeDate=true}={}){
  const d=validDate(value);
@@ -35,7 +35,6 @@ export function renderMobileSyncSummary(snapshot={},now=Date.now()){
  const weekLabel=published?formatPublishedWeek(published.weekStart):'En attente de publication';
  const lastCheck=formatPublicSyncTime(snapshot?.sync?.lastCheckAt);
  const lastTransfer=formatPublicSyncTime(snapshot?.sync?.lastTransferAt);
- const seen=formatPublicSyncTime(snapshot?.sync?.lastSeenAt);
  const checkText=lastCheck.date==='—'?'Aucune vérification':lastCheck.date;
  const transferText=lastTransfer.date==='—'?'Aucun transfert':lastTransfer.date;
  const refreshed=formatPublicSyncTime(snapshot?.checkedAt);
