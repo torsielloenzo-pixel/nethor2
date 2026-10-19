@@ -82,7 +82,7 @@ function strip(dates,selected,today){
    '<button type="button" class="n2pm-day'+(date===selected?' selected':'')+(date===today?' today':'')+'" data-mobile-planning-day="'+date+'" aria-pressed="'+(date===selected)+'" aria-label="'+safe(SHORT[i]+' '+dateLabel(date))+'">'+
    '<span>'+SHORT[i]+'</span><strong>'+Number(date.slice(-2))+'</strong></button>').join('')+'</div>';
 }
-function toolbar(weekStart,view){
+function toolbar(weekStart,view,allowYear=false){
  return '<div class="n2pm-toolbar"><div class="n2pm-pager">'+
   '<button type="button" data-action="prev" aria-label="Semaine précédente">‹</button>'+
   '<span><strong>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</strong><small>Semaine du '+safe(dateLabel(weekStart))+'</small></span>'+
@@ -90,7 +90,7 @@ function toolbar(weekStart,view){
   '<div class="n2pm-segmented" aria-label="Mode du planning">'+
   '<button type="button" data-action="week-view" class="'+(view==='week'?'selected':'')+'" aria-pressed="'+(view==='week')+'">Semaine</button>'+
   '<button type="button" data-action="day-view" class="'+(view==='day'?'selected':'')+'" aria-pressed="'+(view==='day')+'">Jour</button>'+
-  '<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false" aria-label="Ouvrir la vue annuelle">Année</button></div></div>';
+  (allowYear?'<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false" aria-label="Ouvrir la vue annuelle">Année</button>':'')+'</div></div>';
 }
 function summary(cells){
  return '<div class="n2pm-summary">'+cells.map(c=>'<div><span>'+safe(c[0])+'</span><strong>'+safe(c[1])+'</strong></div>').join('')+'</div>';
@@ -166,7 +166,7 @@ function dayView(data,selected,today,clock,filter,awayExpanded){
  if(isToday)out+='<p class="n2pm-footnote">Les statuts reflètent les horaires prévus, pas une présence confirmée.</p>';
  return out;
 }
-export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,currentProfile,filter='all',awayExpanded=false,loading=false,error='',now=new Date()}){
+export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,currentProfile,filter='all',awayExpanded=false,allowYear=false,loading=false,error='',now=new Date()}){
  const result=planningMobileData(model,profiles,currentProfile,weekStart);
  const selected=result.dates.includes(selectedDay)?selectedDay:result.dates[0];
  const clock=parisClock(now);
@@ -178,7 +178,7 @@ export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,
  return '<section class="n2pm" aria-label="Planning mobile de l’équipe">'+
   '<header class="n2pm-page-heading"><div><span>NETTO LE THOR</span><h1>Planning</h1></div>'+
   '<button type="button" data-action="refresh" aria-label="Actualiser le planning" title="Actualiser">↻</button></header>'+
-  toolbar(weekStart,view)+
+  toolbar(weekStart,view,allowYear)+
   (error?'<p class="n2pm-error" role="alert">'+safe(error)+'</p>':'')+
   content+'</section>';
 }
