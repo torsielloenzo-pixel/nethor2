@@ -9,6 +9,15 @@ function rpcResult({data,error}) {
 export async function readSyncStatus(client) {
   return rpcResult(await client.rpc('nethor_sync_status'));
 }
+// Agrégats d'exécutions depuis le serveur (30 jours au maximum).
+// Les données sont agrégées sans exposer les noms ou chemins des fichiers.
+export async function readSyncHistory(client){
+ const {data,error}=await client.rpc('nethor_sync_history',{p_days:30});
+ if(error)throw Error(error.message||'Historique indisponible');
+ if(!Array.isArray(data))throw Error('Format historique invalide');
+ return data;
+}
+
 export async function requestManualSync(client) {
   return rpcResult(await client.rpc('nethor_sync_request_manual'));
 }
