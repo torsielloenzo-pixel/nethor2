@@ -43,3 +43,12 @@ test('PWA iOS : fond continu dans la zone de statut et cache renouvelé',()=>{
   assert.match(read('sw.js'),/src\/ui\/live\.js/);
   assert.match(read('sw.js'),/mobile\.css/);
 });
+
+test('la touche sur le symbole ≡ ouvre réellement le tiroir mobile, sans collision',()=>{
+  assert.match(js,/const menuButton=event\.target\.closest\('#mobileMenu'\)/);
+  assert.match(js,/menuButton\.setAttribute\('aria-expanded',String\(shown\)\)/);
+  assert.match(js,/event\.target\.closest\('#sidebarBackdrop'\)/);
+  assert.match(css,/#app\.menu-open \.app\{overflow:visible!important\}/);
+  assert.match(css,/#app\.menu-open #sidebar\{position:fixed;z-index:1001/);
+  assert.match(css,/#app\.menu-open \.mobile-drawer-backdrop\{position:fixed;inset:0;z-index:1000/);
+});
