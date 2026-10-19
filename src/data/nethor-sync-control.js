@@ -28,6 +28,15 @@ export async function readSyncFileChanges(client,{limit=200}={}){
  return data;
 }
 
+// État des publications automatiques, visible uniquement aux rôles gérant NethorSync.
+export async function readSyncAutoPublications(client,{limit=20}={}){
+ if(!Number.isInteger(limit)||limit<1||limit>100)throw new RangeError('Limite invalide');
+ const {data,error}=await client.rpc('nethor_sync_auto_publications',{p_limit:limit});
+ if(error)throw Error(error.message||'Publications automatiques indisponibles');
+ if(!Array.isArray(data))throw Error('Format publications automatiques invalide');
+ return data;
+}
+
 export async function requestManualSync(client) {
   return rpcResult(await client.rpc('nethor_sync_request_manual'));
 }
