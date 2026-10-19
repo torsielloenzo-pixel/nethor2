@@ -604,3 +604,37 @@
 @media(max-width:760px) and (prefers-reduced-motion:reduce){
  #firstLoginRecoveryPrompt .n2rp-sheet{animation:none}
 }
+
+
+/* NETHORSYNC VUE ENSEMBLE DESKTOP : Administrateur et Point de vente uniquement. */
+@media(min-width:761px){
+  .n2sync-home-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .n2sync-home-layout{align-items:start}
+  .n2sync-home-layout>.stack{min-width:0}
+  .n2sync-home-layout .n2sync-card{min-width:0;overflow:hidden}
+  .n2sync-card .card-head{align-items:center;gap:12px;flex-wrap:wrap}
+  .n2sync-card .card-head .sub{margin-top:5px}
+  .n2sync-status{display:inline-flex;align-items:center;gap:7px;border:1px solid #dfe5ed;background:#f4f6f9;border-radius:100px;padding:8px 11px;font-size:11px;line-height:1.15;font-weight:800;color:#596d87;white-space:nowrap}
+  .n2sync-status i{width:8px;height:8px;flex:none;border-radius:50%;background:#95a4b9}
+  .n2sync-status[data-state="online"]{color:#197448;background:#ebf8f0;border-color:#c5ecd4}
+  .n2sync-status[data-state="online"] i{background:#35b97a;box-shadow:0 0 0 3px #35b97a24}
+  .n2sync-status[data-state="offline"],.n2sync-status[data-state="not-seen"]{color:#9a641d;background:#fff5e6;border-color:#f7e3bf}
+  .n2sync-status[data-state="offline"] i,.n2sync-status[data-state="not-seen"] i{background:#e8a83d}
+  .n2sync-status[data-state="error"]{color:#ad4647;background:#fff0f0;border-color:#f0d2d2}
+  .n2sync-card .card-body{display:grid;gap:15px}
+  .n2sync-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .n2sync-detail{min-width:0;min-height:96px;display:flex;flex-direction:column;gap:6px;border:1px solid #e4ebf5;background:#f7f9fd;border-radius:12px;padding:13px}
+  .n2sync-detail>span{font-size:10px;font-weight:750;color:#71839d}
+  .n2sync-detail>strong{font-size:14px;line-height:1.35;font-weight:850;color:#263c5e;overflow-wrap:anywhere}
+  .n2sync-detail>small{font-size:11px;color:#7288a7}
+  .n2sync-empty{border:1px dashed #d6e2f0;background:#f8fbff;padding:23px;border-radius:12px;color:#6a7e9a;font-size:12px;line-height:1.55}
+  .n2sync-actions{display:flex;gap:9px;align-items:center}
+  .n2sync-actions .btn{min-height:42px;font-size:12px}
+  .n2sync-footnote{font-size:11px;line-height:1.55;color:#8491a6;margin:0}
+  .n2sync-install-help{margin:0;background:#eaf1ff;border-radius:10px;padding:11px 13px;font-size:11px;line-height:1.6;color:#355b94}
+}
+@media(min-width:761px) and (max-width:1160px){
+  .n2sync-details{grid-template-columns:minmax(0,1fr)}
+  .n2sync-detail{min-height:70px}
+  .n2sync-status{white-space:normal}
+}
