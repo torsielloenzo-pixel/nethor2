@@ -53,8 +53,8 @@ function Add-Task([string]$Name,[string]$Args,[string[]]$Schedule) {
 # Supprimer l'ancien passage toutes les 3 heures (conservé par Nethor Sync Lite).
 & schtasks.exe /Delete /F /TN "Nethor Sync 2 - Toutes les 3h" 2>$null | Out-Null
 & schtasks.exe /Delete /F /TN "Nethor Sync 2 - Ouverture de session" 2>$null | Out-Null
-Add-Task "Nethor Sync 2 - Lundi-Samedi" "" @("/SC","WEEKLY","/D","MON,TUE,WED,THU,FRI,SAT","/ST","19:00")
-Add-Task "Nethor Sync 2 - Dimanche" "" @("/SC","WEEKLY","/D","SUN","/ST","12:00")
+Add-Task "Nethor Sync 2 - Lundi-Samedi" "-Scheduled" @("/SC","WEEKLY","/D","MON,TUE,WED,THU,FRI,SAT","/ST","19:00")
+Add-Task "Nethor Sync 2 - Dimanche" "-Scheduled" @("/SC","WEEKLY","/D","SUN","/ST","12:00")
 Add-Task "Nethor Sync 2 - Controle Manuel" "-PollOnly" @("/SC","MINUTE","/MO","5")
 Write-Host "Nethor Sync 2 installe et lie sur $([Environment]::MachineName)."
 Write-Host "Dossier controle : $root"
