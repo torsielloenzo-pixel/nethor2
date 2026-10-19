@@ -5,12 +5,17 @@ No planning is published by this script. Publication stays in Nethor2.
 #>
 [CmdletBinding()]
 param(
-  [string]$ConfigPath = (Join-Path $PSScriptRoot "config.json"),
+  [string]$ConfigPath = "",
   [switch]$DryRun,
   [switch]$PollOnly,
   [switch]$Scheduled
 )
 $ErrorActionPreference = "Stop"
+# PSScriptRoot n est pas toujours initialise lors de l evaluation des valeurs
+# par defaut des parametres PowerShell. Resoudre le chemin dans le corps du script.
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+  $ConfigPath = Join-Path -Path $PSScriptRoot -ChildPath "config.json"
+}
 
 function Read-JsonFile([string]$Path, $Fallback) {
   if (-not (Test-Path -LiteralPath $Path)) { return $Fallback }
