@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from '../src/ui/nethor-sync-import-guide.js';
 
 const NOW=Date.parse('2026-10-19T20:00:00Z');
@@ -35,4 +36,20 @@ test('échec de lecture RPC : le guide ne prétend pas que NethorSync est actif'
 test('sans navigateur, confirmation refusée par défaut',async()=>{
   const accepted=await confirmImportManually({health:'online',weekLabel:'19 octobre 2026',fileName:'planning.xls'});
   assert.equal(accepted,false);
+});
+
+test('intégration Desktop et PWA : guide, dialogue et ressources publiées',()=>{
+  const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+  const live=read('src/ui/live.js');
+  const index=read('index.html');
+  const sw=read('sw.js');
+  const workflow=read('.github/workflows/preview-pages.yml');
+  assert.match(live,/if\(!smallScreen\(\)\)body\+=renderImportSyncGuide\(state.importSync\)/);
+  assert.match(live,/await confirmImportManually\(/);
+  assert.match(live,/readSyncStatus\(client\)/);
+  assert.match(index,/nethor-sync-import-guide\.css/);
+  for(const asset of ['nethor-sync-import-guide.css','nethor-sync-import-guide.js']){
+    assert.ok(sw.includes(asset),'cache : '+asset);
+    assert.ok(workflow.includes(asset),'déploiement : '+asset);
+  }
 });
