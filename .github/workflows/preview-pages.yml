@@ -22,9 +22,9 @@ jobs:
       - name: Préparer les ressources publiques de la PWA Nethor 2
         run: |
           mkdir -p _site/assets _site/src/ui _site/src/import _site/src/domain _site/src/auth _site/src/data _site/src/config
-          cp index.html reset-password.html styles.css live.css mobile.css staff-desktop.css nethor-sync.css sw.js manifest.webmanifest CNAME _site/
+          cp index.html reset-password.html styles.css live.css mobile.css staff-desktop.css nethor-sync.css nethor-sync-import-guide.css sw.js manifest.webmanifest CNAME _site/
           cp assets/icon.svg _site/assets/
-          cp src/ui/live.js src/ui/team-access.js src/ui/planning-mobile.js src/ui/planning-year.js src/ui/layout-role.js src/ui/settings-security.js src/ui/recovery-prompt.js src/ui/nethor-sync-overview.js src/ui/mobile-zoom.js src/ui/mobile-sync-summary.js src/ui/nethor-sync-ui.js src/ui/import-history.js _site/src/ui/
+          cp src/ui/live.js src/ui/team-access.js src/ui/planning-mobile.js src/ui/planning-year.js src/ui/layout-role.js src/ui/settings-security.js src/ui/recovery-prompt.js src/ui/nethor-sync-overview.js src/ui/nethor-sync-import-guide.js src/ui/mobile-zoom.js src/ui/mobile-sync-summary.js src/ui/nethor-sync-ui.js src/ui/import-history.js _site/src/ui/
           cp src/import/import-preview.js src/import/excel-structure.js _site/src/import/
           cp src/domain/planning-core.js src/domain/employee-linker.js src/domain/personal-overview.js _site/src/domain/
           cp src/auth/session-gate.js src/auth/login-identifier.js src/auth/account-security.js src/auth/password-recovery-page.js _site/src/auth/
