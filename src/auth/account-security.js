@@ -4,7 +4,7 @@ export function normalizeRecoveryEmail(value){
 }
 export function validateRecoveryEmail(value){
   const email=normalizeRecoveryEmail(value);
-  if(email.length<5||email.length>254||!^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.endsWith('@stock-fl.local'))
+  if(email.length<5||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.endsWith('@stock-fl.local'))
     throw new Error('Saisis une adresse e-mail personnelle valide.');
   return email;
 }
