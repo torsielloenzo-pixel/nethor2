@@ -5,6 +5,7 @@ import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
 import {renderSecuritySettings} from './settings-security.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
+import {installMobileZoomLock} from './mobile-zoom.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
@@ -16,6 +17,7 @@ import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
 import {readPlanningFile} from '../import/excel-structure.js';
 
 const ROOT=document.getElementById('app');
+installMobileZoomLock();
 let pendingInstall=null;
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();pendingInstall=event;});
 window.addEventListener('appinstalled',()=>{pendingInstall=null;ROOT.querySelector('#pwaHomeCard')?.remove();});
