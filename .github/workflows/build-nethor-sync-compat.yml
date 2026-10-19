@@ -53,12 +53,12 @@ jobs:
             if (-not (Test-Path $source)) { throw "Correctif absent : $name" }
             Copy-Item -LiteralPath $source -Destination $target -Force
             $content = Get-Content -LiteralPath $target -Raw
-            if ($content -match '\\$ConfigPath\\s*=\\s*\\(Join-Path') { throw "Ancien chemin de paramètre détecté : $name" }
+            if ($content -match '\$ConfigPath\s*=\s*\(Join-Path') { throw "Ancien chemin de paramètre détecté : $name" }
           }
           $issPath='tools/nethor-sync/NethorSync2.iss'
           $iss=Get-Content -LiteralPath $issPath -Raw
           $iss=$iss.Replace('#define AppVersion "2.1.1"','#define AppVersion "2.1.2"')
-          if ($iss -notmatch '#define AppVersion "2\\.1\\.2"') { throw 'Version du correctif invalide' }
+          if ($iss -notmatch '#define AppVersion "2\.1\.2"') { throw 'Version du correctif invalide' }
           Set-Content -LiteralPath $issPath -Value $iss -Encoding UTF8
           Write-Host 'Version Windows compatible 2.1.2, sans agent permanent.'
       - name: Tester le demarrage reel du scanner et les sous-dossiers
@@ -108,14 +108,14 @@ jobs:
       - name: Test présence du fichier EXE
         shell: pwsh
         run: |
-          $file=Get-Item 'build\installer\NethorSync2-Setup-Compatibility-211.exe'
+          $file=Get-Item 'build\installer\NethorSync2-Setup-Compatibility-212.exe'
           if ($file.Length -lt 100000) { throw 'Taille de fichier incohérente' }
       - name: Joindre l exécutable à GitHub Actions
         uses: actions/upload-artifact@v4
         with:
           name: NethorSync2-Compatibility-212
           path: |
-            build/installer/NethorSync2-Setup-Compatibility-211.exe
+            build/installer/NethorSync2-Setup-Compatibility-212.exe
             build/installer/NethorSync-Setup.exe
           if-no-files-found: error
           retention-days: 30
@@ -126,7 +126,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           $tag='nethor-sync2-latest'
-          $exe='build/installer/NethorSync2-Setup-Compatibility-211.exe'
+          $exe='build/installer/NethorSync2-Setup-Compatibility-212.exe'
           $public='build/installer/NethorSync-Setup.exe'
           gh release view $tag --repo $env:GH_REPO --json tagName
           if ($LASTEXITCODE -ne 0) {throw 'Release NethorSync existante introuvable'}
