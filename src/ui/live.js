@@ -661,6 +661,8 @@ function go(page){
   if(page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&!state.nethorSync.loading)void loadNethorSyncStatus();
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
+  const planningScroller=ROOT.querySelector('#screen');
+  if(state.page==='planning'&&smallScreen()&&planningScroller)planningScroller.scrollTop=0;
   window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadHistory(){
@@ -862,13 +864,19 @@ ROOT.addEventListener('click',async event=>{
   const mobileFilter=event.target.closest('[data-mobile-planning-filter]');
   if(mobileFilter&&isMobileHome()&&mobileFilter.dataset.filterMode==='day'){
     state.mobilePlanning.dayFilter=mobileFilter.dataset.mobilePlanningFilter;
-    const y=window.scrollY;render();window.scrollTo(0,y);return;
+    const y=ROOT.querySelector('#screen')?.scrollTop||0;
+    render();
+    const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=y;
+    return;
   }
   const mobileAway=event.target.closest('[data-mobile-planning-away]');
   if(mobileAway&&isMobileHome()){
     event.preventDefault();
     state.mobilePlanning.awayExpanded=!state.mobilePlanning.awayExpanded;
-    const y=window.scrollY;render();window.scrollTo(0,y);return;
+    const y=ROOT.querySelector('#screen')?.scrollTop||0;
+    render();
+    const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=y;
+    return;
   }
   const day=event.target.closest('[data-day]');
   if(day){state.day=day.dataset.day;state.view='day';render();return;}
