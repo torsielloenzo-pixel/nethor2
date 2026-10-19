@@ -62,6 +62,12 @@ test('vérification auprès du serveur après connexion, sauvegarde serveur et r
  assert.match(js,/result\.configured!==true/);
  assert.match(js,/sessionStorage\.setItem\(recoveryDismissKey\(state\.user\.id\),'1'\)/);
  assert.match(js,/clearRecoveryDismissed\(gate\.gate\.user\.id\)/);
+ assert.match(js,/await loadWeek\\(\\);\\s*\\/\\/ Vérifier une fois la page mobile complètement montée/);
+ assert.match(js,/document\\.body\\.insertAdjacentHTML\\('beforeend',renderRecoveryPrompt/);
+ assert.match(js,/document\\.addEventListener\\('click'/);
+ assert.match(js,/document\\.addEventListener\\('submit'/);
+ assert.match(js,/document\\.getElementById\\('firstLoginRecoveryPrompt'\\)/);
+ assert.match(js,/if\\(response\\.success!==true\\|\\|typeof response\\.configured!=='boolean'\\)/);
  const css=read('mobile.css');
  assert.match(css,/@media\(max-width:760px\)\{\s*body:has\(#firstLoginRecoveryPrompt\)/);
  assert.match(css,/env\(safe-area-inset-bottom\)/);
@@ -70,5 +76,5 @@ test('vérification auprès du serveur après connexion, sauvegarde serveur et r
 test('publiée dans web, préchargement PWA et serveur de développement',()=>{
  const sw=read('sw.js'),build=read('.github/workflows/preview-pages.yml'),dev=read('scripts/dev-server.js');
  for(const file of [sw,build,dev])assert.ok(file.includes('recovery-prompt.js'));
- assert.match(sw,/nethor-mobile-nozoom-v16/);
+ assert.match(sw,/nethor-mobile-drawer-recovery-v17/);
 });
