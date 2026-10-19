@@ -68,7 +68,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,mobilePlanning:{weekFilter:'all',dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let booted=false;
 let personalRequestId=0;
@@ -335,7 +335,7 @@ function pagePlanning(metrics){
   if(isMobileHome())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:state.loading?null:visibleModel(),profiles:state.profiles,
-    currentProfile:state.profile,filter:state.view==='day'?state.mobilePlanning.dayFilter:state.mobilePlanning.weekFilter,
+    currentProfile:state.profile,filter:state.mobilePlanning.dayFilter,
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error
   });
   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+planningCard(metrics);
@@ -583,10 +583,8 @@ ROOT.addEventListener('click',async event=>{
     state.day=mobileOpen.dataset.mobilePlanningOpen;state.view='day';render();return;
   }
   const mobileFilter=event.target.closest('[data-mobile-planning-filter]');
-  if(mobileFilter&&isMobileHome()){
-    const isDay=mobileFilter.dataset.filterMode==='day';
-    const key=isDay?'dayFilter':'weekFilter';
-    state.mobilePlanning[key]=mobileFilter.dataset.mobilePlanningFilter;
+  if(mobileFilter&&isMobileHome()&&mobileFilter.dataset.filterMode==='day'){
+    state.mobilePlanning.dayFilter=mobileFilter.dataset.mobilePlanningFilter;
     const y=window.scrollY;render();window.scrollTo(0,y);return;
   }
   const mobileAway=event.target.closest('[data-mobile-planning-away]');
