@@ -58,7 +58,7 @@ try {
   Trace-Stage 'Verification des fichiers du programme'
   if (-not (Test-Path -LiteralPath $target)) { New-Item -ItemType Directory -Path $target -Force | Out-Null }
   foreach ($name in @('NethorSync.ps1','Connect-NethorSync.ps1','Verify-NethorSyncBinding.ps1',
-                      'Register-NethorSyncTasks.ps1','NethorSyncRunner.vbs','config.example.json')) {
+                      'Register-NethorSyncTasks.ps1','Watch-NethorSync.ps1','NethorSyncRunner.vbs','config.example.json')) {
     $src = Join-Path $PSScriptRoot $name
     $dst = Join-Path $target $name
     if (-not (Test-Path -LiteralPath $src -PathType Leaf)) {
