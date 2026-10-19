@@ -4,12 +4,11 @@
 
 Disponible pour **Administrateur** et **Point de vente** via la barre latérale, au-dessus de « Connecté à Nethor ».
 
-1. Cliquer **Installer NethorSync** pour télécharger `NethorSync2-Setup.zip`.
-2. Extraire le ZIP (ne pas exécuter les scripts directement dans l'archive).
-3. Lancer **Installer-NethorSync.cmd** sur le PC Windows : l'installateur ouvre une fenêtre de choix du dossier des plannings.
-4. Choisir le dossier principal. Les sous-dossiers année/mois sont inclus.
-5. Se connecter avec le compte Nethor de rôle Administrateur ou Point de vente et autorisé à gérer le planning.
-6. Le programme s'installe dans `%LOCALAPPDATA%\NethorSync2\app` sans raccourci visible et crée ses tâches Windows.
+1. Cliquer **Installer NethorSync** pour télécharger directement `NethorSync2-Setup.exe` depuis GitHub Releases (plus de ZIP requis).
+2. Lancer l'exécutable sur le PC Windows. Le programme propose le dossier `Bureau\\Nethor Sync` ; sélectionner par exemple `C:\\Users\\torsi\\Desktop\\Nethor Sync` et vérifier les sous-dossiers année/mois.
+3. Entrer un compte Nethor de rôle Administrateur ou Point de vente, autorisé à gérer le planning, dans la fenêtre temporaire de connexion.
+4. Après validation, les tâches Windows sont installées pour l'utilisateur courant et lancent l'agent sans fenêtre visible.
+5. Les scripts sont installés sous `%LOCALAPPDATA%\\NethorSync2\\app`, pas dans le dossier des Excel. Aucun raccourci ni fenêtre résidente.
 
 **Le navigateur ne peut pas installer un programme sur Windows sans une action locale de l'utilisateur.** L'installation est discrète ensuite mais reste visible dans le Planificateur Windows et dans les fichiers de l'utilisateur. Aucun pilote, service système ni élévation automatique n'est installé.
 
@@ -56,3 +55,9 @@ Pour arrêter localement, désactiver les tâches « Nethor Sync 2 » dans le Pl
 - `tests/nethor-sync-local.test.ps1` : simulation PowerShell pour les statuts new, unchanged, modified et moved_or_copied.
 - Workflows GitHub Actions Windows et Node sur la branche de développement.
 - Aucun test de publication réelle d'un classeur du magasin n'a été réalisé avec cette version.
+
+## Diffusion Windows
+
+Compilé sous Windows avec Inno Setup depuis `NethorSync2.iss` puis publié à l'adresse stable : https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync2-Setup.exe. Les commits modifiant `tools/nethor-sync` reconstruisent le fichier.
+
+L'application est **non signée** (avertissement SmartScreen possible), et reste visible dans les applications installées, le Planificateur de tâches et les processus Windows. L'agent n'est pas un programme furtif : seules ses exécutions régulières n'affichent pas de console.
