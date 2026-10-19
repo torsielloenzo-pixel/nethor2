@@ -24,7 +24,7 @@ test('remplacement: mêmes noms possibles, dates ancien et nouveau affichées di
  assert.match(html,/14\/10\/2026/);
  assert.equal((html.match(/PLANNING 12.10.26 SEMAINE C/g)||[]).length,2);
  assert.match(html,/NethorSync/);
- assert.match(html,/Publication du planning non automatique/);
+ assert.match(html,/Publication automatique seulement si/);
 });
 test('archives manuelles: téléchargement préservé, aucun bouton sync illégitime',()=>{
  const rows=mergeImportHistory([{id:1,file_name:'PLANNING.xls',imported_at:'2026-10-18T14:00:00Z',
@@ -71,4 +71,14 @@ test('branchement complet: historisation de l’agent, RPC et service worker PWA
  const sw=read('sw.js'),build=read('.github/workflows/preview-pages.yml'),dev=read('scripts/dev-server.js');
  for(const item of [sw,build,dev])assert.match(item,/import-history\.js/);
  assert.match(sw,/nethor-mobile-drawer-recovery-sync-v21/);
+});
+
+test('Une publication NethorSync est distinguée de l’import manuel dans l’historique',()=>{
+ const rows=mergeImportHistory([{id:99,file_name:'PLANNING.xls',storage_path:'sync-inbox/sha-PLANNING.xls',
+  week_start:'2026-10-19',imported_at:'2026-10-19T15:00:00Z',imported_by_name:'Compte maître'}],[]);
+ assert.equal(rows[0].source,'auto');
+ const html=renderImportHistory(rows);
+ assert.match(html,/NethorSync · Publication/);
+ assert.doesNotMatch(html,/Import manuel/);
+ assert.match(html,/data-download=/);
 });
