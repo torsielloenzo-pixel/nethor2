@@ -70,6 +70,10 @@ Deno.serve(async req=>{
        }
      }
    }
+   if(job.dryRun && result==="publish") {
+     result="unchanged";
+     detail="Test de lecture réussi, sans publication : semaine "+String((model as {weekStart?:string})?.weekStart||"?");
+   }
    const {data:out,error:finishError}=await admin.rpc("nethor_sync_auto_complete",{
      p_job_id:id,p_proof:proof,p_result:result,p_model:model,p_detail:detail||null
    });
