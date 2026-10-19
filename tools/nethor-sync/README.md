@@ -1,36 +1,58 @@
-# Nethor Sync 2 — Windows
+# Nethor Sync 2 — PC Windows (préproduction)
 
-Reprise de Nethor Sync Lite pour le dépôt **Nethor2**, sans dépendance Python.
-La synchronisation **ne publie jamais** de planning dans `planning_weeks`.
+## Installation depuis Nethor2
 
-## Architecture de sécurité
+Disponible pour **Administrateur** et **Point de vente** via la barre latérale, au-dessus de « Connecté à Nethor ».
 
-1. Windows scanne le dossier de plannings Excel et les sous-dossiers.
-2. Le SHA-256 sert à distinguer fichier nouveau, inchangé, modifié, déplacé ou copié.
-3. **Simulation par défaut** : aucun transfert réseau.
-4. Après activation explicite, une session Supabase personnelle avec droit serveur `manage` dépose les originaux dans le bucket privé `planning-files`, sous `sync-inbox/<sha256>-<nom>.xls` (idem .xlsx/.xlsm).
-5. L'administrateur ouvre **Nethor2 > Importer**, sélectionne un fichier reçu, contrôle l'analyse, coche la confirmation et publie via le RPC de révision existant.
-6. La copie validée est archivée dans `nethor2/<semaine>/...`. Le fichier entrant n'est supprimé **qu'après** une publication vérifiée.
+1. Cliquer **Installer NethorSync** pour télécharger `NethorSync2-Setup.zip`.
+2. Extraire le ZIP (ne pas exécuter les scripts directement dans l'archive).
+3. Lancer **Installer-NethorSync.cmd** sur le PC Windows : l'installateur ouvre une fenêtre de choix du dossier des plannings.
+4. Choisir le dossier principal. Les sous-dossiers année/mois sont inclus.
+5. Se connecter avec le compte Nethor de rôle Administrateur ou Point de vente et autorisé à gérer le planning.
+6. Le programme s'installe dans `%LOCALAPPDATA%\NethorSync2\app` sans raccourci visible et crée ses tâches Windows.
 
-**Aucune clé service_role** ni secret permanent dans le dépôt. Le jeton de renouvellement est chiffré avec DPAPI Windows pour le compte connecté et reste dans `%LOCALAPPDATA%\NethorSync2\auth.dat`. Ne pas utiliser un compte partagé. La sécurité de l'accès distant dépend aussi des politiques RLS Supabase en vigueur.
+**Le navigateur ne peut pas installer un programme sur Windows sans une action locale de l'utilisateur.** L'installation est discrète ensuite mais reste visible dans le Planificateur Windows et dans les fichiers de l'utilisateur. Aucun pilote, service système ni élévation automatique n'est installé.
 
-## Mise en place
+## Un seul ordinateur maître
 
-1. Télécharger le dossier `tools/nethor-sync` du dépôt sur le poste Windows dans un répertoire fixe et personnel ; ne pas placer les fichiers Excel dans GitHub.
-2. Copier `config.example.json` en `config.json` et renseigner `rootPath`, par exemple `C:\Users\VOTRE_COMPTE\Desktop\Nethor Sync\Plannings`. Les sous-dossiers année/mois sont pris en compte. Le chemin relatif `Plannings` est aussi accepté.
-3. Tester avec PowerShell 5.1 : `powershell.exe -NoProfile -File .\NethorSync.ps1 -DryRun`.
-4. Consulter `%LOCALAPPDATA%\NethorSync2\sync-report.json` et vérifier `new`, `unchanged`, `modified`, `moved_or_copied`, `still_writing` ou `invalid_size`.
-5. Si les résultats sont corrects, exécuter `Connect-NethorSync.ps1` et entrer le compte Nethor habilité (adresse e-mail ou identifiant), puis définir `uploadEnabled` à `true` dans la configuration.
-6. Lancer `NethorSync.ps1` pour envoyer une première fois. Vérifier l'arrivée des fichiers dans Nethor2 avant de planifier.
-7. Installer les deux tâches Windows avec `Installer-Sync.ps1` (ouverture de session, toutes les 3 heures). Les tâches sont exécutées avec les droits de l'utilisateur courant, sur le même profil Windows que `Connect-NethorSync.ps1`.
+La base Supabase enregistre :
+- Un identifiant de poste, son nom, l'utilisateur ayant effectué la liaison et sa date ;
+- Un secret propre à ce PC (seule l'empreinte SHA-256 est gardée en base) ;
+- Une génération de liaison, changée lors d'une révocation administrateur ;
+- La dernière vérification, le dernier transfert et la commande manuelle en attente.
 
-Pour désactiver les envois sans supprimer les tâches : `uploadEnabled=false`.
-Pour retirer les tâches : utiliser le Planificateur de tâches Windows, noms `Nethor Sync 2 - ...`.
+L'identité du poste et son secret local sont stockés sous `%LOCALAPPDATA%\NethorSync2`, protégés par le chiffrement utilisateur DPAPI pour les jetons. L'ancien PC ne peut plus passer les contrôles du programme après une réinitialisation, même si ses fichiers Excel sont conservés.
 
-## Limites délibérées
+**Réinstaller sur un deuxième PC sans délier le premier est refusé par le serveur.** L'administrateur doit d'abord utiliser **Paramètres > NethorSync > Réinitialiser la liaison**. Cela protège du retour des anciennes versions depuis un ordinateur de test.
 
-- La lecture des feuilles et **des couleurs des anciens .xls** est réalisée lors de la prévisualisation Nethor2, pas par PowerShell. Sa compatibilité doit être confirmée sur un fichier réel anonymisé avant toute publication.
-- Pas d'authentification machine/service : une session utilisateur active et habilitée est requise, avec renouvellement du jeton à chaque exécution. Si le jeton est révoqué ou expire, relancer `Connect-NethorSync.ps1`.
-- L'état et le rapport sont locaux ; ne pas les partager publiquement. Les fichiers Excel originaux restent sur le PC.
-- `Get-FileHash` détecte les doublons par contenu, pas seulement par nom. Un fichier en cours d'écriture depuis moins de 30 secondes est différé.
-- Nethor2 conserve la confirmation humaine et vérifie les révisions concurrentes. Aucune modification de schéma ni du site de production n'est requise pour cette première intégration.
+## Modes de fonctionnement
+
+- **Automatique :** lundi au samedi à 19h, dimanche à 12h, à l'heure locale Windows (configurer le PC sur le fuseau Paris).
+- **Manuel :** envoi d'une demande depuis la barre latérale; l'agent la détecte au plus tard lors de son prochain contrôle Windows toutes les 5 minutes (s'il est allumé et connecté).
+- Les modes sont réglables dans les paramètres du site. Le mode manuel suspend les exécutions programmées, mais conserve l'écoute des demandes manuelles.
+- Aucune promesse d'exécution à l'heure exacte si le PC est éteint, en veille ou hors ligne.
+
+Le programme calcule une empreinte SHA-256 des fichiers `.xls`, `.xlsx`, `.xlsm` :
+- **Même contenu déjà envoyé** : rien n'est retransmis.
+- **Contenu modifié** : nouvelle empreinte, nouveau transfert.
+- **Fichier déplacé ou renommé** : identifié par son empreinte ; aucun écrasement inutile.
+- **Fichier incomplet/en cours de copie** : différé.
+
+La synchronisation dépose les originaux dans le stockage **privé** `planning-files/sync-inbox`; aucun fichier n'est déposé sur GitHub. L'application Nethor2 affiche les fichiers en attente pour un administrateur ayant le droit `manage`.
+
+## Publication des plannings : sécurité
+
+**Important : la mise en ligne forcée automatique des plannings n'est pas activée.** Elle demandera la validation du lecteur des styles BIFF/OLE pour les fichiers historiques `.xls`, des dates en B2 et des sept feuilles, ainsi qu'une publication transactionnelle protégée par le verrou de poste. À ce stade, seul le transfert est automatique ; l'administrateur prévisualise puis publie sur Nethor2. L'application évite un écrasement silencieux si un autre planning a été modifié entre la prévisualisation et la validation.
+
+La date indiquée dans l'état du logiciel est la dernière **vérification** (ou le dernier transfert, affiché séparément), et non la garantie que l'ancienne semaine a été publiée.
+
+## Désinstallation et transfert
+
+Pour arrêter localement, désactiver les tâches « Nethor Sync 2 » dans le Planificateur Windows puis supprimer `%LOCALAPPDATA%\NethorSync2` après sauvegarde des rapports nécessaires. Pour libérer le poste depuis Nethor2, l'administrateur doit **réinitialiser la liaison dans les paramètres**. Cette action ne supprime pas les fichiers Excel d'origine.
+
+## Tests
+
+- `npm run check` : syntaxe JavaScript et tests des RPC frontend.
+- `tests/nethor-sync-local.test.ps1` : simulation PowerShell pour les statuts new, unchanged, modified et moved_or_copied.
+- Workflows GitHub Actions Windows et Node sur la branche de développement.
+- Aucun test de publication réelle d'un classeur du magasin n'a été réalisé avec cette version.
