@@ -40,7 +40,7 @@ export function createSyncController(client,root,profile){
  async function refresh(){
   if(loading)return;
   loading=true;
-  try{status=await readSyncStatus(client);error='';}
+  try{const wasPending=status?.pendingManual===true;const next=await readSyncStatus(client);status=next;error='';if(wasPending&&!next.pendingManual&&next.installed)notice='Vérification ponctuelle terminée sur le poste '+(next.deviceLabel||'autorisé')+'.';}
   catch(e){error=String(e.message||e);status=null;}
   finally{loading=false;if(!status?.pendingManual)requestStartedAt=0;paint();}
  }
