@@ -2,7 +2,7 @@ import {canManageSync,syncHealth} from '../data/nethor-sync-control.js';
 
 // Archive officielle empaquetée dans GitHub Pages à partir des scripts Windows du dépôt.
 // Le navigateur télécharge les fichiers ; l'installation exige un geste explicite sur le PC.
-export const NETHOR_SYNC_INSTALLER_URL='./nethor-sync-2.zip';
+export const NETHOR_SYNC_INSTALLER_URL='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync2-Setup.exe';
 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[ch]));
 export const isSyncOverviewRole=(role,isDesktop=true)=>Boolean(isDesktop)&&canManageSync(role);
@@ -50,7 +50,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now()){
   '<button type="button" class="btn primary" data-action="nethor-sync-install">Installer NethorSync</button>':
   '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>';
  const guide=showInstall?
-  '<p class="n2sync-footnote">Sur le poste Windows : télécharger le dossier NethorSync, l’extraire, puis exécuter <strong>Installer-Sync.ps1</strong>. L’installateur demande le dossier des plannings et le compte Nethor autorisé.</p>':
+  '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync2-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte Nethor autorisé.</p>':
   bound?'<p class="n2sync-footnote">Un poste peut être associé à la fois. L’état opérationnel dépend de son dernier contact avec Supabase (moins de 30 minutes).</p>':'';
  return '<section class="card n2sync-card" id="nethorSyncHomeCard" aria-labelledby="n2sync-title">'+
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+
