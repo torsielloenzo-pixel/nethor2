@@ -10,6 +10,8 @@ import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.j
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
+import {readSyncStatus} from '../data/nethor-sync-control.js';
+import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
 import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
 import {readPlanningFile} from '../import/excel-structure.js';
 
@@ -72,7 +74,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let booted=false;
 let personalRequestId=0;
@@ -123,6 +125,7 @@ async function signOut(){
   personalRequestId++;
   if(state.user?.id)clearRecoveryDismissed(state.user.id);
   recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
+  state.nethorSync={loaded:false,loading:false,status:null,error:''};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
@@ -133,6 +136,7 @@ async function startAuthorized(access){
   state.user=access.gate.user;
   state.profile=access.gate.profile;
   recoveryPrompt={step:'closed',dismissed:recoveryDismissed(state.user.id),saving:false,error:'',mailStatus:''};
+  state.nethorSync={loaded:false,loading:false,status:null,error:''};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.access=access.access;
   state.lastCheck=Date.now();
@@ -142,6 +146,7 @@ async function startAuthorized(access){
   await loadProfiles();
   if(isMobileHome())void loadPersonalHome();
   await loadWeek();
+  if(state.page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen()))void loadNethorSyncStatus();
 }
 async function loadProfiles(){
   const {data,error}=await client.from('profiles').select('id,display_name,planning_name,contract_hours,account_enabled,role').order('display_name',{ascending:true});
@@ -349,12 +354,44 @@ function mobileOverviewPage(){
     '</div>';
 }
 
+
+/* Etat du poste NethorSync: serveur seul, aucun secret de poste dans le navigateur. */
+async function loadNethorSyncStatus(){
+ if(!state.user||!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.nethorSync.loading)return;
+ const userId=state.user.id;
+ state.nethorSync.loading=true;
+ if(state.page==='home')render();
+ try{
+  const status=await readSyncStatus(client);
+  if(state.user?.id!==userId)return;
+  state.nethorSync={loaded:true,loading:false,status,error:'',checkedAt:Date.now()};
+ }catch(_){
+  if(state.user?.id!==userId)return;
+  state.nethorSync={loaded:false,loading:false,status:null,error:'État temporairement indisponible',checkedAt:Date.now()};
+ }finally{
+  if(state.user?.id===userId&&state.page==='home')render();
+ }
+}
+
 function pageHome(metrics){
   if(isMobileHome())return mobileOverviewPage();
   const me=state.profile.planning_name||state.profile.display_name;
   const mine=metrics.people.find(p=>normalizeName(p.name)===normalizeName(me));
   let personal='';
   if(mine)personal='<div class="live-message ok">Mon planning cette semaine : <strong>'+hours(mine.total)+'</strong> · '+escapeHtml(mine.name)+'</div>';
+  if(isSyncOverviewRole(state.profile?.role,!smallScreen())){
+    const top=renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',',
+      'Le planning de la semaine et l’état de synchronisation NethorSync.',
+      state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true));
+    const planned=metrics.people.filter(p=>p.total>0).length;
+    const total=metrics.people.reduce((sum,p)=>sum+p.total,0);
+    const kpis='<section class="live-summary n2sync-home-summary">'+
+      '<article class="live-stat"><label>Collaborateurs planifiés</label><strong>'+planned+'</strong><small>Sur la semaine</small></article>'+
+      '<article class="live-stat"><label>Heures planifiées</label><strong>'+hours(total)+'</strong><small>Total calculé</small></article></section>';
+    return top+personal+kpis+
+      '<div class="layout n2sync-home-layout"><div class="stack">'+planningCard(metrics)+'</div>'+
+      '<div class="stack">'+renderSyncOverviewCard(state.nethorSync)+'</div></div>';
+  }
   return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
 function pagePlanning(metrics){
@@ -606,6 +643,7 @@ function go(page){
   state.page=page;state.notice='';state.error='';
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
+  if(page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&!state.nethorSync.loading)void loadNethorSyncStatus();
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   window.scrollTo({top:0,behavior:'instant'});
@@ -820,6 +858,14 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(action==='nethor-sync-refresh'){await loadNethorSyncStatus();return;}
+  if(action==='nethor-sync-install'){
+    if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.nethorSync.status?.installed!==false)return;
+    window.open(NETHOR_SYNC_INSTALLER_URL,'_blank','noopener,noreferrer');
+    const help=ROOT.querySelector('#n2sync-install-help');
+    if(help){help.hidden=false;help.textContent='Télécharge le ZIP officiel sur GitHub, extrais tools/nethor-sync, puis lance Installer-Sync.ps1 sur ce poste Windows. Un accès au dépôt privé peut être nécessaire.';}
+    return;
+  }
   if(action==='forgot-password')await requestRecoveryEmail(ROOT.querySelector('#loginEmail')?.value,true);
   else if(action==='request-password-email'){
     if(!state.accountSecurity.configured){accountNotice('Associe d’abord une adresse e-mail de récupération.','error');return;}
