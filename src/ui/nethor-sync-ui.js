@@ -1,5 +1,5 @@
 import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth,setSyncMode} from '../data/nethor-sync-control.js';
-const INSTALLER='https://raw.githubusercontent.com/torsielloenzo-pixel/nethor2/feature/nethor-sync-2/downloads/NethorSync2-Setup.zip';
+const INSTALLER='https://raw.githubusercontent.com/torsielloenzo-pixel/nethor2/main/downloads/NethorSync2-Setup.zip';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
 export function createSyncController(client,root,profile){
