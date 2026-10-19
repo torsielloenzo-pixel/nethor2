@@ -1,9 +1,8 @@
 import {canManageSync,syncHealth} from '../data/nethor-sync-control.js';
 
-// Archive officielle de la branche du programme Windows existant.
-// L'installation doit être lancée volontairement sur le poste : un navigateur
-// ne peut pas installer silencieusement une tâche Windows.
-export const NETHOR_SYNC_INSTALLER_URL='https://github.com/torsielloenzo-pixel/nethor2/archive/refs/heads/feature/nethor-sync-2.zip';
+// Archive officielle empaquetée dans GitHub Pages à partir des scripts Windows du dépôt.
+// Le navigateur télécharge les fichiers ; l'installation exige un geste explicite sur le PC.
+export const NETHOR_SYNC_INSTALLER_URL='./nethor-sync-2.zip';
 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[ch]));
 export const isSyncOverviewRole=(role,isDesktop=true)=>Boolean(isDesktop)&&canManageSync(role);
