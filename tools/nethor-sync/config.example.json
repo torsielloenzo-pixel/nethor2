@@ -1,0 +1,8 @@
+{
+  "rootPath": "Plannings",
+  "statePath": "",
+  "maxFileMB": 10,
+  "uploadEnabled": false,
+  "supabaseUrl": "https://gioxrpaiwogqqtakjpnv.supabase.co",
+  "publishableKey": "sb_publishable_nJPMS-Z_20ng1aMJmufbmg_gWFFndrC"
+}

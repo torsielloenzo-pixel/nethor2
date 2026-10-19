@@ -1,0 +1,20 @@
+name: Nethor Sync 2 Windows
+on:
+  push:
+    branches: [main, feature/nethor-sync-2]
+    paths:
+      - "tools/nethor-sync/**"
+      - "tests/nethor-sync-local.test.ps1"
+      - ".github/workflows/nethor-sync-tests.yml"
+  pull_request:
+    paths:
+      - "tools/nethor-sync/**"
+      - "tests/nethor-sync-local.test.ps1"
+jobs:
+  powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test local scanner (no network)
+        shell: powershell
+        run: .\tests\nethor-sync-local.test.ps1

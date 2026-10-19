@@ -1,0 +1,8 @@
+config.json
+Plannings/
+*.dat
+*-report.json
+*manifest.json
+*.xls
+*.xlsx
+*.xlsm

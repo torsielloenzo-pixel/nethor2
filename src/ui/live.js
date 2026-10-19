@@ -11,6 +11,7 @@ import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/persona
 import {renderMobilePlanning} from './planning-mobile.js';
 import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
 import {readPlanningFile} from '../import/excel-structure.js';
+import {listIncomingPlannings,downloadIncomingPlanning} from '../data/sync-inbox.js';
 
 const ROOT=document.getElementById('app');
 let pendingInstall=null;
@@ -71,7 +72,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',importPendingPath:null,syncInbox:[],syncLoading:false,syncError:'',history:[],notice:'',error:'',search:'',lastCheck:0,accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let booted=false;
 let personalRequestId=0;
@@ -113,7 +114,7 @@ async function signOut(){
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
-  state.user=null;state.profile=null;state.weekData=null;state.profiles=[];state.importFile=null;state.importModel=null;state.importAnalysis=null;
+  state.user=null;state.profile=null;state.weekData=null;state.profiles=[];state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importPendingPath=null;state.syncInbox=[];
   renderLogin();
 }
 async function startAuthorized(access){
@@ -472,6 +473,14 @@ function pageSettings(){
 function pageImport(){
   if(state.access!=='manage')return '<div class="live-error">Tu n’as pas les droits de gérer le planning.</div>';
   let body='<section class="card"><div class="card-head"><div><h2 class="card-title">Fichier Excel</h2><p class="sub">Glisser-déposer ou sélection · .xls / .xlsx / .xlsm · maximum 10 Mo</p></div></div><label class="live-import-drop" id="importDrop"><strong>⇧ Importer un fichier planning</strong><span>Le fichier est analysé localement avant validation</span><input type="file" id="excelFile" accept=".xls,.xlsx,.xlsm"></label></section>';
+  if(state.profile.role==='admin'){
+    let queue='<section class="card"><div class="card-head"><div><h2 class="card-title">Nethor Sync 2 · Réception</h2><p class="sub">Classeur(s) transmis par le poste Windows · en attente de vérification</p></div>'+button('Actualiser','sync-refresh')+'</div>';
+    if(state.syncLoading)queue+='<div class="live-message">Recherche des fichiers synchronisés…</div>';
+    else if(state.syncError)queue+='<div class="live-error">'+escapeHtml(state.syncError)+'</div>';
+    else if(!state.syncInbox.length)queue+='<div class="live-empty"><strong>Aucun fichier en attente</strong>Les fichiers transmis par Nethor Sync apparaîtront ici, sans publication automatique.</div>';
+    else queue+='<div class="mini-list">'+state.syncInbox.map(item=>'<div class="mini-row"><div><strong>'+escapeHtml(item.originalName)+'</strong><small>'+Math.ceil(item.size/1024)+' Ko · '+escapeHtml(item.createdAt?new Date(item.createdAt).toLocaleString('fr-FR'):'Date non disponible')+'</small></div><button type="button" class="btn" data-sync-select="'+escapeHtml(item.name)+'">Vérifier</button></div>').join('')+'</div>';
+    body=queue+'</section>'+body;
+  }
   if(state.busy)body+='<div class="live-message">Traitement en cours…</div>';
   if(state.importError)body+='<div class="live-error">'+escapeHtml(state.importError)+'</div>';
   if(state.importAnalysis){
@@ -515,6 +524,7 @@ function go(page){
   state.page=page;state.notice='';state.error='';
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
+  if(page==='import'&&state.access==='manage'&&state.profile.role==='admin')void loadSyncInbox();
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   window.scrollTo({top:0,behavior:'instant'});
@@ -524,6 +534,13 @@ async function loadHistory(){
   try{state.history=await getImportHistory(client,{limit:100});state.error='';}
   catch(err){state.error='Impossible de charger l’historique : '+String(err.message||err);}
   finally{state.loading=false;render();}
+}
+async function loadSyncInbox(){
+  if(state.access!=='manage'||state.profile?.role!=='admin')return;
+  state.syncLoading=true;state.syncError='';render();
+  try{state.syncInbox=await listIncomingPlannings(client);state.syncError='';}
+  catch(err){state.syncError='Impossible de consulter les fichiers reçus : '+String(err.message||err);state.syncInbox=[];}
+  finally{state.syncLoading=false;render();}
 }
 function resolveExcelColor({cell,workbook}){
   if(!cell)return null;
@@ -565,7 +582,7 @@ async function getXlsx(){
 }
 async function selectFile(file){
   if(!file)return;
-  state.importFile=null;state.importModel=null;state.importExisting=null;state.importAnalysis=null;state.importError='';
+  state.importFile=null;state.importModel=null;state.importExisting=null;state.importAnalysis=null;state.importPendingPath=null;state.importError='';
   if(!/\.(xls|xlsx|xlsm)$/i.test(file.name)){state.importError='Extension non reconnue.';render();return;}
   if(file.size===0||file.size>10*1024*1024){state.importError='Le fichier doit contenir entre 1 octet et 10 Mo.';render();return;}
   state.busy=true;render();
@@ -577,6 +594,19 @@ async function selectFile(file){
     const existing=await getPlanningWeek(client,model.weekStart);
     state.importFile=file;state.importModel=model;state.importAnalysis=data;state.importExisting=existing;
   }catch(err){state.importError='Impossible de lire ce planning : '+String(err.message||err);}
+  finally{state.busy=false;render();}
+}
+async function selectSyncCandidate(name){
+  if(state.busy||state.access!=='manage'||state.profile?.role!=='admin')return;
+  state.busy=true;render();
+  try{
+    const gate=await checkSession();
+    if(!gate||gate.access!=='manage'||gate.gate.profile.role!=='admin')throw Error('Accès administrateur requis.');
+    const {file,path}=await downloadIncomingPlanning(client,name);
+    state.busy=false;
+    await selectFile(file);
+    if(state.importFile){state.importPendingPath=path;state.notice='Fichier Nethor Sync chargé : contrôle obligatoire avant publication.';}
+  }catch(err){state.importError='Impossible de récupérer le fichier : '+String(err.message||err);}
   finally{state.busy=false;render();}
 }
 async function publish(){
@@ -606,8 +636,17 @@ async function publish(){
     const verified=await verifyPublishedWeek(client,model.weekStart,outcome.revision);
     if(!verified)throw Error('La publication a été acceptée mais sa révision reste non confirmée. Vérifiez le planning avant toute nouvelle opération.');
     uploadedPath=null;
+    let syncCleanupWarning='';
+    if(state.importPendingPath){
+      try{
+        const {error}=await client.storage.from('planning-files').remove([state.importPendingPath]);
+        if(error)throw error;
+      }catch(err){syncCleanupWarning=' Le fichier entrant devra être supprimé manuellement : '+String(err.message||err);}
+    }
+    state.importPendingPath=null;
+    if(state.profile.role==='admin')void loadSyncInbox();
     state.week=model.weekStart;state.day=model.weekStart;state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.page='planning';
-    state.notice='Planning publié et vérifié. Le fichier original est archivé.';
+    state.notice='Planning publié et vérifié. Le fichier original est archivé.'+syncCleanupWarning;
     state.weekData=await getPlanningWeek(client,state.week);
   }catch(err){
     state.importError=String(err.message||err);
@@ -708,6 +747,8 @@ ROOT.addEventListener('click',async event=>{
   if(day){state.day=day.dataset.day;state.view='day';render();return;}
   const link=event.target.closest('[data-link-save]');
   if(link){try{await saveLink(link.dataset.linkSave);}catch(err){state.error=String(err.message||err);render();}return;}
+  const incoming=event.target.closest('[data-sync-select]');
+  if(incoming){await selectSyncCandidate(incoming.dataset.syncSelect);return;}
   const dl=event.target.closest('[data-download]');
   if(dl){await downloadHistory(dl.dataset.download);return;}
   const b=event.target.closest('[data-action]');
@@ -732,9 +773,10 @@ ROOT.addEventListener('click',async event=>{
   }
   else if(action==='refresh')await loadWeek();
   else if(action==='week-view'||action==='day-view'){state.view=action==='week-view'?'week':'day';render();}
-  else if(action==='clear-import'){state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.importError='';render();}
+  else if(action==='clear-import'){state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.importPendingPath=null;state.importError='';render();}
   else if(action==='publish')await publish();
   else if(action==='history-refresh')await loadHistory();
+  else if(action==='sync-refresh')await loadSyncInbox();
 });
 ROOT.addEventListener('change',event=>{if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);});
 ROOT.addEventListener('input',event=>{
