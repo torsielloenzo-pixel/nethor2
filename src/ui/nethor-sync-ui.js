@@ -30,7 +30,7 @@ export function createSyncController(client,root,profile){
    '<p>Dernier contrôle : '+esc(time(status?.lastCheckAt))+' · Dernier transfert : '+esc(time(status?.lastTransferAt))+'</p>'+
    '<p class="live-muted">Mode unique : automatique, du lundi au samedi à 19 h et le dimanche à 12 h (heure du poste, fuseau France). Le bouton « Synchroniser » demande une vérification ponctuelle, traitée au prochain contrôle du poste (jusqu’à 5 minutes), sans modifier ces horaires.</p>'+
    '<p><strong>Mode : Automatique</strong></p>'+
-   '<p class="live-muted">Les fichiers transférés restent soumis à la validation du planning dans Nethor2.</p>'+
+   '<p class="live-muted">Les versions Excel réellement modifiées et récentes sont publiées après vérification automatique ; les fichiers inconnus ou refusés ne remplacent jamais le planning.</p>'+
    (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+'</div></section>';
  }
  function paint(){
