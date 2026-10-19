@@ -41,6 +41,16 @@ Le programme calcule une empreinte SHA-256 des fichiers `.xls`, `.xlsx`, `.xlsm`
 
 La synchronisation dépose les originaux dans le stockage **privé** `planning-files/sync-inbox`; aucun fichier n'est déposé sur GitHub. L'application Nethor2 affiche les fichiers en attente pour un administrateur ayant le droit `manage`.
 
+## Deux programmations totalement indépendantes
+
+**NethorSync 2.1.2 (MSI, Windows)** : conserve la synchronisation des fichiers à 19 h (lundi–samedi) et 12 h (dimanche), plus le contrôle ponctuel demandé par un gestionnaire depuis l'application. L'audit cloud ne déclenche jamais ce scanner et ne nécessite aucune session Windows ouverte.
+
+**Supabase (site / PWA, serveur)** : contrôle tous les fichiers Excel présents dans `planning-files/sync-inbox/` aux horaires 00 h, 04 h, 08 h, 12 h, 16 h et 20 h heure de Paris. Une tâche cron se réveille toutes les heures UTC, mais la procédure ne traite les fichiers qu'à ces heures France (changement d'heure inclus). Elle compare les dernières versions conservées aux semaines déjà publiées, puis peut automatiquement publier les plannings différents avec les protections du moteur serveur. Les fichiers archivés trop anciens ne sont pas réappliqués.
+
+**Après chaque nouveau transfert** : le scanner de stockage existant s'exécute toutes les minutes, déclenche une lecture Excel sur les nouvelles versions et les publie si elles sont recevables. Le contrôle toutes les quatre heures fait une seconde vérification autonome des fichiers déjà stockés, même sans nouvel envoi du MSI.
+
+L'écran NethorSync Mobile/PWA affiche séparément les heures de l'audit Supabase, sa dernière exécution, le nombre de fichiers examinés et le résultat (publié, rejeté, en attente) ainsi que la dernière transmission Windows. Le résultat d'un audit ne signifie pas qu'une nouvelle synchronisation Windows s'est produite.
+
 ## Publication automatique côté Supabase — fonctionne avec NethorSync 2.1.2
 
 **Le poste Windows ne publie jamais les horaires directement.** Il continue à déposer les fichiers Excel .xls/.xlsx/.xlsm dans `planning-files/sync-inbox/` avec une empreinte SHA-256. C'est désormais la base Supabase, indépendante du PC et du navigateur, qui détecte les nouveaux dépôts.
