@@ -177,3 +177,29 @@ test('Les téléchargements de NethorSync utilisent la version MSI compatible et
  assert.match(pipeline,/NethorSync-Setup\.exe/);
  assert.doesNotMatch(NETHOR_SYNC_INSTALLER_URL,/NethorSync2-Setup\.exe/);
 });
+
+test('Le transfert seul ne prétend pas que le planning est publié',()=>{
+ const base={loaded:true,status:{installed:true,lastSeenAt:'2026-10-19T16:59:00Z'},historyLoaded:true,history:[]};
+ const waiting=renderSyncOverviewCard({...base,autoPublications:[{status:'processing',fileName:'PLANNING.xls',when:'2026-10-19T16:00:00Z'}]},now);
+ assert.match(waiting,/Analyse Excel en cours/);
+ assert.doesNotMatch(waiting,/Planning publié pour toute l’équipe/);
+ const published=renderSyncOverviewCard({...base,autoPublications:[{status:'published',fileName:'PLANNING.xls',weekStart:'2026-10-19',when:'2026-10-19T16:00:00Z'}]},now);
+ assert.match(published,/Planning publié pour toute l’équipe/);
+ const unsafe=renderSyncOverviewCard({...base,autoPublications:[{status:'rejected',fileName:'<script>',detail:'Couleurs <inconnues>',when:'2026-10-19T16:00:00Z'}]},now);
+ assert.match(unsafe,/Fichier Excel refusé/);
+ assert.doesNotMatch(unsafe,/<script>/);
+ assert.match(unsafe,/&lt;inconnues&gt;/);
+});
+test('Les traitements automatiques vérifient leur ticket et bloquent les archives antérieures',()=>{
+ const source=read('supabase/migrations/20261019_nethor_sync_auto_publish.sql');
+ const guards=read('supabase/migrations/20261019_nethor_sync_auto_guards.sql');
+ const worker=read('supabase/functions/nethor-sync-auto-publish/index.ts');
+ assert.match(source,/new.change_kind <> 'replaced'/);
+ assert.match(source,/new.modified_at <= new.previous_modified_at/);
+ assert.match(source,/new.modified_at < now\(\) - interval '14 days'/);
+ assert.match(source,/j.attempts<4/);
+ assert.match(guards,/j.dry_run/);
+ assert.match(worker,/SHA-256/);
+ assert.match(worker,/resolveExcelColor/);
+ assert.match(worker,/parsePlanningWorkbook/);
+});
