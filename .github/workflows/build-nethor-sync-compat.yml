@@ -1,9 +1,13 @@
 name: NethorSync - Installateur compatible MSI
 
-# L'ancien outil de comparaison ne doit plus remplacer automatiquement
-# l'installateur public fonctionnel 2.1.2 lors des changements serveur.
+# Un seul déploiement volontaire du correctif compatible 2.1.4.
+# Conserve la base Windows 2.1.1, sans écoute permanente.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-nethor-sync-compat.yml'
 
 permissions:
   contents: write
@@ -53,12 +57,14 @@ jobs:
           $scan=Get-Content -LiteralPath 'tools/nethor-sync/NethorSync.ps1' -Raw
           if ($scan -notmatch 'nethor_sync_record_file_changes') { throw 'Agent sans transmission des versions de fichiers' }
           if ($scan -notmatch 'previousModifiedUtc') { throw 'Historique des dates de versions manquant' }
+          if ($scan -notmatch 'nethor_sync_staged_exists') { throw 'Correctif des doublons Supabase absent' }
+          if ($scan -notmatch 'already_staged') { throw 'Reprise de doublons absente' }
           $issPath='tools/nethor-sync/NethorSync2.iss'
           $iss=Get-Content -LiteralPath $issPath -Raw
-          $iss=$iss.Replace('#define AppVersion "2.1.1"','#define AppVersion "2.1.3"')
+          $iss=$iss.Replace('#define AppVersion "2.1.1"','#define AppVersion "2.1.4"')
           if ($iss -notmatch '#define AppVersion "2\.1\.3"') { throw 'Version du correctif invalide' }
           Set-Content -LiteralPath $issPath -Value $iss -Encoding UTF8
-          Write-Host 'Version Windows compatible 2.1.3, sans agent permanent.'
+          Write-Host 'Version Windows compatible 2.1.4, sans agent permanent.'
       - name: Tester le demarrage reel du scanner et les sous-dossiers
         shell: powershell
         run: |
@@ -80,6 +86,39 @@ jobs:
           } finally {
             Remove-Item -LiteralPath $probe -Force -Recurse -ErrorAction SilentlyContinue
           }
+      - name: Tester les doublons Supabase avant transfert (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $source=Get-Content -LiteralPath 'tools/nethor-sync/NethorSync.ps1' -Raw
+          $start=$source.IndexOf('function Upload-Candidate(')
+          $end=$source.IndexOf('# Une seule instance', $start)
+          if ($start -lt 0 -or $end -le $start) { throw 'Fonction Upload-Candidate absente' }
+          $uploadFunction=$source.Substring($start,$end-$start)
+          Invoke-Expression $uploadFunction
+          $script:exists=$true
+          $script:uploadCalls=0
+          function Invoke-SyncRpc { param($Settings,$Token,$Method,$Params)
+            if ($Method -ne 'nethor_sync_staged_exists') { throw "Mauvaise RPC : $Method" }
+            if ($Params.p_storage_key -notmatch '^sync-inbox/[a-f0-9]{64}-') { throw 'Chemin de stockage incorrect' }
+            return $script:exists
+          }
+          function Invoke-RestMethod { $script:uploadCalls++; throw 'Un doublon ne doit pas etre envoye' }
+          $cfg=@{supabaseUrl='https://exemple.supabase.co';publishableKey='test-public'}
+          $device=@{id='00000000-0000-4000-8000-000000000001';secret='test';generation=1}
+          $file=[pscustomobject]@{Name='Planning 19.10.26 SEMAINE A.xls';Extension='.xls';FullName='C:\planning.xls'}
+          $hash='a'*64
+          $result=Upload-Candidate $cfg 'jeton-test' $file $hash $device
+          if ($result.status -ne 'already_staged') { throw 'Doublon non reconnu' }
+          if ($script:uploadCalls -ne 0) { throw 'Fichier existant inutilement re-uploade' }
+          $script:exists=$false
+          try {
+            $null=Upload-Candidate $cfg 'jeton-test' $file $hash $device
+            throw 'Nouvel objet : erreur attendue en absence du vrai stockage'
+          } catch {
+            if ($_.Exception.Message -eq 'Nouvel objet : erreur attendue en absence du vrai stockage') { throw }
+          }
+          if ($script:uploadCalls -ne 1) { throw 'L envoi d un fichier inexistant est absent' }
+          Write-Host 'Pre-verification doublon : OK ; envoi nouveau fichier : OK.'
       - name: Installer Inno Setup
         shell: pwsh
         run: |
@@ -94,7 +133,7 @@ jobs:
           & $compiler 'tools\nethor-sync\NethorSync2.iss'
           if ($LASTEXITCODE -ne 0) {throw 'Compilation échouée'}
           $original='build\installer\NethorSync2-Setup.exe'
-          $result='build\installer\NethorSync2-Setup-Compatibility-213.exe'
+          $result='build\installer\NethorSync2-Setup-Compatibility-214.exe'
           if (-not (Test-Path $original)) {throw 'Exécutable absent'}
           Copy-Item $original $result -Force
           $publicName='build\installer\NethorSync-Setup.exe'
@@ -106,14 +145,14 @@ jobs:
       - name: Test présence du fichier EXE
         shell: pwsh
         run: |
-          $file=Get-Item 'build\installer\NethorSync2-Setup-Compatibility-213.exe'
+          $file=Get-Item 'build\installer\NethorSync2-Setup-Compatibility-214.exe'
           if ($file.Length -lt 100000) { throw 'Taille de fichier incohérente' }
       - name: Joindre l exécutable à GitHub Actions
         uses: actions/upload-artifact@v4
         with:
-          name: NethorSync2-Compatibility-213
+          name: NethorSync2-Compatibility-214
           path: |
-            build/installer/NethorSync2-Setup-Compatibility-213.exe
+            build/installer/NethorSync2-Setup-Compatibility-214.exe
             build/installer/NethorSync-Setup.exe
           if-no-files-found: error
           retention-days: 30
@@ -124,10 +163,10 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           $tag='nethor-sync2-latest'
-          $exe='build/installer/NethorSync2-Setup-Compatibility-213.exe'
+          $exe='build/installer/NethorSync2-Setup-Compatibility-214.exe'
           $public='build/installer/NethorSync-Setup.exe'
           gh release view $tag --repo $env:GH_REPO --json tagName
           if ($LASTEXITCODE -ne 0) {throw 'Release NethorSync existante introuvable'}
-          gh release upload $tag $exe --repo $env:GH_REPO --clobber
+          gh release upload $tag $exe $public --repo $env:GH_REPO --clobber
           if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier le téléchargement NethorSync'}
-          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync2-Setup-Compatibility-213.exe") | .name'
+          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync2-Setup-Compatibility-214.exe" or .name=="NethorSync-Setup.exe") | .name'
