@@ -28,7 +28,7 @@ export function createSyncController(client,root,profile){
    '<p>Poste : <strong>'+esc(isInstalled()?status.deviceLabel||'Inconnu':'Non installé/configuré')+'</strong></p>'+
    '<p>Lié par : '+esc(status?.registeredBy||'—')+'</p>'+
    '<p>Dernier contrôle : '+esc(time(status?.lastCheckAt))+' · Dernier transfert : '+esc(time(status?.lastTransferAt))+'</p>'+
-   '<p class="live-muted">Contrôle distant programmé à 00 h, 04 h, 08 h, 12 h, 16 h et 20 h (heure de Paris), sans réinstaller le logiciel. Les anciennes tâches Windows de 19 h (lundi–samedi) et 12 h (dimanche) restent complémentaires. Le bouton « Synchroniser » envoie une demande ponctuelle, traitée au prochain contrôle du MSI (environ 5 minutes si le poste est connecté).</p>'+
+   '<p class="live-muted">Sur Supabase : audit des fichiers Excel stockés à 00 h, 04 h, 08 h, 12 h, 16 h et 20 h (heure de Paris), suivi d’une publication automatique des versions valides si nécessaire. Après chaque nouveau transfert, analyse côté serveur également. Aucun ordre n’est envoyé au PC par cet audit. Sur le MSI : les tâches Windows restent à 19 h du lundi au samedi et à 12 h le dimanche. Le bouton « Synchroniser » conserve uniquement sa fonction de demande ponctuelle au MSI.</p>'+
    '<p><strong>Mode : Automatique</strong></p>'+
    '<p class="live-muted">Les versions Excel réellement modifiées et récentes sont publiées après vérification automatique ; les fichiers inconnus ou refusés ne remplacent jamais le planning.</p>'+
    (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+'</div></section>';
