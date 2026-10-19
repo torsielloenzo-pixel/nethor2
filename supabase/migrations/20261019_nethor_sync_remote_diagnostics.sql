@@ -79,7 +79,7 @@ end
 $fn$;
 revoke all on function public.nethor_sync_submit_diagnostic(uuid,text,bigint,text,text,integer,integer,integer,integer,text,jsonb)
  from public,anon;
-grant execute on function public.nethor_sync_submit_diagnostic(uuid,text,bigint,text,text,integer,integer,integer,text,jsonb)
+grant execute on function public.nethor_sync_submit_diagnostic(uuid,text,bigint,text,text,integer,integer,integer,integer,text,jsonb)
  to authenticated;
 
 create or replace function public.nethor_sync_diagnostic_history(p_limit integer default 20)
