@@ -638,3 +638,24 @@
   .n2sync-detail{min-height:70px}
   .n2sync-status{white-space:normal}
 }
+
+
+/* Nethor Mobile / PWA Mobile : navigation tactile sans zoom par pincement
+   ou double tap. Conserve pan-x / pan-y pour défiler et parcourir le planning.
+   La classe n'est posée qu'après identification d'un appareil mobile. */
+html.nethor-zoom-locked,
+html.nethor-zoom-locked body,
+html.nethor-zoom-locked #app,
+html.nethor-zoom-locked #app * {
+  touch-action:pan-x pan-y !important;
+}
+html.nethor-zoom-locked {
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+/* Safari iOS peut zoomer automatiquement quand un champ a une police <16px. */
+html.nethor-zoom-locked input:not([type="checkbox"]):not([type="radio"]),
+html.nethor-zoom-locked textarea,
+html.nethor-zoom-locked select {
+  font-size:16px !important;
+}
