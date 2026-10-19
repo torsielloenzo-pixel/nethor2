@@ -6,11 +6,12 @@ import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '.
 import {renderSecuritySettings} from './settings-security.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {installMobileZoomLock} from './mobile-zoom.js';
-import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek} from '../data/planning-repository.js';
+import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek,getPublishedWeeksForYear} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
+import {renderPlanningYear} from './planning-year.js';
 import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications} from '../data/nethor-sync-control.js';
 import {mergeImportHistory,renderImportHistory} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
@@ -80,12 +81,13 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
 let syncChartPeriod=7;
 let booted=false;
 let personalRequestId=0;
+let annualRequestId=0;
 let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
 const recoveryDismissKey=userId=>'nethor-recovery-later:'+userId;
 function recoveryDismissed(userId){
@@ -135,6 +137,7 @@ async function checkSession(){
 async function signOut(){
   closeFirstLoginRecovery();
   personalRequestId++;
+  annualRequestId++;
   if(state.user?.id)clearRecoveryDismissed(state.user.id);
   recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
   state.nethorSync={loaded:false,loading:false,status:null,error:''};
@@ -148,6 +151,9 @@ async function signOut(){
   renderLogin();
 }
 async function startAuthorized(access){
+  annualRequestId++;
+  state.mobilePlanning.year=Number(dateInParis().slice(0,4));
+  state.mobilePlanning.annual={year:null,weeks:[],loading:false,loaded:false,error:''};
   state.user=access.gate.user;
   state.profile=access.gate.profile;
   recoveryPrompt={step:'closed',dismissed:recoveryDismissed(state.user.id),saving:false,error:'',mailStatus:''};
@@ -415,7 +421,30 @@ function pageHome(metrics){
   }
   return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
+async function loadAnnualWeeks(force=false){
+ if(!state.user||!smallScreen()||state.page!=='planning'||state.view!=='year')return;
+ const year=state.mobilePlanning.year;
+ if(!force&&state.mobilePlanning.annual.loaded&&state.mobilePlanning.annual.year===year)return;
+ if(!force&&state.mobilePlanning.annual.loading&&state.mobilePlanning.annual.year===year)return;
+ const request=++annualRequestId,userId=state.user.id;
+ state.mobilePlanning.annual={year,weeks:[],loading:true,loaded:false,error:''};
+ render();
+ try{
+  const weeks=await getPublishedWeeksForYear(client,year);
+  if(request!==annualRequestId||state.user?.id!==userId||state.mobilePlanning.year!==year)return;
+  state.mobilePlanning.annual={year,weeks,loading:false,loaded:true,error:''};
+ }catch(_){
+  if(request!==annualRequestId||state.user?.id!==userId||state.mobilePlanning.year!==year)return;
+  state.mobilePlanning.annual={year,weeks:[],loading:false,loaded:true,error:'Impossible de consulter les semaines publiées.'};
+ }finally{
+  if(request===annualRequestId&&state.user?.id===userId&&state.page==='planning'&&state.view==='year'&&smallScreen())render();
+ }
+}
 function pagePlanning(metrics){
+  if(smallScreen()&&state.view==='year'){
+    return renderPlanningYear({...state.mobilePlanning.annual,year:state.mobilePlanning.year,
+      today:dateInParis(),selectedDay:state.day});
+  }
   if(isMobileHome())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:state.loading?null:visibleModel(),profiles:state.profiles,
@@ -935,6 +964,19 @@ ROOT.addEventListener('click',async event=>{
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
 
+  // La vue annuelle Nethor 1 est volontairement réservée au téléphone et à sa PWA.
+  const yearDate=event.target.closest('[data-year-day]');
+  if(yearDate&&state.page==='planning'&&state.view==='year'&&smallScreen()){
+    const day=yearDate.dataset.yearDay;
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(day))return;
+    state.day=day;
+    state.week=mondayFor(day);
+    state.view='week';
+    state.mobilePlanning.dayFilter='all';
+    await loadWeek();
+    const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=0;
+    return;
+  }
   const mobileDay=event.target.closest('[data-mobile-planning-day]');
   if(mobileDay&&isMobileHome()){
     state.day=mobileDay.dataset.mobilePlanningDay;render();return;
@@ -969,6 +1011,24 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(state.page==='planning'&&smallScreen()&&['year-view','year-prev','year-next','year-current','year-close'].includes(action)){
+    if(action==='year-close'){state.view='week';annualRequestId++;render();return;}
+    if(action==='year-view'){
+      state.mobilePlanning.year=Number((state.day||dateInParis()).slice(0,4));
+      state.view='year';
+      render();
+      void loadAnnualWeeks();
+      return;
+    }
+    if(action==='year-current')state.mobilePlanning.year=Number(dateInParis().slice(0,4));
+    else state.mobilePlanning.year+=action==='year-prev'?-1:1;
+    if(state.mobilePlanning.year<1900||state.mobilePlanning.year>2100)return;
+    state.mobilePlanning.annual={year:null,weeks:[],loading:false,loaded:false,error:''};
+    render();
+    const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=0;
+    void loadAnnualWeeks();
+    return;
+  }
   if(action==='nethor-sync-mobile-refresh'){
     if(state.page==='anomalies'&&smallScreen())await loadMobileSyncStatus(true);
     return;
@@ -1036,7 +1096,10 @@ ROOT.addEventListener('click',event=>{
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void verifyResume();});
 window.addEventListener('focus',()=>void verifyResume());
 window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
-  if(!smallScreen())closeFirstLoginRecovery();
+  if(!smallScreen()){
+    closeFirstLoginRecovery();
+    if(state.view==='year'){annualRequestId++;state.view='week';}
+  }
   if(!state.user)return;
   render();
   if(state.page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
