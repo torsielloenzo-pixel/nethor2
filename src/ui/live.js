@@ -423,7 +423,7 @@ async function saveRecoveryEmail(form){
   accountNotice('Adresse de récupération enregistrée.'+
    (result.mail_status==='sent'?' Un message d’information a été envoyé.':' L’envoi du message d’information n’est pas confirmé.'),'success');
  }catch(err){if(state.user?.id===userId)accountNotice(err.message,'error');}
- finally{if(submit)submit.disabled=false;if(state.user?.id===userId)state.accountSecurity.busy=false;}
+ finally{if(submit)submit.disabled=false;if(state.user?.id===userId){state.accountSecurity.busy=false;if(state.page==='settings')render();}}
 }
 async function changeMyPassword(form){
  if(state.accountSecurity.busy||!state.user)return;
@@ -446,7 +446,7 @@ async function changeMyPassword(form){
  }finally{
   for(const name of ['oldPassword','newPassword','confirmPassword']){const input=form.querySelector('#'+name);if(input)input.value='';}
   if(submit)submit.disabled=false;
-  if(state.user?.id===userId)state.accountSecurity.busy=false;
+  if(state.user?.id===userId){state.accountSecurity.busy=false;if(state.page==='settings')render();}
  }
 }
 async function requestRecoveryEmail(identifier,fromLogin=false){
