@@ -65,3 +65,14 @@
 @media (prefers-reduced-motion:reduce){
  .n2sync-chart-bar{transition:none!important}
 }
+
+/* Publication automatique : séparer un simple transfert d'une semaine validée. */
+@media (min-width:761px){
+ .n2sync-auto{margin:16px 0 0;padding:13px 16px;border:1px solid #e0e8f4;border-radius:12px;background:#f8faff;color:#385170}
+ .n2sync-auto strong{display:block;font-size:12px;color:#213c63}
+ .n2sync-auto p{margin:4px 0 0;font-size:11px;line-height:1.5;color:#60728d}
+ .n2sync-auto[data-state=published]{background:#f1f9f5;border-color:#c5e6d5}
+ .n2sync-auto[data-state=published] strong{color:#176544}
+ .n2sync-auto[data-state=rejected],.n2sync-auto[data-state=failed]{background:#fff8f7;border-color:#f3d0cd}
+ .n2sync-auto[data-state=rejected] strong,.n2sync-auto[data-state=failed] strong{color:#a04848}
+}
