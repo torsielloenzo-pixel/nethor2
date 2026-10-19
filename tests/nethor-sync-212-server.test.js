@@ -39,7 +39,7 @@ test('Les gestionnaires distinguent une archive transférée et une semaine effe
  const rpc=read('src/data/nethor-sync-control.js');
  assert.match(overview,/Planning publié pour toute l’équipe/);
  assert.match(overview,/Fichier Excel refusé/);
- assert.match(overview,/sans réinstallation de NethorSync 2\.1\.2/);
+ assert.match(overview,/Les plannings sont publiés côté Supabase|Les nouveaux transferts sont analysés et publiés côté Supabase/);
  assert.match(rpc,/nethor_sync_auto_publications/);
  assert.match(publish,/left join private\.nethor_sync_file_changes/);
  assert.match(publish,/coalesce\(j\.storage_name,c\.file_name\)/);
