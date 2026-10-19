@@ -883,10 +883,10 @@ ROOT.addEventListener('click',async event=>{
     if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.nethorSync.status?.installed!==false)return;
     const download=document.createElement('a');
     download.href=NETHOR_SYNC_INSTALLER_URL;
-    download.download='NethorSync2.zip';
+    download.rel='noopener noreferrer';
     document.body.appendChild(download);download.click();download.remove();
     const help=ROOT.querySelector('#n2sync-install-help');
-    if(help){help.hidden=false;help.textContent='Le ZIP NethorSync2 est téléchargé depuis nethor.fr. Extrais-le sur le poste Windows, puis lance Installer-Sync.ps1. L’installeur demande le dossier des plannings et tes identifiants Nethor.';}
+    if(help){help.hidden=false;help.textContent='L’installateur NethorSync2-Setup.exe est téléchargé depuis GitHub Releases. Ouvre-le sur ce PC Windows puis sélectionne le dossier de tes plannings.';}
     return;
   }
   if(action==='forgot-password')await requestRecoveryEmail(ROOT.querySelector('#loginEmail')?.value,true);
