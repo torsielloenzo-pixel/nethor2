@@ -1,6 +1,6 @@
 // Nethor 2 — shell statique uniquement. Jamais de données RH, de tokens ou d'appels Supabase en cache.
-const CACHE_NAME='nethor-brand-unified-v8';
-const SHELL=['./','./index.html','./styles.css','./live.css','./mobile.css','./src/ui/live.js','./src/ui/team-access.js','./src/config/public.js','./src/auth/session-gate.js','./src/auth/login-identifier.js','./src/data/planning-repository.js','./src/import/excel-structure.js','./src/domain/planning-core.js','./src/domain/employee-linker.js','./src/domain/personal-overview.js','./assets/icon.svg','./assets/nethor-logo-16-v8.png','./assets/nethor-logo-32-v8.png','./assets/nethor-logo-180-v8.png','./assets/nethor-logo-192-v8.png','./assets/nethor-logo-512-v8.png','./favicon.ico','./manifest.webmanifest'];
+const CACHE_NAME='nethor-brand-planning-mobile-v9';
+const SHELL=['./','./index.html','./styles.css','./live.css','./mobile.css','./src/ui/live.js','./src/ui/planning-mobile.js','./src/ui/team-access.js','./src/config/public.js','./src/auth/session-gate.js','./src/auth/login-identifier.js','./src/data/planning-repository.js','./src/import/excel-structure.js','./src/domain/planning-core.js','./src/domain/employee-linker.js','./src/domain/personal-overview.js','./assets/icon.svg','./assets/nethor-logo-16-v8.png','./assets/nethor-logo-32-v8.png','./assets/nethor-logo-180-v8.png','./assets/nethor-logo-192-v8.png','./assets/nethor-logo-512-v8.png','./favicon.ico','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL))));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  const keys=await caches.keys();
