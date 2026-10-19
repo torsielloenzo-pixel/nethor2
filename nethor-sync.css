@@ -89,3 +89,16 @@
 .sync-manual-step[data-step=error]{color:#af4550;font-weight:800}
 .sync-manual-step[data-step=error]>b{background:#ffe9e9;color:#a73945;border-color:#f1c2c4}
 .sync-manual-pipeline>small{font-size:10px;line-height:1.45;color:#9b4b55}
+
+/* Historique de diagnostics NethorSync : données anonymisées, lecture compacte. */
+.sync-diagnostic-panel{margin:16px 0 0;padding:12px;border:1px solid #e2e8f2;border-radius:12px;background:#f8faff;max-width:100%}
+.sync-diagnostic-panel h3{margin:0 0 5px;font-size:13px;color:#263c59}
+.sync-diagnostic-panel .live-muted{font-size:11px}
+.sync-diagnostic-history{display:grid;gap:7px;margin-top:9px;max-height:280px;overflow-y:auto}
+.sync-diagnostic-item{padding:9px;border:1px solid #e3e8f2;border-radius:10px;background:white}
+.sync-diagnostic-item>div{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sync-diagnostic-item strong{color:#943c43;font-size:11px}
+.sync-diagnostic-item time{color:#7e8b9b;font-size:10px}
+.sync-diagnostic-item p{margin:5px 0;font-size:11px;color:#4d627b}
+.sync-diagnostic-item small{display:block;font-size:10px;line-height:1.5;color:#748397}
+.sync-diagnostic-empty{margin:8px 0 2px;color:#677a96;font-size:11px}
