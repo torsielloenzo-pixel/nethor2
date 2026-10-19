@@ -2,6 +2,8 @@ import {SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY} from '../config/public.js';
 import {loadAuthorizedSession} from '../auth/session-gate.js';
 import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
+import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
+import {renderSecuritySettings} from './settings-security.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
@@ -69,7 +71,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let booted=false;
 let personalRequestId=0;
@@ -86,7 +88,7 @@ function showMessage(text,kind='error'){
 function renderLogin(message=''){
   ROOT.classList.remove('menu-open','staff-desktop-layout','personal-home-active','mobile-planning-active');
   document.title='Nethor · Connexion';
-  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand"><img class="nethor-login-logo" src="./assets/icon.svg" width="50" height="50" alt=""><span>NETHOR²<small>PLANNING · LE THOR</small></span></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
+  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand"><img class="nethor-login-logo" src="./assets/icon.svg" width="50" height="50" alt=""><span>NETHOR²<small>PLANNING · LE THOR</small></span></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><button type="button" class="n2sec-forgot" data-action="forgot-password">Mot de passe oublié ?</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
@@ -108,6 +110,7 @@ async function checkSession(){
 }
 async function signOut(){
   personalRequestId++;
+  state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
   state.user=null;state.profile=null;state.weekData=null;state.profiles=[];state.importFile=null;state.importModel=null;state.importAnalysis=null;
@@ -116,6 +119,7 @@ async function signOut(){
 async function startAuthorized(access){
   state.user=access.gate.user;
   state.profile=access.gate.profile;
+  state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.access=access.access;
   state.lastCheck=Date.now();
   renderShell();
@@ -369,8 +373,101 @@ function pageTeam(metrics){
     '<div class="live-person-list">'+(rows||'<div class="live-empty">Aucun résultat.</div>')+'</div></section>'+
     '<p class="live-muted" style="margin-top:14px">Les profils désactivés visibles par l’administrateur sont masqués de cette interface. La création et la désactivation des comptes restent administrées par les outils existants.</p>';
 }
+
+async function invokeAccountFunction(name,body){
+ const {data,error}=await client.functions.invoke(name,{body});
+ if(error)throw Error('Service indisponible. Réessaie plus tard.');
+ if(data?.error)throw Error(String(data.error).slice(0,210));
+ return data||{};
+}
+function accountNotice(message,kind='info'){
+ state.accountSecurity.message=message;
+ state.accountSecurity.kind=kind;
+ if(state.page==='settings')render();
+}
+async function loadAccountRecoveryStatus(){
+ if(!state.user||state.accountSecurity.loading)return;
+ const userId=state.user.id;
+ state.accountSecurity.loading=true;
+ state.accountSecurity.error=false;
+ if(state.page==='settings')render();
+ try{
+  const response=await invokeAccountFunction('profile-email',{action:'status'});
+  if(state.user?.id!==userId)return;
+  state.accountSecurity.configured=response.configured===true;
+  state.accountSecurity.loaded=true;
+ }catch(_){
+  if(state.user?.id!==userId)return;
+  state.accountSecurity.error=true;state.accountSecurity.loaded=false;
+  state.accountSecurity.message='Vérification de l’adresse indisponible.';
+  state.accountSecurity.kind='error';
+ }finally{
+  if(state.user?.id===userId){state.accountSecurity.loading=false;if(state.page==='settings')render();}
+ }
+}
+async function saveRecoveryEmail(form){
+ if(state.accountSecurity.busy||!state.user)return;
+ let newEmail;
+ try{newEmail=validateRecoveryEmail(form.querySelector('#newRecoveryEmail')?.value);}
+ catch(err){accountNotice(err.message,'error');return;}
+ const oldEmail=String(form.querySelector('#oldRecoveryEmail')?.value||'').trim().toLowerCase();
+ const userId=state.user.id;
+ state.accountSecurity.busy=true;
+ const submit=form.querySelector('button[type="submit"]');
+ if(submit){submit.disabled=true;submit.textContent='Enregistrement…';}
+ try{
+  const result=await invokeAccountFunction('profile-email',{action:'save',old_email:oldEmail,new_email:newEmail});
+  if(state.user?.id!==userId)return;
+  state.accountSecurity.configured=result.configured===true;
+  state.accountSecurity.loaded=true;state.accountSecurity.error=false;
+  accountNotice('Adresse de récupération enregistrée.'+
+   (result.mail_status==='sent'?' Un message d’information a été envoyé.':' L’envoi du message d’information n’est pas confirmé.'),'success');
+ }catch(err){if(state.user?.id===userId)accountNotice(err.message,'error');}
+ finally{if(submit)submit.disabled=false;if(state.user?.id===userId)state.accountSecurity.busy=false;}
+}
+async function changeMyPassword(form){
+ if(state.accountSecurity.busy||!state.user)return;
+ let changes;
+ try{changes=validateNewPassword(form.querySelector('#oldPassword')?.value,form.querySelector('#newPassword')?.value,form.querySelector('#confirmPassword')?.value);}
+ catch(err){accountNotice(err.message,'error');return;}
+ const userId=state.user.id;
+ const submit=form.querySelector('button[type="submit"]');
+ state.accountSecurity.busy=true;
+ if(submit){submit.disabled=true;submit.textContent='Modification…';}
+ try{
+  // Le SDK traduit currentPassword en current_password côté Supabase Auth.
+  const {error}=await client.auth.updateUser(changes);
+  if(error)throw error;
+  if(state.user?.id===userId)accountNotice('Ton mot de passe a été modifié. Utilise-le à ta prochaine connexion.','success');
+ }catch(error){
+  if(state.user?.id===userId)accountNotice(error?.code==='reauthentication_needed'?
+   'Supabase demande une vérification complémentaire. Utilise le lien de récupération par e-mail.':
+   'Impossible de changer le mot de passe. Vérifie le mot de passe actuel et réessaie.','error');
+ }finally{
+  for(const name of ['oldPassword','newPassword','confirmPassword']){const input=form.querySelector('#'+name);if(input)input.value='';}
+  if(submit)submit.disabled=false;
+  if(state.user?.id===userId)state.accountSecurity.busy=false;
+ }
+}
+async function requestRecoveryEmail(identifier,fromLogin=false){
+ const text=String(identifier||'').trim();
+ if(!text){if(fromLogin)showMessage('Saisis ton identifiant avant de demander un lien.');return;}
+ if(!fromLogin&&Date.now()-state.accountSecurity.lastRequestAt<120000){
+  accountNotice('Une demande vient d’être faite. Vérifie d’abord tes e-mails.');return;
+ }
+ try{
+  // Lien Auth généré côté serveur et envoyé par Resend, jamais par le navigateur.
+  await invokeAccountFunction('password-recovery-email',{action:'request',identifier:text});
+  if(fromLogin)showMessage(RESET_REQUEST_MESSAGE,'info');
+  else{state.accountSecurity.lastRequestAt=Date.now();accountNotice(RESET_REQUEST_MESSAGE,'success');}
+ }catch(_){
+  if(fromLogin)showMessage('Service momentanément indisponible. Réessaie plus tard.');
+  else accountNotice('Impossible de transmettre la demande pour le moment.','error');
+ }
+}
+
 function pageSettings(){
-  return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>';
+  return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>'+renderSecuritySettings(state.accountSecurity);
 }
 function pageImport(){
   if(state.access!=='manage')return '<div class="live-error">Tu n’as pas les droits de gérer le planning.</div>';
@@ -418,6 +515,7 @@ function go(page){
   state.page=page;state.notice='';state.error='';
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
+  if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   window.scrollTo({top:0,behavior:'instant'});
 }
@@ -562,6 +660,12 @@ async function verifyResume(){
   }catch{await signOut();}
 }
 ROOT.addEventListener('submit',async event=>{
+  if(event.target.id==='recoveryEmailForm'){
+    event.preventDefault();await saveRecoveryEmail(event.target);return;
+  }
+  if(event.target.id==='changePasswordForm'){
+    event.preventDefault();await changeMyPassword(event.target);return;
+  }
   if(event.target.id!=='loginForm')return;
   event.preventDefault();
   const identifier=ROOT.querySelector('#loginEmail')?.value||'';
@@ -609,7 +713,14 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
-  if(action==='logout')await signOut();
+  if(action==='forgot-password')await requestRecoveryEmail(ROOT.querySelector('#loginEmail')?.value,true);
+  else if(action==='request-password-email'){
+    if(!state.accountSecurity.configured){accountNotice('Associe d’abord une adresse e-mail de récupération.','error');return;}
+    const {data,error}=await client.auth.getUser();
+    if(error||!data?.user?.email){accountNotice('Impossible d’identifier ton compte.','error');return;}
+    await requestRecoveryEmail(data.user.email);
+  }
+  else if(action==='logout')await signOut();
   else if(action==='install-pwa')await installPwa();
   else if(action==='go-import')go('import');
   else if(action==='go-planning')go('planning');
