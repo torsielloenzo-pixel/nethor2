@@ -163,7 +163,7 @@ end $$;
 
 create or replace function public.nethor_sync_set_mode(p_mode text)
 returns jsonb language plpgsql security definer set search_path=''
-as $
+as $$
 declare r public.nethor_sync_binding%rowtype;
 begin
  if (select auth.uid()) is null or not private.session_is_active() or
@@ -176,7 +176,7 @@ begin
  where singleton_id=1 and device_id is not null returning * into r;
  if not found then raise exception 'NETHOR_SYNC_NOT_INSTALLED'; end if;
  return jsonb_build_object('mode',r.mode);
-end $;
+end $$;
 
 revoke execute on function public.nethor_sync_status() from public,anon;
 revoke execute on function public.nethor_sync_register(uuid,text,text) from public,anon;
