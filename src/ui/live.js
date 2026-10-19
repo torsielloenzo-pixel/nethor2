@@ -1017,12 +1017,15 @@ ROOT.addEventListener('click',async event=>{
       state.mobilePlanning.year=Number((state.day||dateInParis()).slice(0,4));
       state.view='year';
       render();
+      const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=0;
       void loadAnnualWeeks(true);
       return;
     }
-    if(action==='year-current')state.mobilePlanning.year=Number(dateInParis().slice(0,4));
-    else state.mobilePlanning.year+=action==='year-prev'?-1:1;
-    if(state.mobilePlanning.year<1900||state.mobilePlanning.year>2100)return;
+    const targetYear=action==='year-current'
+      ?Number(dateInParis().slice(0,4))
+      :state.mobilePlanning.year+(action==='year-prev'?-1:1);
+    if(targetYear<1900||targetYear>2100)return;
+    state.mobilePlanning.year=targetYear;
     state.mobilePlanning.annual={year:null,weeks:[],loading:false,loaded:false,error:''};
     render();
     const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=0;
