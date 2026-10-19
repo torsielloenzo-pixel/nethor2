@@ -33,5 +33,33 @@ if (-not (Test-Path -LiteralPath $stateDir)) { New-Item -Path $stateDir -ItemTyp
 $refreshToken = ConvertTo-SecureString -String $auth.refresh_token -AsPlainText -Force
 try { $refreshToken | ConvertFrom-SecureString | Set-Content -LiteralPath (Join-Path $stateDir "auth.dat") -Encoding UTF8 }
 finally { $refreshToken.Dispose() }
+# Enregistrement serveur du poste, impossible tant qu'un autre poste est lie.
+$bindingPath = Join-Path $stateDir "device-binding.json"
+$device = if (Test-Path -LiteralPath $bindingPath) { Get-Content -LiteralPath $bindingPath -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
+$deviceId = if ($device -and $device.deviceId) { [string]$device.deviceId } else { [guid]::NewGuid().ToString() }
+$secretPath = Join-Path $stateDir "device-secret.dat"
+if (Test-Path -LiteralPath $secretPath) {
+  $protected = (Get-Content -LiteralPath $secretPath -Raw -Encoding UTF8).Trim()
+  $secure = ConvertTo-SecureString -String $protected
+  $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try { $deviceSecret = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
+  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr); $secure.Dispose() }
+} else {
+  $bytes = New-Object byte[] 32
+  $generator = [Security.Cryptography.RandomNumberGenerator]::Create()
+  try { $generator.GetBytes($bytes) } finally { $generator.Dispose() }
+  $deviceSecret = ([BitConverter]::ToString($bytes)).Replace("-", "").ToLowerInvariant()
+}
+$registration = Invoke-RestMethod -Method Post -Uri ($config.supabaseUrl.TrimEnd("/") + "/rest/v1/rpc/nethor_sync_register") -Headers $headers -ContentType "application/json" -Body (@{
+  p_device_id = $deviceId
+  p_secret = $deviceSecret
+  p_device_label = [Environment]::MachineName
+} | ConvertTo-Json)
+if (-not $registration.registered -or -not $registration.generation) { throw "Enregistrement du poste non confirme." }
+$encodedDeviceSecret = ConvertTo-SecureString -String $deviceSecret -AsPlainText -Force
+try { $encodedDeviceSecret | ConvertFrom-SecureString | Set-Content -LiteralPath $secretPath -Encoding UTF8 }
+finally { $encodedDeviceSecret.Dispose(); $deviceSecret = $null }
+@{ deviceId=$deviceId; generation=[long]$registration.generation; label=[Environment]::MachineName } |
+  ConvertTo-Json | Set-Content -LiteralPath $bindingPath -Encoding UTF8
 Write-Host "Compte de gestion connecte. Jeton chiffre pour l'utilisateur Windows courant."
-Write-Host "Aucun fichier n'est envoye avant activation de uploadEnabled dans config.json."
+Write-Host "Le poste est lie. Aucune publication automatique de planning sans validation."
