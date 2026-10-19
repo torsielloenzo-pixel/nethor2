@@ -43,3 +43,23 @@ export async function verifyPublishedWeek(client,weekStart,expectedRevision) {
   const current=await getPlanningWeek(client,weekStart);
   return !!current && current.revision===expectedRevision;
 }
+
+/** Dates des semaines publiées dans l'année, en lecture seule (RLS planning).
+ * Inclut la semaine du 1er janvier si son lundi est dans l'année précédente.
+ * Ne récupère ni noms, ni horaires des collaborateurs.
+ */
+export async function getPublishedWeeksForYear(client,year){
+ if(!Number.isInteger(year)||year<1900||year>2100)throw new RangeError('Année invalide');
+ const monday=date=>{
+  const d=new Date(date+'T12:00:00Z');
+  const wd=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-wd);
+  return d.toISOString().slice(0,10);
+ };
+ const start=monday(year+'-01-01'),end=monday(year+'-12-31');
+ const {data,error}=await client.from('planning_weeks')
+  .select('week_start').gte('week_start',start).lte('week_start',end)
+  .order('week_start',{ascending:true});
+ if(error)throw Error('Impossible de consulter les semaines publiées.');
+ return [...new Set((Array.isArray(data)?data:[]).map(item=>String(item.week_start||''))
+  .filter(key=>/^\d{4}-\d{2}-\d{2}$/.test(key)))];
+}
