@@ -1,4 +1,4 @@
-name: NethorSync - Comparaison installateur 2.1.1
+name: NethorSync - Installateur compatible MSI
 
 on:
   workflow_dispatch:
@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/build-nethor-sync-compat.yml'
+      - 'tools/nethor-sync/NethorSync.ps1'
+      - 'tools/nethor-sync/Connect-NethorSync.ps1'
+      - 'tools/nethor-sync/Verify-NethorSyncBinding.ps1'
 
 permissions:
   contents: write
@@ -35,12 +38,56 @@ jobs:
           if ($iss -notmatch '#define AppVersion "2\.1\.1"') { throw 'Version Inno Setup incorrecte' }
           if ($iss -match 'Watch-NethorSync.ps1') { throw 'La version de reference ne doit pas contenir le processus d ecoute' }
           Write-Host 'Source connue : version 2.1.1, sans écoute continue.'
+      - name: Recuperer les corrections de scripts de cette revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: bugfix
+          persist-credentials: false
+      - name: Appliquer le correctif aux scripts de la version compatible
+        shell: pwsh
+        run: |
+          foreach ($name in @('NethorSync.ps1','Connect-NethorSync.ps1','Verify-NethorSyncBinding.ps1')) {
+            $source = Join-Path 'bugfix/tools/nethor-sync' $name
+            $target = Join-Path 'tools/nethor-sync' $name
+            if (-not (Test-Path $source)) { throw "Correctif absent : $name" }
+            Copy-Item -LiteralPath $source -Destination $target -Force
+            $content = Get-Content -LiteralPath $target -Raw
+            if ($content -match '\\$ConfigPath\\s*=\\s*\\(Join-Path') { throw "Ancien chemin de paramètre détecté : $name" }
+          }
+          $issPath='tools/nethor-sync/NethorSync2.iss'
+          $iss=Get-Content -LiteralPath $issPath -Raw
+          $iss=$iss.Replace('#define AppVersion "2.1.1"','#define AppVersion "2.1.2"')
+          if ($iss -notmatch '#define AppVersion "2\\.1\\.2"') { throw 'Version du correctif invalide' }
+          Set-Content -LiteralPath $issPath -Value $iss -Encoding UTF8
+          Write-Host 'Version Windows compatible 2.1.2, sans agent permanent.'
+      - name: Tester le demarrage reel du scanner et les sous-dossiers
+        shell: powershell
+        run: |
+          $probe=Join-Path $env:TEMP ('nethor-sync-boot-'+[guid]::NewGuid().ToString('N'))
+          $agent=Join-Path $probe 'app'
+          $plans=Join-Path $probe 'Planning/2026/Octobre'
+          $state=Join-Path $probe 'state'
+          New-Item -ItemType Directory -Path $agent,$plans -Force | Out-Null
+          try {
+            Copy-Item -LiteralPath 'tools/nethor-sync/NethorSync.ps1' -Destination $agent
+            [IO.File]::WriteAllBytes((Join-Path $plans 'planning.xls'),[byte[]](1,2,3,4))
+            @{rootPath=(Join-Path $probe 'Planning');statePath=$state;uploadEnabled=$false;maxFileMB=10} |
+              ConvertTo-Json | Set-Content -LiteralPath (Join-Path $agent 'config.json') -Encoding UTF8
+            $result=& powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $agent 'NethorSync.ps1') -DryRun 2>&1 | Out-String
+            if ($LASTEXITCODE -ne 0) {throw "Erreur au démarrage du scanner : $result"}
+            $report=Get-Content -LiteralPath (Join-Path $state 'sync-report.json') -Raw | ConvertFrom-Json
+            if ($report.scanned -ne 1) {throw "Scan récursif incorrect : $($report.scanned)"}
+            Write-Host 'Démarrage sans -ConfigPath OK ; sous-dossiers détectés.'
+          } finally {
+            Remove-Item -LiteralPath $probe -Force -Recurse -ErrorAction SilentlyContinue
+          }
       - name: Installer Inno Setup
         shell: pwsh
         run: |
           choco install innosetup --yes --no-progress --limit-output
           if ($LASTEXITCODE -ne 0) {throw "Inno Setup indisponible"}
-      - name: Compiler exactement le code source de la version de reference
+      - name: Compiler la version compatible avec correctif des chemins PowerShell
         shell: pwsh
         run: |
           $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -49,7 +96,7 @@ jobs:
           & $compiler 'tools\nethor-sync\NethorSync2.iss'
           if ($LASTEXITCODE -ne 0) {throw 'Compilation échouée'}
           $original='build\installer\NethorSync2-Setup.exe'
-          $result='build\installer\NethorSync2-Setup-Compatibility-211.exe'
+          $result='build\installer\NethorSync2-Setup-Compatibility-212.exe'
           if (-not (Test-Path $original)) {throw 'Exécutable absent'}
           Copy-Item $original $result -Force
           $publicName='build\installer\NethorSync-Setup.exe'
@@ -66,7 +113,7 @@ jobs:
       - name: Joindre l exécutable à GitHub Actions
         uses: actions/upload-artifact@v4
         with:
-          name: NethorSync2-Compatibility-211
+          name: NethorSync2-Compatibility-212
           path: |
             build/installer/NethorSync2-Setup-Compatibility-211.exe
             build/installer/NethorSync-Setup.exe
