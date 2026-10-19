@@ -222,6 +222,48 @@ $report = [ordered]@{
 }
 
 if ($networkEnabled) {
+  # Enregistrer les versions réelles du fichier AVANT l'accusé de réception
+  # du contrôle. Le stockage précédent conserve l'ancienne date LastWriteTimeUtc ;
+  # la date d'envoi ne sert jamais de date de version.
+  if ($errors.Count -eq 0) {
+    $changes = @()
+    foreach ($entry in @($entries)) {
+      if ($entry.status -notin @('new', 'modified', 'moved_or_copied')) { continue }
+      if ($entry.upload -notin @('staged', 'already_staged')) { continue }
+      if (-not $entry.storageKey -or -not $entry.sha256) { continue }
+      $previousEntry = $previousByPath[[string]$entry.path]
+      $previousName = $null
+      $previousModified = $null
+      $previousHash = $null
+      if ($entry.status -eq 'modified' -and $null -ne $previousEntry) {
+        $previousName = [IO.Path]::GetFileName([string]$previousEntry.path)
+        $previousModified = if ($previousEntry.modifiedUtc) { [string]$previousEntry.modifiedUtc } else { $null }
+        $previousHash = if ($previousEntry.sha256) { [string]$previousEntry.sha256 } else { $null }
+      }
+      $kind = if ($entry.status -eq 'modified') { 'replaced' }
+        elseif ($entry.status -eq 'moved_or_copied') { 'moved' } else { 'added' }
+      $changes += @{
+        relativePath = [string]$entry.path
+        fileName = [IO.Path]::GetFileName([string]$entry.path)
+        previousFileName = $previousName
+        kind = $kind
+        previousModifiedUtc = $previousModified
+        modifiedUtc = [string]$entry.modifiedUtc
+        previousSha256 = $previousHash
+        sha256 = [string]$entry.sha256
+        storageKey = [string]$entry.storageKey
+      }
+    }
+    # Reprise idempotente : un transfert effectué mais non confirmé est repris
+    # sans dupliquer les versions grâce à l'index unique côté Supabase.
+    foreach ($batch in @($changes | Group-Object { [Math]::Floor([Array]::IndexOf($changes, $_) / 100) })) {
+      if ($null -eq $batch -or @($batch.Group).Count -eq 0) { continue }
+      $null = Invoke-SyncRpc $config $token 'nethor_sync_record_file_changes' @{
+        p_device_id=$device.id; p_secret=$device.secret
+        p_generation=$device.generation; p_changes=@($batch.Group)
+      }
+    }
+  }
   # Ne pas accuser reception d'une demande manuelle si l'operation a echoue.
   if ($errors.Count -eq 0) {
     $outcome = if (@($entries | Where-Object { $_.upload -eq "staged" }).Count -gt 0) { "transferred" }
