@@ -41,23 +41,21 @@ Le programme calcule une empreinte SHA-256 des fichiers `.xls`, `.xlsx`, `.xlsm`
 
 La synchronisation dépose les originaux dans le stockage **privé** `planning-files/sync-inbox`; aucun fichier n'est déposé sur GitHub. L'application Nethor2 affiche les fichiers en attente pour un administrateur ayant le droit `manage`.
 
-## Publication automatique sécurisée
+## Publication automatique côté Supabase — fonctionne avec NethorSync 2.1.2
 
-Depuis la version **2.1.3**, NethorSync enregistre le chemin relatif, l'empreinte SHA-256 et les dates de dernière modification Windows de chaque version. Après un transfert et l'enregistrement de ce changement, Supabase crée un travail de publication automatique. Le serveur télécharge l'original, recalcule l'empreinte et utilise le même décodeur de planning Excel (date B2, 7 jours, collaborateurs et couleurs) que l'import manuel.
+**Le poste Windows ne publie jamais les horaires directement.** Il continue à déposer les fichiers Excel .xls/.xlsx/.xlsm dans `planning-files/sync-inbox/` avec une empreinte SHA-256. C'est désormais la base Supabase, indépendante du PC et du navigateur, qui détecte les nouveaux dépôts.
 
-**La publication ne se fait que si toutes ces conditions sont remplies :**
+- Une tâche serveur vérifie chaque minute les nouveaux fichiers du répertoire privé. Les dépôts **antérieurs à la date d'activation de cette fonction** ne sont jamais publiés rétroactivement.
+- Seuls les fichiers déposés par le compte actif du MSI associé sont acceptés. Le serveur récupère le classeur, recalcule son empreinte SHA-256 et utilise le même lecteur Excel que l'import manuel.
+- Seules les semaines déjà publiées dans Nethor2 peuvent être remplacées, après vérification de la date B2, des sept jours, des couleurs, du nom du planning et de la cohérence des employés et créneaux.
+- Les semaines anciennes de plus d'une semaine ou futures de plus de dix semaines, les doublons et les fichiers dont la version est ambiguë sont ignorés sans changer les horaires.
+- La dernière version publiée est protégée par verrouillage transactionnel et ordre des transferts. Un import manuel intervenu après le dépôt ne peut pas être effacé.
+- L'état du résultat (`published`, `unchanged`, `skipped`, `rejected`, `failed`) est visible aux gestionnaires, et l'historique Nethor2 conserve l'ancien fichier.
+- Les utilisateurs reçoivent la nouvelle semaine depuis la même table `planning_weeks`, avec les révisions et mécanismes de lecture existants.
 
-- L'événement est un vrai remplacement (`replaced`) d'un même fichier déjà observé par NethorSync, et non une première découverte, une copie ou un déplacement.
-- La date de modification Windows est strictement plus récente que celle de la version précédente, dans une fenêtre de 14 jours.
-- Le classeur d'origine est lisible : 7 journées, au maximum 200 salariés, horaires et couleurs cohérents ; aucun style inconnu ne doit être deviné.
-- La semaine existe déjà en base (au moins une version initiale publiée manuellement) ; elle n'a pas été remplacée entre-temps par une version plus récente.
-- Le poste et le compte qui lui est lié sont toujours autorisés.
+**Limitation connue de la 2.1.2 :** Supabase connaît la date de **réception** du fichier, mais pas son horodatage Windows `LastWriteTimeUtc`. Un ancien fichier recopié après coup peut être transféré comme une nouveauté : il est impossible de prouver sa fraîcheur absolue à partir du seul dépôt. Les contrôles de période, de nom, de version déjà publiée et d'ordre des arrivées réduisent ce risque sans l'éliminer totalement. En cas de doute, vérifier le planning dans Nethor2.
 
-À défaut, le fichier reste archivé mais n'est pas publié. La décision est enregistrée (`published`, `unchanged`, `skipped`, `rejected`) dans l'historique de publication, accessible aux rôles Administrateur et Point de vente. Chaque publication utilise les mêmes tables, révisions, jours lus et historique que le planning manuel.
-
-Les fichiers déjà présents avant l'activation ne sont **pas publiés rétroactivement**. Les semaines nouvelles, jamais publiées auparavant, attendent une première importation manuelle. Les pièces jointes ne sont jamais modifiées ni supprimées par NethorSync.
-
-La mise à jour 2.1.3 garde la connexion Windows/DPAPI et les tâches planifiées de la 2.1.1 compatible, sans installer l'écoute permanente 2.2.0.
+Aucun ancien fichier ne peut être supprimé ou modifié sur le MSI par le traitement serveur. La 2.1.3 n'est pas requise.
 
 ## Désinstallation et transfert
 
@@ -72,6 +70,6 @@ Pour arrêter localement, désactiver les tâches « Nethor Sync 2 » dans le Pl
 
 ## Diffusion Windows
 
-L'installateur compatible **2.1.3**, destiné au MSI, est publié sous le nom [NethorSync-Setup.exe](https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe). Le workflow de compatibilité conserve le socle Inno Setup 2.1.1 et importe les scripts corrigés depuis main, afin de ne pas réintroduire l'écoute permanente 2.2.0.
+L'installateur **2.1.2**, conservé pour compatibilité avec le MSI, est publié sous le nom [NethorSync-Setup.exe](https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe). Le programme local reste un simple scanner et transporteur de fichiers. Les règles de publication évoluent sur Supabase, sans reconfiguration Windows.
 
 Le logiciel est non signé : Smart App Control peut bloquer un nouvel exécutable. Ne désactivez pas les protections Windows pour l'installer. Seule l'exécution programmée est discrète : les tâches restent visibles dans le Planificateur Windows.
