@@ -25,6 +25,21 @@ export function syncOverviewStatus(snapshot,now=Date.now()){
  return syncHealth(snapshot.status,now);
 }
 
+// Ne jamais annoncer un planning publié sur la seule foi du transfert Excel.
+function renderAutoPublication(snapshot){
+ if(snapshot?.autoError)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Suivi des publications temporairement indisponible.</p></section>';
+ const entries=Array.isArray(snapshot?.autoPublications)?snapshot.autoPublications:[];
+ const last=entries[0];
+ if(!last)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Activée pour les fichiers réellement modifiés et récents. Aucune nouvelle version traitée pour le moment.</p></section>';
+ const labels={queued:'En attente de traitement',processing:'Analyse Excel en cours',published:'Planning publié pour toute l’équipe',unchanged:'Horaires déjà à jour',skipped:'Publication ignorée pour sécurité',rejected:'Fichier Excel refusé',failed:'Échec de traitement'};
+ const state=String(last.status||'');
+ const when=formatSyncTimestamp(last.when);
+ return '<section class="n2sync-auto" data-state="'+escapeHtml(state)+'"><strong>Publication automatique · '+escapeHtml(labels[state]||'État inconnu')+'</strong>'+
+   '<p>'+escapeHtml(last.fileName||'Planning Excel')+' · '+escapeHtml(when.date)+' à '+escapeHtml(when.time)+'</p>'+
+   (last.weekStart?'<p>Semaine du '+escapeHtml(last.weekStart)+'</p>':'')+
+   (last.detail?'<p>'+escapeHtml(last.detail)+'</p>':'')+'</section>';
+}
+
 export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
  const current=syncOverviewStatus(snapshot,now);
  const status=snapshot?.status;
@@ -56,6 +71,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+
    '<span class="n2sync-status" data-state="'+escapeHtml(current)+'"><i aria-hidden="true"></i>'+escapeHtml(titles[current]||'État inconnu')+'</span></div>'+
    '<div class="card-body">'+details+(status?.installed?renderSyncHistory(snapshot,now,period):'')+
+     renderAutoPublication(snapshot)+
      '<div class="n2sync-actions">'+action+'</div>'+guide+
      '<p id="n2sync-install-help" class="n2sync-install-help" hidden role="status"></p>'+
    '</div></section>';
