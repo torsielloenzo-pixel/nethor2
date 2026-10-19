@@ -217,16 +217,18 @@ foreach ($file in $files) {
     elseif ($null -ne $old) { $entry.status = "modified" }
     elseif ($oldHashes.ContainsKey($hash)) { $entry.status = "moved_or_copied" }
     else { $entry.status = "new" }
-    if ($uploaded.ContainsKey($hash)) {
-      $entry.upload = "already_sent"
-    } elseif ($networkEnabled) {
-
-      # Le poste revoque ne peut poursuivre les transferts avec notre agent.
+    if ($networkEnabled -and
+        ($entry.status -ne "unchanged" -or -not $uploaded.ContainsKey($hash))) {
+      # Contrôle obligatoire pour une nouvelle version ou un ancien upload non
+      # confirmé : la présence d'un hash local ne suffit pas après un changement
+      # de poste ou une erreur de réseau.
       $null = Check-ActiveDevice $config $token $device
       $result = Upload-Candidate $config $token $file $hash $device
       $entry.upload = $result.status
       $entry.storageKey = $result.key
       $uploaded[$hash] = $true
+    } elseif ($uploaded.ContainsKey($hash)) {
+      $entry.upload = "already_sent"
     } else { $entry.upload = "pending" }
   } catch {
     $entry.upload = "error"
