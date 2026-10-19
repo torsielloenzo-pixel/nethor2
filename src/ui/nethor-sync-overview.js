@@ -25,7 +25,7 @@ export function syncOverviewStatus(snapshot,now=Date.now()){
  return syncHealth(snapshot.status,now);
 }
 
-export function renderSyncOverviewCard(snapshot,now=Date.now()){
+export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
  const current=syncOverviewStatus(snapshot,now);
  const status=snapshot?.status;
  const bound=Boolean(status?.installed)&&current!=='error'&&current!=='loading';
@@ -55,8 +55,77 @@ export function renderSyncOverviewCard(snapshot,now=Date.now()){
  return '<section class="card n2sync-card" id="nethorSyncHomeCard" aria-labelledby="n2sync-title">'+
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+
    '<span class="n2sync-status" data-state="'+escapeHtml(current)+'"><i aria-hidden="true"></i>'+escapeHtml(titles[current]||'État inconnu')+'</span></div>'+
-   '<div class="card-body">'+details+
+   '<div class="card-body">'+details+(status?.installed?renderSyncHistory(snapshot,now,period):'')+
      '<div class="n2sync-actions">'+action+'</div>'+guide+
      '<p id="n2sync-install-help" class="n2sync-install-help" hidden role="status"></p>'+
    '</div></section>';
+}
+
+
+// Graphique historique : seules les données issues du serveur sont affichées.
+// Le rapport NethorSync compte une exécution, et non le nombre exact de fichiers Excel.
+export function prepareSyncChart(history,now=Date.now(),period=7){
+ const days=period===30?30:7;
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{
+  timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'
+ }).formatToParts(new Date(now)).filter(p=>['year','month','day'].includes(p.type)).map(p=>[p.type,Number(p.value)]));
+ const midnight=Date.UTC(parts.year,parts.month-1,parts.day);
+ const records=new Map((Array.isArray(history)?history:[]).map(d=>[String(d.date),d]));
+ const safe=value=>Number.isFinite(Number(value))?Math.max(0,Math.trunc(Number(value))):0;
+ const rows=Array.from({length:days},(_,i)=>{
+  const date=new Date(midnight-(days-1-i)*86400000).toISOString().slice(0,10);
+  const item=records.get(date)||{};
+  return {date,success:safe(item.success),errors:safe(item.errors),transfers:safe(item.transfers)};
+ });
+ const batches=[];
+ for(let start=0;start<rows.length;start+=(days===30?5:1)){
+  const group=rows.slice(start,start+(days===30?5:1));
+  const first=group[0].date,last=group[group.length-1].date;
+  const labelDate=d=>new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(d+'T12:00:00Z'));
+  batches.push({label:first===last?labelDate(first):labelDate(first)+' – '+labelDate(last),
+   success:group.reduce((n,d)=>n+d.success,0),
+   errors:group.reduce((n,d)=>n+d.errors,0),
+   transfers:group.reduce((n,d)=>n+d.transfers,0)});
+ }
+ return {rows,batches,success:rows.reduce((n,d)=>n+d.success,0),
+  errors:rows.reduce((n,d)=>n+d.errors,0),
+  transfers:rows.reduce((n,d)=>n+d.transfers,0)};
+}
+
+function renderSyncHistory(snapshot,now,period){
+ const loading=!snapshot?.historyLoaded&&!snapshot?.historyError;
+ const series=prepareSyncChart(snapshot?.history,now,period);
+ const title='<div class="n2sync-history-top"><div><h3>Historique des synchronisations</h3>'+
+  '<p>Suivi réel des contrôles de NethorSync</p></div>'+
+  '<div class="n2sync-period" role="group" aria-label="Période du graphique">'+
+  [7,30].map(days=>'<button type="button" data-action="nethor-sync-chart-'+days+'"'+
+   (period===days?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+days+' jours</button>').join('')+'</div></div>';
+ if(snapshot?.historyError)return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+
+  '<p class="n2sync-history-placeholder" role="status">Historique indisponible. L’état du poste reste consultable ci-dessus.</p></section>';
+ if(loading)return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+
+  '<p class="n2sync-history-placeholder" role="status">Chargement de l’historique…</p></section>';
+ const total=series.success+series.errors;
+ const metrics='<div class="n2sync-metrics">'+[
+  ['Vérifications réussies',series.success,'success'],
+  ['Échecs',series.errors,'error'],
+  ['Cycles avec transfert',series.transfers,'transfer']
+ ].map(([label,value,kind])=>'<div class="n2sync-metric '+kind+'"><span>'+label+'</span><strong>'+value+'</strong></div>').join('')+'</div>';
+ if(total===0)return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+metrics+
+  '<p class="n2sync-history-placeholder">Aucune vérification enregistrée sur cette période. Le suivi démarre à compter de son activation.</p></section>';
+ const max=Math.max(1,...series.batches.flatMap(d=>[d.success,d.errors,d.transfers]));
+ const bars=series.batches.map(d=>{
+  const aria=escapeHtml(d.label+': '+d.success+' réussies, '+d.errors+' échecs, '+d.transfers+' cycles avec transfert');
+  const columns=[['success',d.success],['error',d.errors],['transfer',d.transfers]]
+   .map(([kind,n])=>'<span class="n2sync-chart-bar '+kind+'" style="height:'+(n?Math.max(3,Math.round(n/max*100)):0)+'%"></span>').join('');
+  return '<div class="n2sync-chart-group" role="img" aria-label="'+aria+'"><div class="n2sync-chart-bars">'+columns+'</div>'+
+    '<small>'+escapeHtml(d.label)+'</small></div>';
+ }).join('');
+ const percent=Math.round(series.success/total*100);
+ return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+metrics+
+  '<div class="n2sync-chart-legend"><span><i class="success"></i>Réussies</span><span><i class="error"></i>Échecs</span><span><i class="transfer"></i>Avec transfert</span></div>'+
+  '<div class="n2sync-chart" role="group" aria-label="Activité de NethorSync">'+bars+'</div>'+
+  '<div class="n2sync-chart-foot"><span>Taux de réussite</span><strong>'+percent+' %</strong></div>'+
+  '<div class="n2sync-chart-progress"><span style="width:'+percent+'%"></span></div>'+
+  '<p class="n2sync-history-note">Un transfert correspond à un cycle ayant envoyé au moins un fichier, pas au nombre de fichiers envoyés.</p>'+
+  '</section>';
 }
