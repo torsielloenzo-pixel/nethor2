@@ -16,8 +16,21 @@ export async function readStaffSyncStatus(client){
  if(error)throw Error('État NethorSync indisponible.');
  if(!data||typeof data!=='object'||typeof data.installed!=='boolean')
    throw Error('Réponse NethorSync invalide.');
- return {installed:data.installed===true,lastSeenAt:data.lastSeenAt||null,
-   lastCheckAt:data.lastCheckAt||null,lastTransferAt:data.lastTransferAt||null};
+ return {
+   installed:data.installed===true,
+   lastSeenAt:data.lastSeenAt||null,
+   lastCheckAt:data.lastCheckAt||null,
+   lastTransferAt:data.lastTransferAt||null,
+   lastResult:['unchanged','transferred','error','no_files'].includes(data.lastResult)?data.lastResult:null,
+   controlIntervalHours:data.controlIntervalHours===4?4:null,
+   controlLocalHours:Array.isArray(data.controlLocalHours)?data.controlLocalHours.filter(x=>/^([01][0-9]|2[0-3]):00$/.test(String(x))).slice(0,6):[],
+   nextControlAt:data.nextControlAt||null,
+   lastScheduledAt:data.lastScheduledAt||null,
+   lastRequestedAt:data.lastRequestedAt||null,
+   lastRequestedKind:['immediate','scheduled'].includes(data.lastRequestedKind)?data.lastRequestedKind:null,
+   lastRequestStatus:['none','pending','completed','error'].includes(data.lastRequestStatus)?data.lastRequestStatus:'none',
+   controlPending:data.controlPending===true
+ };
 }
 export async function readMobileSyncSummary(client){
  const [planning,sync]=await Promise.allSettled([
