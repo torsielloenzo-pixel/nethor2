@@ -173,7 +173,7 @@ test('Les téléchargements de NethorSync utilisent la version MSI compatible et
  const app=read('src/ui/live.js');
  const pipeline=read('.github/workflows/build-nethor-sync-compat.yml');
  assert.match(side,/releases\/download\/nethor-sync2-latest\/NethorSync-Setup\.exe/);
- assert.match(side,/Ouvrez NethorSync-Setup\.exe/);
+ assert.match(side,/ouvrez NethorSync-Setup\.exe/i);
  assert.match(app,/NethorSync-Setup\.exe/);
  assert.match(pipeline,/ref: 55b1d728aa770d2e4bd875f62521c7a6271fbcd4/);
  assert.match(pipeline,/NethorSync-Setup\.exe/);
