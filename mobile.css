@@ -645,9 +645,8 @@
    La classe n'est posée qu'après identification d'un appareil mobile. */
 html.nethor-zoom-locked,
 html.nethor-zoom-locked body,
-html.nethor-zoom-locked #app,
-html.nethor-zoom-locked #app * {
-  touch-action:pan-x pan-y !important;
+html.nethor-zoom-locked #app {
+  touch-action:pan-x pan-y;
 }
 html.nethor-zoom-locked {
   -webkit-text-size-adjust:100%;
@@ -658,4 +657,13 @@ html.nethor-zoom-locked input:not([type="checkbox"]):not([type="radio"]),
 html.nethor-zoom-locked textarea,
 html.nethor-zoom-locked select {
   font-size:16px !important;
+}
+
+/* Le tiroir doit rester au premier plan même si l'accueil est sans défilement. */
+@media(max-width:760px){
+  #app.menu-open,
+  #app.menu-open .app{overflow:visible!important}
+  #app.menu-open .mobile-drawer-backdrop{position:fixed;inset:0;z-index:1000}
+  #app.menu-open #sidebar{position:fixed;z-index:1001;display:flex;visibility:visible;pointer-events:auto}
+  #app.menu-open #mobileMenu{pointer-events:auto}
 }
