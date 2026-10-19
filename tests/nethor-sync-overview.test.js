@@ -21,7 +21,7 @@ test('Poste non installé : bouton installer, jamais un faux état actif',()=>{
  assert.match(html,/Non installé \/ configuré/);
  assert.match(html,/data-action="nethor-sync-install"/);
  assert.doesNotMatch(html,/Dernière synchronisation/);
- assert.match(NETHOR_SYNC_INSTALLER_URL,/releases\/download\/nethor-sync2-latest\/NethorSync2-Setup\.exe$/);
+ assert.match(NETHOR_SYNC_INSTALLER_URL,/releases\/download\/nethor-sync2-latest\/NethorSync-Setup\.exe$/);
 });
 test('Poste opérationnel : date, heure, dernier transfert et nom de poste',()=>{
  const snapshot={loaded:true,status:{
@@ -164,4 +164,16 @@ test('Connexion historique sécurisée et fonctionnalité limitée au desktop ge
  assert.match(live,/Promise\.allSettled\(\[readSyncStatus\(client\),readSyncHistory\(client\)\]\)/);
  assert.match(live,/action==='nethor-sync-chart-30'/);
  assert.match(control,/client\.rpc\('nethor_sync_history',\{p_days:30\}\)/);
+});
+
+test('Les téléchargements de NethorSync utilisent la version MSI compatible et le bon nom',()=>{
+ const side=read('src/ui/nethor-sync-ui.js');
+ const app=read('src/ui/live.js');
+ const pipeline=read('.github/workflows/build-nethor-sync-compat.yml');
+ assert.match(side,/releases\/download\/nethor-sync2-latest\/NethorSync-Setup\.exe/);
+ assert.match(side,/Ouvrez NethorSync-Setup\.exe/);
+ assert.match(app,/NethorSync-Setup\.exe/);
+ assert.match(pipeline,/ref: 55b1d728aa770d2e4bd875f62521c7a6271fbcd4/);
+ assert.match(pipeline,/NethorSync-Setup\.exe/);
+ assert.doesNotMatch(NETHOR_SYNC_INSTALLER_URL,/NethorSync2-Setup\.exe/);
 });
