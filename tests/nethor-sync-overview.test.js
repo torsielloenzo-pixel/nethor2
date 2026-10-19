@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {canManageSync,syncHealth} from '../src/data/nethor-sync-control.js';
-import {formatSyncTimestamp,isSyncOverviewRole,NETHOR_SYNC_INSTALLER_URL,renderSyncOverviewCard,syncOverviewStatus} from '../src/ui/nethor-sync-overview.js';
+import {formatSyncTimestamp,isSyncOverviewRole,NETHOR_SYNC_INSTALLER_URL,renderSyncOverviewCard,prepareSyncChart,syncOverviewStatus} from '../src/ui/nethor-sync-overview.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const now=Date.parse('2026-10-19T17:00:00Z');
 
@@ -61,7 +61,10 @@ test('Vue ensemble admin/PDV n’affiche ni couverture ni détection d’anomali
  const js=read('src/ui/live.js');
  const part=js.slice(js.indexOf('function pageHome(metrics){'),js.indexOf('function pagePlanning(metrics){'));
  const scope=part.slice(part.indexOf('if(isSyncOverviewRole('),part.indexOf('  return renderPageHeader(',part.indexOf('if(isSyncOverviewRole(')));
- assert.ok(scope.includes('renderSyncOverviewCard(state.nethorSync)'));
+ assert.ok(scope.includes('renderSyncOverviewCard(state.nethorSync,Date.now(),syncChartPeriod)'));
+ assert.ok(scope.includes('n2sync-home-content'));
+ assert.ok(scope.indexOf('planningCard(metrics)')<scope.indexOf('renderSyncOverviewCard('));
+ assert.doesNotMatch(scope,/Collaborateurs planifiés|Heures planifiées|n2sync-home-summary/);
  assert.ok(scope.includes('planningCard(metrics)'));
  assert.ok(!scope.includes('coverageCard(metrics)'));
  assert.ok(!scope.includes('alertsCard(metrics'));
@@ -120,4 +123,45 @@ test('Mode unique automatique, synchronisation ponctuelle indépendante et écou
  assert.match(scheduler,/Hour=12/);
  assert.match(installer,/Watch-NethorSync\.ps1/);
  assert.match(spec,/Watch-NethorSync\.ps1/);
+});
+
+test('Graphique réel : périodes 7 / 30 jours, jours manquants à zéro',()=>{
+ const entries=[
+  {date:'2026-10-19',success:4,errors:1,transfers:2},
+  {date:'2026-10-18',success:3,errors:0,transfers:1}
+ ];
+ const seven=prepareSyncChart(entries,now,7);
+ assert.equal(seven.rows.length,7);
+ assert.equal(seven.batches.length,7);
+ assert.equal(seven.success,7);
+ assert.equal(seven.errors,1);
+ assert.equal(seven.transfers,3);
+ assert.equal(seven.rows[0].success,0);
+ const thirty=prepareSyncChart(entries,now,30);
+ assert.equal(thirty.rows.length,30);
+ assert.equal(thirty.batches.length,6);
+ assert.equal(thirty.success,7);
+});
+test('Absence de données NethorSync : jamais de chiffres fictifs',()=>{
+ const snapshot={loaded:true,historyLoaded:true,history:[],status:{
+  installed:true,deviceLabel:'MSI',lastSeenAt:'2026-10-19T16:59:00Z'
+ }};
+ const html=renderSyncOverviewCard(snapshot,now);
+ assert.match(html,/Aucune vérification enregistrée/);
+ assert.match(html,/nethor-sync-chart-7/);
+ assert.match(html,/nethor-sync-chart-30/);
+ assert.doesNotMatch(html,/Fichiers Excel/);
+ const withData=renderSyncOverviewCard({...snapshot,history:[
+  {date:'2026-10-19',success:5,errors:2,transfers:1}
+ ]},now,30);
+ assert.match(withData,/Taux de réussite/);
+ assert.match(withData,/Cycles avec transfert/);
+ assert.match(withData,/71 %/);
+});
+test('Connexion historique sécurisée et fonctionnalité limitée au desktop gestionnaire',()=>{
+ const live=read('src/ui/live.js');
+ const control=read('src/data/nethor-sync-control.js');
+ assert.match(live,/Promise\.allSettled\(\[readSyncStatus\(client\),readSyncHistory\(client\)\]\)/);
+ assert.match(live,/action==='nethor-sync-chart-30'/);
+ assert.match(control,/client\.rpc\('nethor_sync_history',\{p_days:30\}\)/);
 });
