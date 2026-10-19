@@ -13,7 +13,9 @@ export function createSyncController(client,root,profile){
   const details=isInstalled()
    ? '<div class="sync-side-details"><span>Poste : <strong>'+esc(status.deviceLabel||'Inconnu')+'</strong></span><span>Dépend de : '+esc(status.registeredBy||'Compte inconnu')+'</span><span>Dernière synchronisation : '+esc(time(status.lastCheckAt))+'</span><span>Dernier transfert Excel : '+esc(time(status.lastTransferAt))+'</span></div>'
    : '<p class="sync-side-small">Aucun poste NethorSync autorisé.</p>';
-  const actions=!isInstalled()
+  const actions=error
+   ? '<button class="sync-action" type="button" data-action="sync-state-refresh">Réessayer la vérification</button>'
+   : !isInstalled()
    ? '<button class="sync-action" type="button" data-action="sync-download">Installer NethorSync</button>'
    : '<button class="sync-action" type="button" data-action="sync-request-manual">Synchroniser manuellement</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button>';
   return '<div class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><strong>'+label+'</strong></div>'+details+
