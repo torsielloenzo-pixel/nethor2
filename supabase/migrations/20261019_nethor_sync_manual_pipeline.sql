@@ -57,7 +57,7 @@ create or replace function private.nethor_sync_manual_after_report()
 returns trigger language plpgsql security definer set search_path=''
 as $fn$
 declare v_flow private.nethor_sync_manual_pipeline%rowtype;
-declare v_check jsonb;
+v_check jsonb;
 begin
  if new.singleton_id<>1 or new.device_id is null then return new; end if;
  if new.acknowledged_manual>old.acknowledged_manual
@@ -113,12 +113,12 @@ create or replace function public.nethor_sync_status()
 returns jsonb language plpgsql stable security definer set search_path=''
 as $fn$
 declare r public.nethor_sync_binding%rowtype;
-declare f private.nethor_sync_manual_pipeline%rowtype;
-declare c private.nethor_sync_cloud_checks%rowtype;
-declare v_open integer:=0;
-declare v_published integer:=0;
-declare v_refused integer:=0;
-declare v_stage text:='none';
+f private.nethor_sync_manual_pipeline%rowtype;
+c private.nethor_sync_cloud_checks%rowtype;
+v_open integer:=0;
+v_published integer:=0;
+v_refused integer:=0;
+v_stage text:='none';
 begin
  if (select auth.uid()) is null or not private.session_is_active()
     or not exists(select 1 from public.profiles p where p.id=(select auth.uid())
