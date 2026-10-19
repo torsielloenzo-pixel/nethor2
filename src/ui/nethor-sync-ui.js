@@ -1,5 +1,5 @@
 import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth,setSyncMode} from '../data/nethor-sync-control.js';
-const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/archive/refs/heads/feature/nethor-sync-2.zip';
+const INSTALLER='https://raw.githubusercontent.com/torsielloenzo-pixel/nethor2/feature/nethor-sync-2/downloads/NethorSync2-Setup.zip';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
 export function createSyncController(client,root,profile){
@@ -11,7 +11,7 @@ export function createSyncController(client,root,profile){
   const state=syncHealth(status);
   const label=error&&!status?'État indisponible':state==='online'?'NethorSync opérationnel':isInstalled()?'NethorSync lié · hors ligne':'NethorSync non configuré';
   const details=isInstalled()
-   ? '<div class="sync-side-details"><span>Poste : <strong>'+esc(status.deviceLabel||'Inconnu')+'</strong></span><span>Dépend de : '+esc(status.registeredBy||'Compte inconnu')+'</span><span>Dernier contrôle : '+esc(time(status.lastCheckAt))+'</span><span>Dernier transfert : '+esc(time(status.lastTransferAt))+'</span></div>'
+   ? '<div class="sync-side-details"><span>Poste : <strong>'+esc(status.deviceLabel||'Inconnu')+'</strong></span><span>Dépend de : '+esc(status.registeredBy||'Compte inconnu')+'</span><span>Dernière synchronisation : '+esc(time(status.lastCheckAt))+'</span><span>Dernier transfert Excel : '+esc(time(status.lastTransferAt))+'</span></div>'
    : '<p class="sync-side-small">Aucun poste NethorSync autorisé.</p>';
   const actions=!isInstalled()
    ? '<button class="sync-action" type="button" data-action="sync-download">Installer NethorSync</button>'
@@ -50,7 +50,7 @@ export function createSyncController(client,root,profile){
  async function action(name){
   if(name==='sync-download'){
     window.open(INSTALLER,'_blank','noopener,noreferrer');
-    notice='Après téléchargement, extraire tools/nethor-sync puis lancer Installer-Sync.ps1 sur le PC Windows.';
+    notice='Extraire le ZIP puis exécuter Installer-NethorSync.cmd sur Windows pour choisir le dossier.';
     paint();return true;
   }
   if(name==='sync-state-refresh'){await refresh();return true;}
