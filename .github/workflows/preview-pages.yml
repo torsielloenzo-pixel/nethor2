@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 concurrency:
@@ -35,17 +35,6 @@ jobs:
           test -s _site/assets/nethor-logo-180-v8.png && test -s _site/assets/nethor-logo-192-v8.png && test -s _site/assets/nethor-logo-512-v8.png && test -s _site/favicon.ico
           test "$(cat _site/CNAME)" = "nethor.fr"
           test ! -e _site/.env
-      - name: Synchroniser les icônes officielles Nethor dans le dépôt
-        run: |
-          python3 scripts/generate-pwa-icons.py assets
-          cp favicon.ico _site/favicon.ico
-          git add favicon.ico assets/nethor-logo-*-v8.png
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "assets(brand): synchroniser les icônes officielles Nethor"
-            git push origin HEAD:main
-          fi
       - name: Configurer Pages
         uses: actions/configure-pages@v5
         with:
