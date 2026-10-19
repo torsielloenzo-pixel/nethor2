@@ -667,3 +667,55 @@ html.nethor-zoom-locked select {
   #app.menu-open #sidebar{position:fixed;z-index:1001;display:flex;visibility:visible;pointer-events:auto}
   #app.menu-open #mobileMenu{pointer-events:auto}
 }
+
+
+/* Planning Mobile / PWA Mobile : l'entête Nethor reste immobile.
+   #screen est la seule zone à défilement vertical. Le menu latéral et la
+   navigation du bas restent indépendants, avec les zones de sécurité iOS. */
+@media(max-width:760px){
+  body:has(#app.mobile-planning-active){
+    height:100dvh;
+    overflow:hidden;
+    overscroll-behavior-y:none;
+  }
+  #app.mobile-planning-active{
+    height:100dvh;
+    min-height:0;
+    overflow:hidden;
+  }
+  #app.mobile-planning-active .app{
+    height:100dvh;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+  }
+  #app.mobile-planning-active .workspace{
+    height:100dvh;
+    min-height:0;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    padding-bottom:calc(74px + env(safe-area-inset-bottom));
+    overflow:hidden;
+  }
+  #app.mobile-planning-active .topbar{
+    flex:0 0 auto;
+    position:relative;
+    top:auto;
+    z-index:9;
+  }
+  #app.mobile-planning-active main#screen{
+    flex:1 1 auto;
+    display:block;
+    min-height:0;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    margin:0;
+    padding:14px 12px 14px;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+}
