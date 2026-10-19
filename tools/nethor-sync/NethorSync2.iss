@@ -1,6 +1,6 @@
 ; Nethor Sync 2 - installation par utilisateur Windows, sans elevation.
 ; Le dossier des plannings est choisi explicitement ; il n'est ni copié ni modifié.
-#define AppVersion "2.1.1"
+#define AppVersion "2.2.0"
 [Setup]
 AppId={{B29F5D58-538F-40C2-9FA2-1A6B5926A4F8}
 AppName=NethorSync 2
@@ -32,6 +32,7 @@ Source: "NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Connect-NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Installer-Sync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Register-NethorSyncTasks.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Watch-NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Verify-NethorSyncBinding.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "NethorSyncRunner.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "config.example.json"; DestDir: "{app}"; Flags: onlyifdoesntexist
@@ -41,6 +42,8 @@ Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN ""Nethor Sync 2 - Lundi-Samedi"""; Flags: runhidden
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN ""Nethor Sync 2 - Dimanche"""; Flags: runhidden
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN ""Nethor Sync 2 - Controle Manuel"""; Flags: runhidden
+Filename: "{sys}\schtasks.exe"; Parameters: "/End /TN ""Nethor Sync 2 - Ecoute"""; Flags: runhidden
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN ""Nethor Sync 2 - Ecoute"""; Flags: runhidden
 
 [Code]
 var
