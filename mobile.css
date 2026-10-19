@@ -378,3 +378,98 @@
 @media(prefers-reduced-motion:reduce){
  .n2pm-away summary>b{transition:none}
 }
+
+/* ENTETE MOBILE NETHOR — même bleu #101f3e que le fond du logo officiel.
+   Uniquement mobile / PWA mobile ; le desktop reste inchangé. */
+.nethor-mobile-titles{display:none}
+@media(max-width:760px){
+  #app .topbar{
+    background:#101f3e;
+    color:#fff;
+    border-bottom:1px solid rgba(255,255,255,.1);
+    box-shadow:0 4px 16px rgba(12,27,55,.14);
+    height:64px;
+    min-height:64px;
+    padding:env(safe-area-inset-top) 14px 0;
+    box-sizing:content-box;
+    position:sticky;
+    top:0;
+    z-index:9;
+  }
+  #app .topbar .top-left{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    flex:1;
+    min-width:0;
+  }
+  #app .topbar .mobile-brand{
+    display:grid;
+    place-items:center;
+    flex:0 0 42px;
+    width:42px;
+    height:42px;
+    min-width:42px;
+    min-height:42px;
+    padding:0;
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:12px;
+    background:rgba(255,255,255,.085);
+    color:#fff;
+    font-size:31px;
+    font-weight:400;
+    line-height:1;
+  }
+  #app .topbar .mobile-brand span{display:block;transform:translateY(-2px)}
+  #app .topbar .mobile-brand:hover{background:rgba(255,255,255,.16)}
+  #app .topbar .mobile-brand:focus-visible{outline:2px solid #fff;outline-offset:3px}
+  #app .topbar .mobile-brand[aria-expanded="true"]{background:rgba(255,255,255,.20)}
+  #app .topbar .nethor-header-logo{
+    flex:0 0 40px;
+    width:40px;
+    height:40px;
+    border-radius:10px;
+    background:#101f3e;
+  }
+  #app .topbar .nethor-header-titles{
+    flex:1;
+    min-width:0;
+    display:flex;
+    align-items:center;
+  }
+  #app .topbar .nethor-desktop-titles{display:none}
+  #app .topbar .nethor-mobile-titles{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:3px;
+    min-width:0;
+  }
+  #app .topbar .nethor-mobile-titles strong{
+    display:block;
+    font-size:17px;
+    line-height:1.05;
+    font-weight:850;
+    letter-spacing:1.9px;
+    color:#fff;
+  }
+  #app .topbar #mobileCurrentPage{
+    display:block;
+    font-size:11px;
+    line-height:1.25;
+    font-weight:650;
+    letter-spacing:.25px;
+    color:#b9cff4;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  #app .topbar .top-actions{display:none}
+}
+@media(max-width:360px){
+  #app .topbar{padding-left:11px;padding-right:11px}
+  #app .topbar .top-left{gap:9px}
+  #app .topbar .mobile-brand{flex-basis:39px;width:39px;height:39px;min-width:39px;min-height:39px}
+  #app .topbar .nethor-header-logo{flex-basis:37px;width:37px;height:37px}
+  #app .topbar .nethor-mobile-titles strong{font-size:16px;letter-spacing:1.5px}
+}
