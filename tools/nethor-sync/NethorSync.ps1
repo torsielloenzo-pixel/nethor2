@@ -125,7 +125,7 @@ function Send-SafeSyncDiagnostic($Settings,[string]$Token,$Device,[int]$Scanned,
       p_scanned=[Math]::Min(100000,[Math]::Max(0,$Scanned))
       p_failed=[Math]::Min(100000,[Math]::Max(1,$Failed))
       p_transferred=[Math]::Min(100000,[Math]::Max(0,$Transferred))
-      p_client_version='2.1.5'; p_breakdown=$groups
+      p_client_version='2.1.6'; p_breakdown=$groups
     }
     Write-Host 'Rapport de diagnostic sécurisé transmis à Nethor2.'
   } catch {
