@@ -144,9 +144,6 @@ foreach ($hash in @($previous.uploadedHashes)) {
   if ($hash) { $uploaded[[string]$hash] = $true }
 }
 $maxBytes = if ($config.maxFileMB) { [long]$config.maxFileMB * 1MB } else { 10MB }
-$files = @(Get-ChildItem -LiteralPath $root -File -Recurse -ErrorAction Stop |
-  Where-Object { $_.Extension.ToLowerInvariant() -in @(".xls", ".xlsx", ".xlsm") -and -not $_.Name.StartsWith("~$") -and -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) } |
-  Sort-Object FullName)
 $entries = @()
 $errors = @()
 
@@ -169,6 +166,9 @@ if ($networkEnabled) {
     exit 0
   }
 }
+$files = @(Get-ChildItem -LiteralPath $root -File -Recurse -ErrorAction Stop |
+  Where-Object { $_.Extension.ToLowerInvariant() -in @(".xls", ".xlsx", ".xlsm") -and -not $_.Name.StartsWith("~$") -and -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) } |
+  Sort-Object FullName)
 foreach ($file in $files) {
   $relative = $file.FullName.Substring($root.TrimEnd("\").Length).TrimStart("\")
   $entry = [ordered]@{ path = $relative; size = $file.Length; modifiedUtc = $file.LastWriteTimeUtc.ToString("o"); sha256 = $null; status = "unread"; upload = "not_sent"; storageKey = $null }
