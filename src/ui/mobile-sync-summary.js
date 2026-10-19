@@ -11,6 +11,10 @@ export function formatPublicSyncTime(value,{includeDate=true}={}){
  const time=new Intl.DateTimeFormat('fr-FR',{...opts,hour:'2-digit',minute:'2-digit'}).format(d);
  return {date:includeDate?date:'',time,short:date+' · '+time};
 }
+export function scheduledTime(value) {
+ const stamp=formatPublicSyncTime(value);
+ return {time:stamp.time,date:stamp.date};
+}
 export function formatPublishedWeek(weekStart){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(weekStart||'')))return 'Semaine non renseignée';
  const monday=new Date(weekStart+'T12:00:00Z');
@@ -37,6 +41,22 @@ export function renderMobileSyncSummary(snapshot={},now=Date.now()){
  const lastTransfer=formatPublicSyncTime(snapshot?.sync?.lastTransferAt);
  const checkText=lastCheck.date==='—'?'Aucune vérification':lastCheck.date;
  const transferText=lastTransfer.date==='—'?'Aucun transfert':lastTransfer.date;
+ const schedule=snapshot?.sync?.controlIntervalHours===4;
+ const slots=Array.isArray(snapshot?.sync?.controlLocalHours)&&snapshot.sync.controlLocalHours.length===6
+   ?snapshot.sync.controlLocalHours:['00:00','04:00','08:00','12:00','16:00','20:00'];
+ const next=scheduledTime(snapshot?.sync?.nextControlAt);
+ const requested=formatPublicSyncTime(snapshot?.sync?.lastRequestedAt);
+ const requestStatus=snapshot?.sync?.lastRequestStatus;
+ const requestResult={
+  pending:'En attente du MSI',completed:'Exécutée sur le MSI',
+  error:'Échec du dernier contrôle',none:'Aucune demande'
+ }[requestStatus]||'État indisponible';
+ const requestOrigin=snapshot?.sync?.lastRequestedKind==='immediate'?'À la demande':
+   snapshot?.sync?.lastRequestedKind==='scheduled'?'Programmée':'';
+ const outcome={
+  transferred:'Fichiers transférés',unchanged:'Aucun changement',
+  no_files:'Aucun fichier',error:'Échec du contrôle'
+ }[snapshot?.sync?.lastResult]||'Résultat non disponible';
  const refreshed=formatPublicSyncTime(snapshot?.checkedAt);
  const foot=snapshot?.planningError?'La date de publication n’a pas pu être vérifiée. Réessaie avec le bouton Actualiser.':
    'Les versions Excel modifiées et récentes peuvent être publiées automatiquement après vérification. Un simple transfert ne garantit pas la publication.';
@@ -47,10 +67,12 @@ export function renderMobileSyncSummary(snapshot={},now=Date.now()){
   '<div class="n2ms-primary" data-publication="'+publishedState+'"><div class="n2ms-primary-label"><span class="n2ms-primary-dot" aria-hidden="true"></span>DERNIÈRE PUBLICATION DU PLANNING</div>'+
   '<div class="n2ms-primary-time"><strong>'+esc(dateLabel)+'</strong>'+(timeLabel?'<span>'+esc(timeLabel)+'</span>':'')+'</div>'+
   '<p>'+esc(weekLabel)+'</p></div>'+
-  '<div class="n2ms-subtitle"><span>NethorSync · Activité du poste</span><span class="n2ms-state" data-state="'+esc(state)+'"><i aria-hidden="true"></i>'+esc(titles[state]||'État indisponible')+'</span></div>'+
+  '<div class="n2ms-subtitle"><div class="n2ms-schedule"><span>CONTRÔLE PROGRAMMÉ'+(schedule?' · TOUTES LES 4 H':'')+'</span><small>'+(schedule?esc(slots.join(' · ')):'Horaires indisponibles')+' · Paris</small></div><span class="n2ms-state" data-state="'+esc(state)+'"><i aria-hidden="true"></i>'+esc(titles[state]||'État indisponible')+'</span></div>'+
   '<div class="n2ms-grid">'+
-   '<div class="n2ms-tile"><span>Dernier contrôle</span><strong>'+esc(checkText)+'</strong><small>'+esc(lastCheck.date==='—'?'Pas encore effectué':'à '+lastCheck.time)+'</small></div>'+
-   '<div class="n2ms-tile"><span>Dernier transfert</span><strong>'+esc(transferText)+'</strong><small>'+esc(lastTransfer.date==='—'?'Pas encore effectué':'à '+lastTransfer.time)+'</small></div>'+
+   '<div class="n2ms-tile"><span>Prochain contrôle</span><strong>'+esc(schedule?next.time:'—')+'</strong><small>'+esc(schedule?next.date+' · Heure de Paris':'En attente de programmation')+'</small></div>'+
+   '<div class="n2ms-tile" data-request="'+esc(requestStatus||'none')+'"><span>Dernière demande</span><strong>'+esc(requested.time)+'</strong><small>'+esc(requested.date==='—'?requestResult:(requestOrigin?requestOrigin+' · ':'')+requestResult)+'</small></div>'+
+   '<div class="n2ms-tile"><span>Dernier contrôle effectué</span><strong>'+esc(checkText)+'</strong><small>'+esc(lastCheck.date==='—'?'Jamais effectué':'à '+lastCheck.time+' · '+outcome)+'</small></div>'+
+   '<div class="n2ms-tile"><span>Dernier transfert Excel</span><strong>'+esc(transferText)+'</strong><small>'+esc(lastTransfer.date==='—'?'Pas encore effectué':'à '+lastTransfer.time)+'</small></div>'+
   '</div>'+
   '<footer class="n2ms-foot"><p>'+esc(foot)+'</p><small>'+esc(snapshot?.loaded?'Informations vérifiées '+(refreshed.time==='—'?'': 'à '+refreshed.time):'Vérification en cours…')+'</small></footer>'+
   '</section>';
