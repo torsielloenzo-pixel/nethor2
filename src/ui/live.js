@@ -861,9 +861,12 @@ ROOT.addEventListener('click',async event=>{
   if(action==='nethor-sync-refresh'){await loadNethorSyncStatus();return;}
   if(action==='nethor-sync-install'){
     if(!isSyncOverviewRole(state.profile?.role,!smallScreen())||state.nethorSync.status?.installed!==false)return;
-    window.open(NETHOR_SYNC_INSTALLER_URL,'_blank','noopener,noreferrer');
+    const download=document.createElement('a');
+    download.href=NETHOR_SYNC_INSTALLER_URL;
+    download.download='NethorSync2.zip';
+    document.body.appendChild(download);download.click();download.remove();
     const help=ROOT.querySelector('#n2sync-install-help');
-    if(help){help.hidden=false;help.textContent='Télécharge le ZIP officiel sur GitHub, extrais tools/nethor-sync, puis lance Installer-Sync.ps1 sur ce poste Windows. Un accès au dépôt privé peut être nécessaire.';}
+    if(help){help.hidden=false;help.textContent='Le ZIP NethorSync2 est téléchargé depuis nethor.fr. Extrais-le sur le poste Windows, puis lance Installer-Sync.ps1. L’installeur demande le dossier des plannings et tes identifiants Nethor.';}
     return;
   }
   if(action==='forgot-password')await requestRecoveryEmail(ROOT.querySelector('#loginEmail')?.value,true);
