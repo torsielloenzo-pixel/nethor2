@@ -74,9 +74,52 @@ test('la page Alertes est NethorSync seulement sur mobile et le scroll est bloqu
  assert.match(rule,/body:has\(#app\.mobile-sync-active\)\{height:100dvh;overflow:hidden/);
  assert.match(rule,/#app\.mobile-sync-active main#screen\{/);
  assert.match(rule,/overflow:hidden;overscroll-behavior:none/);
- assert.match(rule,/grid-template-rows:auto minmax\(0,1\.3fr\) auto minmax\(0,1fr\) auto/);
+ assert.match(rule,/grid-template-rows:auto minmax\(0,1\.05fr\) auto minmax\(0,1\.25fr\) auto/);
  assert.doesNotMatch(rule,/overflow-y:auto/);
  const workflow=read('.github/workflows/preview-pages.yml'),sw=read('sw.js');
  for(const item of [workflow,sw])for(const file of ['mobile-sync-summary.js'])assert.ok(item.includes(file));
  assert.match(sw,/nethor-mobile-drawer-recovery-sync-v\d+/);
+});
+
+test('Horaires fixes 00/04/08/12/16/20 et prochaine demande visibles dans Mobile et PWA',async()=>{
+ const status={
+  installed:true,lastSeenAt:'2026-10-19T04:40:10Z',lastCheckAt:'2026-10-19T03:35:12Z',
+  lastTransferAt:'2026-10-19T03:35:12Z',lastResult:'transferred',
+  controlIntervalHours:4,
+  controlLocalHours:['00:00','04:00','08:00','12:00','16:00','20:00'],
+  nextControlAt:'2026-10-19T06:00:00Z',
+  lastRequestedAt:'2026-10-19T04:40:00Z',
+  lastRequestedKind:'immediate',lastRequestStatus:'pending',controlPending:true
+ };
+ const result=await readMobileSyncSummary(client({status}).obj);
+ assert.equal(result.sync.controlIntervalHours,4);
+ assert.deepEqual(result.sync.controlLocalHours,status.controlLocalHours);
+ assert.equal(result.sync.lastRequestStatus,'pending');
+ const html=renderMobileSyncSummary(result,Date.parse('2026-10-19T04:40:20Z'));
+ for(const label of ['CONTRÔLE PROGRAMMÉ','TOUTES LES 4 H','00:00','04:00','08:00',
+ '12:00','16:00','20:00','Prochain contrôle','Dernière demande',
+ 'Dernier contrôle effectué','Dernier transfert Excel','En attente du MSI','À la demande',
+ 'Fichiers transférés']){
+  assert.ok(html.includes(label),label);
+ }
+ assert.match(html,/data-request="pending"/);
+ assert.match(html,/08:00/);
+ for(const forbidden of ['deviceLabel','deviceId','generation','storagePath','registeredBy']){
+  assert.ok(!html.includes(forbidden));
+ }
+ const complete=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastRequestStatus:'completed'}});
+ assert.match(complete,/Exécutée sur le MSI/);
+ const fail=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastRequestStatus:'error',lastResult:'error'}});
+ assert.match(fail,/Échec du dernier contrôle/);
+});
+test('programmation serveur heure de Paris, même après changement heure hiver/été',()=>{
+ const sql=read('supabase/migrations/20261019_nethor_sync_four_hour_controls.sql');
+ assert.match(sql,/time zone 'Europe\/Paris'/);
+ assert.match(sql,/mod\(extract\(hour from v_local\)::integer,4\)<>0/);
+ assert.match(sql,/nethor-sync-four-hour-control/);
+ assert.match(sql,/select private\.nethor_sync_control_tick\('scheduled'\)/);
+ assert.match(sql,/v_binding\.pending_manual>v_binding\.acknowledged_manual/);
+ assert.match(sql,/private\.can_module\(caller_id,'planning','view'\)/);
+ assert.match(sql,/lastRequestStatus/);
+ assert.doesNotMatch(sql,/update\s+public\.planning_weeks/);
 });
