@@ -58,7 +58,6 @@ begin
        and p.role in ('admin','role_point-de-vente')
     where o.bucket_id='planning-files'
       and o.name ~* '^sync-inbox/[a-f0-9]{64}-[^/]+\.(xls|xlsx|xlsm)$'
-      and o.name=lower(left(o.name,75))||substr(o.name,76) -- SHA toujours en minuscules
       and o.created_at>settings.enabled_at
       and o.created_at<=now()-interval '25 seconds'
       and o.owner_id=b.registered_by::text
