@@ -25,6 +25,21 @@ export function syncOverviewStatus(snapshot,now=Date.now()){
  return syncHealth(snapshot.status,now);
 }
 
+// La dernière erreur Windows est distincte de l'activité de synchronisation.
+function renderRecentDiagnostic(snapshot){
+ if(!Array.isArray(snapshot?.diagnostics)||snapshot.diagnostics.length===0)return '';
+ const item=snapshot.diagnostics[0];
+ const stages={storage_upload:'Transfert Supabase',file_scan:'Lecture fichier',file_history:'Historique Excel',sync_report:'Confirmation du contrôle',startup:'Connexion/démarrage'};
+ const codes={file_access:'Accès au fichier',http_error:'Erreur HTTP',request_rejected:'Requête rejetée',timeout:'Délai dépassé',network:'Erreur réseau',authorization:'Autorisation refusée',unexpected:'Erreur technique',mixed:'Plusieurs erreurs'};
+ const http=Number(item.httpStatus);
+ const detail=(stages[item.stage]||'Opération Windows')+' · '+(codes[item.code]||'Erreur technique')+
+   (Number.isInteger(http)&&http>=100&&http<=599?' · HTTP '+http:'');
+ const at=formatSyncTimestamp(item.at);
+ return '<div class="n2sync-auto" data-state="rejected"><strong>Dernier rapport d’erreur Windows · '+escapeHtml(at.date)+' à '+escapeHtml(at.time)+'</strong>'+
+  '<p>'+escapeHtml(detail)+' · '+escapeHtml(item.failed||0)+' erreur(s) / '+escapeHtml(item.scanned||0)+' fichiers analysés</p>'+
+  '<p>Rapport #'+escapeHtml(item.id||'—')+' · Détails dans Paramètres → NethorSync</p></div>';
+}
+
 // Ne jamais annoncer un planning publié sur la seule foi du transfert Excel.
 function renderAutoPublication(snapshot){
  if(snapshot?.autoError)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Suivi des publications temporairement indisponible.</p></section>';
@@ -72,6 +87,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+
    '<span class="n2sync-status" data-state="'+escapeHtml(current)+'"><i aria-hidden="true"></i>'+escapeHtml(titles[current]||'État inconnu')+'</span></div>'+
    '<div class="card-body">'+details+(status?.installed?renderSyncHistory(snapshot,now,period):'')+
+     renderRecentDiagnostic(snapshot)+
      renderAutoPublication(snapshot)+
      '<div class="n2sync-actions">'+action+'</div>'+guide+
      '<p id="n2sync-install-help" class="n2sync-install-help" hidden role="status"></p>'+
