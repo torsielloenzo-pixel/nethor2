@@ -6,7 +6,7 @@ aux noms de jours de la langue Windows ni aux codes retour de schtasks.exe.
 #>
 [CmdletBinding()]
 param(
-  [string]$AppPath = (Join-Path $PSScriptRoot ""),
+  [string]$AppPath = $PSScriptRoot,
   [switch]$ProbeOnly
 )
 $ErrorActionPreference = 'Stop'
