@@ -109,7 +109,9 @@ test('Mode unique automatique, synchronisation ponctuelle indépendante et écou
  const runner=read('tools/nethor-sync/NethorSyncRunner.vbs');
  const scheduler=read('tools/nethor-sync/Register-NethorSyncTasks.ps1');
  const spec=read('tools/nethor-sync/NethorSync2.iss');
- assert.match(ui, /Synchronisation demandée…':'Synchroniser'/);
+ assert.match(ui,/Traitement en cours…/);
+ assert.match(ui,/Réessayer la vérification/);
+ assert.match(ui,/renderManualSyncPipeline\(status\)/);
  assert.doesNotMatch(ui,/data-action="sync-mode-manual"|data-action="sync-mode-automatic"/);
  assert.match(ui,/Mode : Automatique/);
  assert.match(ui,/pendingManual/);
