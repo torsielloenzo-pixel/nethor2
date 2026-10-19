@@ -13,15 +13,21 @@ const work=(color='g')=>Array.from({length:58},(_,i)=>i<12?color:null);
 const status=c=>Array(58).fill(c);
 const me={planning_name:'Marie',display_name:'Marie',id:'2'};
 const options={weekStart:week,selectedDay:week,view:'week',profiles:[],currentProfile:me,now:new Date('2026-10-19T11:15:00Z')};
-test('Semaine : sept jours, cartes par personne, ma carte prioritaire et filtres Nethor 1',()=>{
+test('Semaine : sept jours et cartes par personne, sans compteurs ni filtres',()=>{
  const model=make({Alex:{[week]:work('g')},Marie:{[week]:work('b')},Camille:{[week]:status('y')}});
  const data=planningMobileData(model,[],me,week);
  assert.equal(data.dates.length,7);
  assert.equal(data.employees[0].name,'Marie');
  assert.equal(data.employees[0].total,3);
  const html=renderMobilePlanning({...options,model});
- assert.match(html,/data-mobile-planning-filter="mine"/);
- assert.match(html,/data-mobile-planning-filter="working"/);
+ assert.doesNotMatch(html,/class="n2pm-summary"/);
+ assert.doesNotMatch(html,/class="n2pm-filters"/);
+ assert.doesNotMatch(html,/data-mobile-planning-filter=/);
+ assert.doesNotMatch(html,/>Équipe<\/span>/);
+ assert.doesNotMatch(html,/>En poste<\/span>/);
+ assert.doesNotMatch(html,/>Tous<\/button>/);
+ assert.doesNotMatch(html,/>Autres<\/button>/);
+ assert.doesNotMatch(html,/>Moi<\/button>/);
  assert.match(html,/data-mobile-planning-day="2026-10-19"/);
  assert.match(html,/data-mobile-planning-open="2026-10-19"/);
  assert.match(html,/data-color="g"/);
