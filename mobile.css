@@ -473,3 +473,40 @@
   #app .topbar .nethor-header-logo{flex-basis:37px;width:37px;height:37px}
   #app .topbar .nethor-mobile-titles strong{font-size:16px;letter-spacing:1.5px}
 }
+
+
+/* PARAMETRES SECURITE NETHOR2 — mêmes formulaires sur mobile, PWA et desktop. */
+.n2sec-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px;align-items:start}
+.n2sec-card{min-width:0;overflow:hidden}
+.n2sec-card .card-head{padding-bottom:7px}
+.n2sec-card .card-head .sub{font-size:11px;line-height:1.55;margin:6px 0 0;color:#7b89a0}
+.n2sec-card .card-body{padding-top:12px}
+.n2sec-form{display:grid;gap:8px;min-width:0}
+.n2sec-form label{color:#304969;font-size:11px;font-weight:800;margin-top:5px}
+.n2sec-form input{width:100%;min-width:0;min-height:44px;border:1px solid #d9e3f1;background:#fff;color:#273c5d;border-radius:10px;padding:11px 12px;font-size:14px;outline-offset:2px}
+.n2sec-form input:focus{border-color:#4d83d8;box-shadow:0 0 0 3px #3265c41a}
+.n2sec-form .btn{margin-top:9px;min-height:44px;font-size:12px}
+.n2sec-form .btn:disabled,.n2sec-recovery .btn:disabled{opacity:.55;cursor:not-allowed}
+.n2sec-state{display:flex;gap:8px;align-items:center;color:#395d88;font-weight:800;font-size:11px}
+.n2sec-dot{flex:none;width:9px;height:9px;border-radius:50%;background:#9daac0}
+.n2sec-dot[data-linked="true"]{background:#2da96b}
+.n2sec-help{font-size:11px;line-height:1.55;margin:10px 0 14px;color:#617890}
+.n2sec-caption{font-size:10px;line-height:1.5;color:#8191a6;margin:11px 0 0}
+.n2sec-recovery{border-top:1px solid #e6edf5;margin-top:22px;padding-top:18px}
+.n2sec-recovery strong{display:block;font-size:12px;color:#314b71}
+.n2sec-recovery p{font-size:11px;line-height:1.55;color:#7889a0;margin:6px 0 12px}
+.n2sec-recovery button{font-size:11px;min-height:42px}
+.n2sec-notice{padding:12px 14px;border:1px solid #c7d9f6;border-radius:11px;background:#edf4ff;color:#315b94;font-size:12px;line-height:1.5;margin-top:16px}
+.n2sec-notice[data-kind="success"]{background:#e9f8ef;color:#1e6d48;border-color:#bee8cb}
+.n2sec-notice[data-kind="error"]{background:#fff0ef;color:#a44040;border-color:#f1d0cb}
+.n2sec-forgot{display:block;width:max-content;max-width:100%;border:0;background:none;margin:8px auto 0;padding:8px 4px;color:#365fab;font-size:12px;font-weight:750;cursor:pointer}
+.n2sec-forgot:hover{text-decoration:underline}
+@media(max-width:840px){.n2sec-panels{grid-template-columns:minmax(0,1fr);gap:12px}}
+@media(max-width:760px){
+ .n2sec-panels{margin-top:13px;gap:12px}
+ .n2sec-card .card-head{padding:17px 15px 9px}
+ .n2sec-card .card-body{padding:8px 15px 17px}
+ .n2sec-card .card-head .sub{font-size:11px}
+ .n2sec-form input{font-size:16px;min-height:46px}
+ .n2sec-form .btn{min-height:46px}
+}
