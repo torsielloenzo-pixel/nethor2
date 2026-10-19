@@ -52,7 +52,12 @@ jobs:
           $result='build\installer\NethorSync2-Setup-Compatibility-211.exe'
           if (-not (Test-Path $original)) {throw 'Exécutable absent'}
           Copy-Item $original $result -Force
-          Get-FileHash -Algorithm SHA256 $result | Format-List
+          $publicName='build\installer\NethorSync-Setup.exe'
+          Copy-Item $result $publicName -Force
+          $hashCompat=(Get-FileHash -Algorithm SHA256 $result).Hash
+          $hashPublic=(Get-FileHash -Algorithm SHA256 $publicName).Hash
+          if ($hashCompat -ne $hashPublic) { throw 'La version publique diffère de la version validée' }
+          Get-FileHash -Algorithm SHA256 $publicName | Format-List
       - name: Test présence du fichier EXE
         shell: pwsh
         run: |
@@ -62,7 +67,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NethorSync2-Compatibility-211
-          path: build/installer/NethorSync2-Setup-Compatibility-211.exe
+          path: |
+            build/installer/NethorSync2-Setup-Compatibility-211.exe
+            build/installer/NethorSync-Setup.exe
           if-no-files-found: error
           retention-days: 30
       - name: Joindre la variante à la release NethorSync existante
@@ -73,7 +80,9 @@ jobs:
         run: |
           $tag='nethor-sync2-latest'
           $exe='build/installer/NethorSync2-Setup-Compatibility-211.exe'
+          $public='build/installer/NethorSync-Setup.exe'
           gh release view $tag --repo $env:GH_REPO --json tagName
           if ($LASTEXITCODE -ne 0) {throw 'Release NethorSync existante introuvable'}
-          gh release upload $tag $exe --repo $env:GH_REPO --clobber
-          if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier le fichier de comparaison'}
+          gh release upload $tag $exe $public --repo $env:GH_REPO --clobber
+          if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier le téléchargement NethorSync'}
+          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync-Setup.exe") | .name'
