@@ -4,6 +4,7 @@ import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
 import {renderSecuritySettings} from './settings-security.js';
+import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
@@ -75,6 +76,15 @@ const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view
 let client;
 let booted=false;
 let personalRequestId=0;
+let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
+const recoveryDismissKey=userId=>'nethor-recovery-later:'+userId;
+function recoveryDismissed(userId){
+ try{return sessionStorage.getItem(recoveryDismissKey(userId))==='1';}catch{return false;}
+}
+function clearRecoveryDismissed(userId){
+ try{sessionStorage.removeItem(recoveryDismissKey(userId));}catch(_){/* stockage optionnel */}
+}
+
 // Le même contenu personnel et la même logique Jour/Semaine sur desktop
 // pour Responsable et Employé seulement, sans toucher aux administrateurs/PDV.
 const smallScreen=()=>window.matchMedia('(max-width:760px)').matches;
@@ -86,6 +96,7 @@ function showMessage(text,kind='error'){
   if(block){block.textContent=text;block.className=kind==='error'?'form-error':'live-message';block.hidden=false;}
 }
 function renderLogin(message=''){
+  recoveryPrompt.step='closed';
   ROOT.classList.remove('menu-open','staff-desktop-layout','personal-home-active','mobile-planning-active');
   document.title='Nethor · Connexion';
   ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand"><img class="nethor-login-logo" src="./assets/icon.svg" width="50" height="50" alt=""><span>NETHOR²<small>PLANNING · LE THOR</small></span></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><button type="button" class="n2sec-forgot" data-action="forgot-password">Mot de passe oublié ?</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
@@ -110,6 +121,8 @@ async function checkSession(){
 }
 async function signOut(){
   personalRequestId++;
+  if(state.user?.id)clearRecoveryDismissed(state.user.id);
+  recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
@@ -119,10 +132,13 @@ async function signOut(){
 async function startAuthorized(access){
   state.user=access.gate.user;
   state.profile=access.gate.profile;
+  recoveryPrompt={step:'closed',dismissed:recoveryDismissed(state.user.id),saving:false,error:'',mailStatus:''};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.access=access.access;
   state.lastCheck=Date.now();
   renderShell();
+  // Vérification serveur une fois connecté, exclusivement en contexte téléphone/PWA mobile.
+  if(shouldCheckRecoveryOnLogin())void maybeOfferRecoveryAfterLogin();
   await loadProfiles();
   if(isMobileHome())void loadPersonalHome();
   await loadWeek();
@@ -405,6 +421,81 @@ async function loadAccountRecoveryStatus(){
   if(state.user?.id===userId){state.accountSecurity.loading=false;if(state.page==='settings')render();}
  }
 }
+
+function shouldCheckRecoveryOnLogin(){
+ return smallScreen()&&(state.profile?.role==='employe'||state.profile?.role==='responsable')&&!recoveryPrompt.dismissed;
+}
+function closeFirstLoginRecovery(remember=false){
+ ROOT.querySelector('#firstLoginRecoveryPrompt')?.remove();
+ recoveryPrompt.step='closed';
+ recoveryPrompt.error='';
+ if(remember){
+  recoveryPrompt.dismissed=true;
+  if(state.user?.id)try{sessionStorage.setItem(recoveryDismissKey(state.user.id),'1');}catch(_){/* sessionStorage optionnel */}
+ }
+}
+function presentFirstLoginRecovery(step='offer'){
+ if(!smallScreen()||!state.user||!['employe','responsable'].includes(state.profile?.role))return;
+ if(step==='offer'&&!shouldOfferRecoveryPrompt({
+  role:state.profile?.role,mobile:smallScreen(),loaded:state.accountSecurity.loaded,
+  configured:state.accountSecurity.configured,error:state.accountSecurity.error,dismissed:recoveryPrompt.dismissed
+ }))return;
+ recoveryPrompt.step=step;
+ const current=ROOT.querySelector('#firstLoginRecoveryPrompt');
+ if(current)current.remove();
+ ROOT.insertAdjacentHTML('beforeend',renderRecoveryPrompt({
+  step,busy:recoveryPrompt.saving,error:recoveryPrompt.error,mailStatus:recoveryPrompt.mailStatus
+ }));
+ const dialog=ROOT.querySelector('#firstLoginRecoveryPrompt');
+ (step==='form'?dialog?.querySelector('#firstLoginRecoveryEmail'):dialog?.querySelector('button'))?.focus({preventScroll:true});
+}
+async function maybeOfferRecoveryAfterLogin(){
+ if(!shouldCheckRecoveryOnLogin())return;
+ const userId=state.user.id;
+ if(!state.accountSecurity.loaded&&!state.accountSecurity.loading)await loadAccountRecoveryStatus();
+ if(state.user?.id!==userId||!shouldCheckRecoveryOnLogin())return;
+ presentFirstLoginRecovery('offer');
+}
+function setFirstLoginRecoveryError(message){
+ const form=ROOT.querySelector('#firstLoginRecoveryForm');
+ if(!form)return;
+ let error=form.querySelector('.n2rp-error');
+ if(!error){error=document.createElement('p');error.className='n2rp-error';error.setAttribute('role','alert');form.querySelector('#firstLoginRecoveryEmail')?.insertAdjacentElement('afterend',error);}
+ error.textContent=message;
+}
+async function saveFirstLoginRecovery(form){
+ if(recoveryPrompt.step!=='form'||recoveryPrompt.saving||!state.user)return;
+ const field=form.querySelector('#firstLoginRecoveryEmail');
+ let email;
+ try{email=validateRecoveryEmail(field?.value);}
+ catch(err){setFirstLoginRecoveryError(err.message);field?.focus();return;}
+ const id=state.user.id;
+ recoveryPrompt.saving=true;
+ const submit=form.querySelector('[type="submit"]');
+ if(submit){submit.disabled=true;submit.textContent='Enregistrement…';}
+ if(field)field.disabled=true;
+ try{
+  const result=await invokeAccountFunction('profile-email',{action:'save',old_email:'',new_email:email});
+  if(state.user?.id!==id||recoveryPrompt.step!=='form')return;
+  if(result.configured!==true)throw Error("L’enregistrement de l’adresse n’a pas été confirmé.");
+  state.accountSecurity.configured=true;
+  state.accountSecurity.loaded=true;
+  state.accountSecurity.error=false;
+  recoveryPrompt.mailStatus=result.mail_status||'';
+  recoveryPrompt.error='';
+  recoveryPrompt.saving=false;
+  presentFirstLoginRecovery('success');
+ }catch(err){
+  if(state.user?.id===id&&recoveryPrompt.step==='form')setFirstLoginRecoveryError(String(err.message||'Enregistrement indisponible. Réessaie plus tard.'));
+ }finally{
+  recoveryPrompt.saving=false;
+  if(state.user?.id===id&&recoveryPrompt.step==='form'){
+   if(submit){submit.disabled=false;submit.textContent='Associer cette adresse';}
+   if(field)field.disabled=false;
+  }
+ }
+}
+
 async function saveRecoveryEmail(form){
  if(state.accountSecurity.busy||!state.user)return;
  let newEmail;
@@ -654,12 +745,18 @@ async function verifyResume(){
     state.profile={...state.profile,...gate.gate.profile};
     if(state.access!=='manage'&&state.page==='import')state.page='planning';
     if(!canNavigate(state.page,state.profile))state.page='planning';
-    if(roleChanged)renderShell();
+    if(roleChanged){
+      closeFirstLoginRecovery();
+      renderShell();
+    }
     render();
     if(state.page==='home'&&isMobileHome()&&!state.personal.loading&&(Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   }catch{await signOut();}
 }
 ROOT.addEventListener('submit',async event=>{
+  if(event.target.id==='firstLoginRecoveryForm'){
+    event.preventDefault();await saveFirstLoginRecovery(event.target);return;
+  }
   if(event.target.id==='recoveryEmailForm'){
     event.preventDefault();await saveRecoveryEmail(event.target);return;
   }
@@ -678,10 +775,20 @@ ROOT.addEventListener('submit',async event=>{
     if(error)throw Error('Identifiants incorrects ou accès indisponible.');
     const gate=await checkSession();
     if(!gate){await client.auth.signOut();throw Error('Votre compte ne dispose pas d’un accès actif au planning.');}
+    clearRecoveryDismissed(gate.gate.user.id);
     await startAuthorized(gate);
   }catch(err){showMessage(String(err.message||err));if(submit){submit.disabled=false;submit.textContent='Se connecter';}}
 });
 ROOT.addEventListener('click',async event=>{
+  const firstLoginAction=event.target.closest('[data-action^="recovery-"]');
+  if(firstLoginAction){
+    const action=firstLoginAction.dataset.action;
+    if(action==='recovery-add')presentFirstLoginRecovery('form');
+    else if(action==='recovery-back')presentFirstLoginRecovery('offer');
+    else if(action==='recovery-later')closeFirstLoginRecovery(true);
+    else if(action==='recovery-done')closeFirstLoginRecovery();
+    return;
+  }
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
 
@@ -756,11 +863,22 @@ ROOT.addEventListener('click',event=>{
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void verifyResume();});
 window.addEventListener('focus',()=>void verifyResume());
 window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
+  if(!smallScreen())closeFirstLoginRecovery();
   if(!state.user)return;
   render();
   if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
 });
-document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileMenu();});
+document.addEventListener('keydown',event=>{
+ if(!ROOT.querySelector('#firstLoginRecoveryPrompt')){if(event.key==='Escape')closeMobileMenu();return;}
+ if(event.key==='Escape'){event.preventDefault();closeFirstLoginRecovery(true);return;}
+ if(event.key==='Tab'){
+  const buttons=[...ROOT.querySelectorAll('#firstLoginRecoveryPrompt button:not(:disabled),#firstLoginRecoveryPrompt input:not(:disabled)')];
+  if(!buttons.length)return;
+  const first=buttons[0],last=buttons[buttons.length-1];
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+ }
+});
 async function boot(){
   if(booted)return;booted=true;
   try{
