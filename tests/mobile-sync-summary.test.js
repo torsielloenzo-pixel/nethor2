@@ -81,45 +81,50 @@ test('la page Alertes est NethorSync seulement sur mobile et le scroll est bloqu
  assert.match(sw,/nethor-mobile-drawer-recovery-sync-v\d+/);
 });
 
-test('Horaires fixes 00/04/08/12/16/20 et prochaine demande visibles dans Mobile et PWA',async()=>{
+
+test('Contrôle toutes les quatre heures uniquement dans Supabase, distinct du MSI',async()=>{
  const status={
-  installed:true,lastSeenAt:'2026-10-19T04:40:10Z',lastCheckAt:'2026-10-19T03:35:12Z',
+  installed:true,lastSeenAt:'2026-10-19T03:35:12Z',lastCheckAt:'2026-10-19T03:35:12Z',
   lastTransferAt:'2026-10-19T03:35:12Z',lastResult:'transferred',
   controlIntervalHours:4,
   controlLocalHours:['00:00','04:00','08:00','12:00','16:00','20:00'],
   nextControlAt:'2026-10-19T06:00:00Z',
-  lastRequestedAt:'2026-10-19T04:40:00Z',
-  lastRequestedKind:'immediate',lastRequestStatus:'pending',controlPending:true
+  lastCloudCheckAt:'2026-10-19T04:57:17Z',
+  lastCloudCheckStatus:'completed',lastCloudScanned:10,lastCloudCandidates:2,
+  lastCloudQueued:2,lastCloudPublished:2,lastCloudPending:0,lastCloudRejected:0
  };
  const result=await readMobileSyncSummary(client({status}).obj);
  assert.equal(result.sync.controlIntervalHours,4);
  assert.deepEqual(result.sync.controlLocalHours,status.controlLocalHours);
- assert.equal(result.sync.lastRequestStatus,'pending');
- const html=renderMobileSyncSummary(result,Date.parse('2026-10-19T04:40:20Z'));
- for(const label of ['CONTRÔLE PROGRAMMÉ','TOUTES LES 4 H','00:00','04:00','08:00',
- '12:00','16:00','20:00','Prochain contrôle','Dernière demande',
- 'Dernier contrôle effectué','Dernier transfert Excel','En attente du MSI','À la demande',
- 'Fichiers transférés']){
+ assert.equal(result.sync.lastCloudScanned,10);
+ assert.equal(result.sync.lastCloudPublished,2);
+ const html=renderMobileSyncSummary(result,Date.parse('2026-10-19T04:59:00Z'));
+ for(const label of ['CONTRÔLE SUPABASE','TOUTES LES 4 H','00:00','04:00','08:00',
+ '12:00','16:00','20:00','Prochain contrôle base','Dernier contrôle base',
+ 'Résultat du contrôle base','Dernier transfert MSI','Base vérifiée',
+ '10 fichiers vérifiés','2 publiés','19 h / dimanche 12 h']){
   assert.ok(html.includes(label),label);
  }
- assert.match(html,/data-request="pending"/);
+ assert.match(html,/data-cloud-state="completed"/);
  assert.match(html,/08:00/);
+ assert.doesNotMatch(html,/En attente du MSI|Exécutée sur le MSI|Dernière demande/);
  for(const forbidden of ['deviceLabel','deviceId','generation','storagePath','registeredBy']){
   assert.ok(!html.includes(forbidden));
  }
- const complete=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastRequestStatus:'completed'}});
- assert.match(complete,/Exécutée sur le MSI/);
- const fail=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastRequestStatus:'error',lastResult:'error'}});
- assert.match(fail,/Échec du dernier contrôle/);
+ const pending=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastCloudPending:2,lastCloudPublished:0}});
+ assert.match(pending,/2 en attente/);
+ const failed=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastCloudCheckStatus:'failed'}});
+ assert.match(failed,/Contrôle en échec/);
 });
-test('programmation serveur heure de Paris, même après changement heure hiver/été',()=>{
- const sql=read('supabase/migrations/20261019_nethor_sync_four_hour_controls.sql');
+test('Le cron de 4 heures est uniquement cloud, Paris, sans commande MSI',()=>{
+ const sql=read('supabase/migrations/20261019_nethor_sync_cloud_four_hour_audit.sql');
  assert.match(sql,/time zone 'Europe\/Paris'/);
  assert.match(sql,/mod\(extract\(hour from v_local\)::integer,4\)<>0/);
- assert.match(sql,/nethor-sync-four-hour-control/);
- assert.match(sql,/select private\.nethor_sync_control_tick\('scheduled'\)/);
- assert.match(sql,/v_binding\.pending_manual>v_binding\.acknowledged_manual/);
- assert.match(sql,/private\.can_module\(caller_id,'planning','view'\)/);
- assert.match(sql,/lastRequestStatus/);
- assert.doesNotMatch(sql,/update\s+public\.planning_weeks/);
+ assert.match(sql,/nethor-sync-cloud-audit-four-hours/);
+ assert.match(sql,/select private\.nethor_sync_cloud_audit\(false\)/);
+ assert.match(sql,/cron\.unschedule\('nethor-sync-four-hour-control'\)/);
+ assert.match(sql,/select count\(\*\) into v_seen from storage\.objects/);
+ assert.doesNotMatch(sql,/update public\.planning_weeks/);
+ assert.doesNotMatch(sql,/update public\.nethor_sync_binding/);
 });
+
