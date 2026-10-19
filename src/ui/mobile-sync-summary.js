@@ -39,7 +39,7 @@ export function renderMobileSyncSummary(snapshot={},now=Date.now()){
  const transferText=lastTransfer.date==='—'?'Aucun transfert':lastTransfer.date;
  const refreshed=formatPublicSyncTime(snapshot?.checkedAt);
  const foot=snapshot?.planningError?'La date de publication n’a pas pu être vérifiée. Réessaie avec le bouton Actualiser.':
-   'Les fichiers transférés par NethorSync doivent être publiés pour apparaître dans le planning.';
+   'Les versions Excel modifiées et récentes peuvent être publiées automatiquement après vérification. Un simple transfert ne garantit pas la publication.';
  return '<section class="n2ms" aria-label="Informations NethorSync" data-state="'+esc(state)+'">'+
   '<header class="n2ms-head"><div><span>INFORMATIONS PLANNING</span><h1>NethorSync</h1></div>'+
   '<button type="button" data-action="nethor-sync-mobile-refresh" aria-label="Actualiser les informations" title="Actualiser les informations"'+(snapshot?.loading?' disabled':'')+'>'+
