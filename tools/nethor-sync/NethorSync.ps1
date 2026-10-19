@@ -67,6 +67,74 @@ function Invoke-SyncRpc($Settings, [string]$Token, [string]$Method, $Params) {
   $headers = @{ apikey=[string]$Settings.publishableKey; Authorization="Bearer " + $Token }
   return Invoke-RestMethod -Method Post -Uri ($Settings.supabaseUrl.TrimEnd("/") + "/rest/v1/rpc/" + $Method) -Headers $headers -ContentType "application/json" -Body ($Params | ConvertTo-Json -Depth 6)
 }
+# Telemetrie privee, sans chemin de fichier ni message d'exception brut.
+# Les erreurs detaillees restent exclusivement dans sync-report.json local.
+$script:diagnosticGroups = @{}
+$script:syncStage = 'startup'
+function Get-SafeSyncError($Failure,[string]$Stage) {
+  $status = $null
+  try {
+    if ($Failure.Exception.Response) {
+      $rawStatus = [int]$Failure.Exception.Response.StatusCode
+      if ($rawStatus -ge 100 -and $rawStatus -le 599) { $status=$rawStatus }
+    }
+  } catch {}
+  $code = 'unexpected'
+  if ($null -ne $status) {
+    if ($status -eq 401 -or $status -eq 403) { $code='authorization' }
+    elseif ($status -eq 400 -or $status -eq 409 -or $status -eq 422) { $code='request_rejected' }
+    else { $code='http_error' }
+  } elseif ($Failure.Exception -is [System.TimeoutException]) {
+    $code='timeout'
+  } elseif ($Failure.Exception -is [System.Net.WebException]) {
+    if ($Failure.Exception.Status -eq [System.Net.WebExceptionStatus]::Timeout) { $code='timeout' }
+    else { $code='network' }
+  } elseif ($Stage -eq 'file_scan') {
+    $code='file_access'
+  }
+  return @{ stage=$Stage; code=$code; httpStatus=$status }
+}
+function Add-SafeSyncError($Failure,[string]$Stage) {
+  $info=Get-SafeSyncError $Failure $Stage
+  $groupKey=$info.stage+'|'+$info.code+'|'+$info.httpStatus
+  if (-not $script:diagnosticGroups.ContainsKey($groupKey)) {
+    $script:diagnosticGroups[$groupKey]=@{
+      stage=$info.stage; code=$info.code; count=0
+    }
+    if ($null -ne $info.httpStatus) {
+      $script:diagnosticGroups[$groupKey].httpStatus=$info.httpStatus
+    }
+  }
+  $script:diagnosticGroups[$groupKey].count++
+}
+function Send-SafeSyncDiagnostic($Settings,[string]$Token,$Device,[int]$Scanned,[int]$Failed,[int]$Transferred) {
+  if (-not $Token -or -not $Device -or $Failed -lt 1 -or
+      $script:diagnosticGroups.Count -lt 1) { return }
+  try {
+    $groups=@($script:diagnosticGroups.Values | Sort-Object { -[int]$_.count } |
+      Select-Object -First 12)
+    $primary=$groups[0]
+    $sum=@($groups | Measure-Object -Property count -Sum)[0].Sum
+    $majorStage=[string]$primary.stage
+    $majorCode=if ($script:diagnosticGroups.Count -gt 1) { 'mixed' } else { [string]$primary.code }
+    $topStatus=$null
+    if ($null -ne $primary.httpStatus) { $topStatus=[int]$primary.httpStatus }
+    $null=Invoke-SyncRpc $Settings $Token 'nethor_sync_submit_diagnostic' @{
+      p_device_id=$Device.id; p_secret=$Device.secret
+      p_generation=$Device.generation
+      p_stage=$majorStage; p_error_code=$majorCode; p_http_status=$topStatus
+      p_scanned=[Math]::Min(100000,[Math]::Max(0,$Scanned))
+      p_failed=[Math]::Min(100000,[Math]::Max(1,$Failed))
+      p_transferred=[Math]::Min(100000,[Math]::Max(0,$Transferred))
+      p_client_version='2.1.5'; p_breakdown=$groups
+    }
+    Write-Host 'Rapport de diagnostic sécurisé transmis à Nethor2.'
+  } catch {
+    # Un échec de telemetrie n'interrompt jamais le transfert.
+    Write-Warning 'Rapport distant indisponible ; diagnostic local conserve.'
+  }
+}
+
 function Get-DeviceIdentity([string]$StateDir) {
   $bindingPath = Join-Path $StateDir "device-binding.json"
   $secretPath = Join-Path $StateDir "device-secret.dat"
@@ -168,12 +236,14 @@ foreach ($hash in @($previous.uploadedHashes)) {
 $maxBytes = if ($config.maxFileMB) { [long]$config.maxFileMB * 1MB } else { 10MB }
 $entries = @()
 $errors = @()
+$script:syncStage = 'startup'
 
 $token = $null
 $device = $null
 $manualVersion = [long]0
 $networkEnabled = ($config.uploadEnabled -eq $true) -and (-not $DryRun)
 if ($networkEnabled) {
+  $script:syncStage='startup'
   $token = Get-RemoteSession $config $authPath
   $device = Get-DeviceIdentity $stateDir
   # Le controle du serveur DOIT preceder meme la comparaison locale.
@@ -192,6 +262,7 @@ $files = @(Get-ChildItem -LiteralPath $root -File -Recurse -ErrorAction Stop |
   Where-Object { $_.Extension.ToLowerInvariant() -in @(".xls", ".xlsx", ".xlsm") -and -not $_.Name.StartsWith("~$") -and -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) } |
   Sort-Object FullName)
 foreach ($file in $files) {
+  $script:syncStage='file_scan'
   $relative = $file.FullName.Substring($root.TrimEnd("\").Length).TrimStart("\")
   $entry = [ordered]@{ path = $relative; size = $file.Length; modifiedUtc = $file.LastWriteTimeUtc.ToString("o"); sha256 = $null; status = "unread"; upload = "not_sent"; storageKey = $null }
   try {
@@ -223,7 +294,9 @@ foreach ($file in $files) {
       # confirmé : la présence d'un hash local ne suffit pas après un changement
       # de poste ou une erreur de réseau.
       $null = Check-ActiveDevice $config $token $device
+      $script:syncStage='storage_upload'
       $result = Upload-Candidate $config $token $file $hash $device
+      $script:syncStage='file_scan'
       $entry.upload = $result.status
       $entry.storageKey = $result.key
       $uploaded[$hash] = $true
@@ -232,7 +305,9 @@ foreach ($file in $files) {
     } else { $entry.upload = "pending" }
   } catch {
     $entry.upload = "error"
+    Add-SafeSyncError $_ $script:syncStage
     $errors += [pscustomobject]@{ file = $relative; reason = $_.Exception.Message }
+    $script:syncStage='file_scan'
   }
   $entries += [pscustomobject]$entry
 }
@@ -281,6 +356,7 @@ if ($networkEnabled) {
     }
     # Reprise idempotente : un transfert effectué mais non confirmé est repris
     # sans dupliquer les versions grâce à l'index unique côté Supabase.
+    $script:syncStage='file_history'
     for ($offset = 0; $offset -lt $changes.Count; $offset += 100) {
       $batch = @($changes | Select-Object -Skip $offset -First 100)
       $null = Invoke-SyncRpc $config $token 'nethor_sync_record_file_changes' @{
@@ -288,6 +364,13 @@ if ($networkEnabled) {
         p_generation=$device.generation; p_changes=$batch
       }
     }
+  # Les erreurs du scan sont agrégées (sans nom de fichiers).
+  # Le rapport est transmis même lorsque l'accusé de réception reste en attente.
+  if ($errors.Count -gt 0) {
+    $transferredCount=@($entries | Where-Object { $_.upload -eq 'staged' }).Count
+    Send-SafeSyncDiagnostic $config $token $device $files.Count $errors.Count $transferredCount
+  }
+  $script:syncStage='sync_report'
   # Ne pas accuser reception d'une demande manuelle si l'operation a echoue.
   if ($errors.Count -eq 0) {
     $outcome = if (@($entries | Where-Object { $_.upload -eq "staged" }).Count -gt 0) { "transferred" }
@@ -315,6 +398,14 @@ if (-not $DryRun) {
 Write-Host ("Nethor Sync 2 - {0} fichier(s), {1} erreur(s), mode {2}" -f $files.Count,$errors.Count, $(if ($networkEnabled) { "envoi" } else { "simulation" }))
 Write-Host "Rapport: $reportPath"
 if ($errors.Count -gt 0) { exit 1 }
+} catch {
+  # Un échec global (historique RPC, accusé de réception, etc.) est aussi
+  # traçable, mais les détails et secrets ne quittent jamais le PC.
+  if ($networkEnabled -and $token -and $device) {
+    Add-SafeSyncError $_ $script:syncStage
+    Send-SafeSyncDiagnostic $config $token $device @($entries).Count ([Math]::Max(1,@($errors).Count)) @($entries | Where-Object { $_.upload -eq 'staged' }).Count
+  }
+  throw
 } finally {
   $mutex.ReleaseMutex()
   $mutex.Dispose()
