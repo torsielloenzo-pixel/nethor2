@@ -18,6 +18,16 @@ export async function readSyncHistory(client){
  return data;
 }
 
+// Historique détaillé réservé aux administrateurs (fonction SQL avec session active).
+// Les informations de device, chemins et secrets ne sont pas renvoyées.
+export async function readSyncFileChanges(client,{limit=200}={}){
+ if(!Number.isInteger(limit)||limit<1||limit>500)throw new RangeError('Limite invalide');
+ const {data,error}=await client.rpc('nethor_sync_file_history',{p_limit:limit});
+ if(error)throw Error(error.message||'Historique NethorSync indisponible');
+ if(!Array.isArray(data))throw Error('Format d’historique NethorSync invalide');
+ return data;
+}
+
 export async function requestManualSync(client) {
   return rpcResult(await client.rpc('nethor_sync_request_manual'));
 }
