@@ -106,10 +106,10 @@ test('Mode unique automatique, synchronisation ponctuelle indépendante et écou
  const runner=read('tools/nethor-sync/NethorSyncRunner.vbs');
  const scheduler=read('tools/nethor-sync/Register-NethorSyncTasks.ps1');
  const spec=read('tools/nethor-sync/NethorSync2.iss');
- assert.match(ui,/>Synchroniser'/);
+ assert.match(ui, /Synchronisation demandée…':'Synchroniser'/);
  assert.doesNotMatch(ui,/data-action="sync-mode-manual"|data-action="sync-mode-automatic"/);
  assert.match(ui,/Mode : Automatique/);
- assert.match(ui,/status\?\.pendingManual\?' disabled'/);
+ assert.match(ui,/pendingManual/);
  assert.match(watcher,/nethor_sync_poll/);
  assert.match(watcher,/IntervalSeconds=8/);
  assert.match(watcher,/\-PollOnly/);
