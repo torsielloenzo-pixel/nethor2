@@ -20,7 +20,7 @@ test('année : affiche bien 12 mois, 365 jours et une grille lundi–dimanche',(
  assert.match(html,/data-action="year-close"/);
  assert.match(html,/n2py-day not-published today/);
 });
-test('année bissextile : 29 février, et calcul des semaines traversant le nouvel an',()=>{
+test('année bissextile : 29 février, et calcul des semaines traversant le nouvel an',async()=>{
  const html=renderPlanningYear({year:2028,weeks:['2027-12-27','2028-02-28'],today:'2028-02-29'});
  assert.equal((html.match(/data-year-day="/g)||[]).length,366);
  assert.ok(html.includes('data-year-day="2028-02-29"'));
