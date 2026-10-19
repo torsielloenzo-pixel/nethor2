@@ -18,3 +18,21 @@ jobs:
       - name: Test local scanner (no network)
         shell: powershell
         run: .\tests\nethor-sync-local.test.ps1
+      - name: Valider scripts installateur et definitions de taches Windows (hors ligne)
+        shell: powershell
+        run: |
+          $files = @(
+            '.\tools\nethor-sync\Installer-Sync.ps1',
+            '.\tools\nethor-sync\Register-NethorSyncTasks.ps1',
+            '.\tools\nethor-sync\Verify-NethorSyncBinding.ps1',
+            '.\tools\nethor-sync\Connect-NethorSync.ps1',
+            '.\tools\nethor-sync\NethorSync.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file),[ref]$tokens,[ref]$errors)
+            if ($errors.Count -gt 0) { throw "$file contient une erreur de syntaxe : $($errors[0].Message)" }
+          }
+          & .\tools\nethor-sync\Register-NethorSyncTasks.ps1 -AppPath (Resolve-Path .\tools\nethor-sync) -ProbeOnly
+          if (-not $?) { throw 'La définition des tâches Windows a échoué.' }
