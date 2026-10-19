@@ -35,7 +35,7 @@ test('Poste opérationnel : date, heure, dernier transfert et nom de poste',()=>
  assert.match(html,/CAISSE-03/);
  assert.match(html,/Dernière synchronisation/);
  assert.match(html,/Dernier transfert de fichier/);
- assert.match(html,/Télécharger la correction 2\.1\.4/);
+ assert.match(html,/Télécharger la correction 2\.1\.5/);
  assert.match(html,/data-action="nethor-sync-refresh"/);
  assert.equal(syncHealth(snapshot.status,now),'online');
 });
@@ -44,7 +44,7 @@ test('Poste associé mais hors ligne : garder informations sans suggérer instal
  const html=renderSyncOverviewCard({loaded:true,status},now);
  assert.match(html,/Poste hors ligne/);
  assert.match(html,/BUREAU-01/);
- assert.match(html,/Télécharger la correction 2\.1\.4/);
+ assert.match(html,/Télécharger la correction 2\.1\.5/);
 });
 test('Statut indisponible : interdire toute nouvelle installation',()=>{
  const html=renderSyncOverviewCard({loaded:false,error:'RPC error',status:null},now);
