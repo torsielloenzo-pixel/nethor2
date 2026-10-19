@@ -1,5 +1,5 @@
 import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth,setSyncMode} from '../data/nethor-sync-control.js';
-const INSTALLER='./nethor-sync-2.zip';
+const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync2-Setup.exe';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
 export function createSyncController(client,root,profile){
@@ -52,7 +52,7 @@ export function createSyncController(client,root,profile){
  async function action(name){
   if(name==='sync-download'){
     window.open(INSTALLER,'_blank','noopener,noreferrer');
-    notice='Extraire le ZIP puis exécuter Installer-Sync.ps1 sur Windows pour choisir le dossier.';
+    notice='Ouvrez NethorSync2-Setup.exe sur Windows pour sélectionner le dossier des plannings.';
     paint();return true;
   }
   if(name==='sync-state-refresh'){await refresh();return true;}
