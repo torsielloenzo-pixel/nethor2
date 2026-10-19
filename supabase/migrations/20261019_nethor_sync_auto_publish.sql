@@ -142,12 +142,14 @@ begin
       or (p_model->>'startTime')<>'6'
       or p_model->>'sourcePath' is distinct from c.storage_path
       or p_model->>'sourceFile' is distinct from c.file_name
+      or p_model->>'sourceModifiedAt' is null
    then
      v_outcome='rejected';p_detail='Modèle Excel incomplet ou non conforme';
    else
      select array_agg(k order by k) into v_dates from jsonb_object_keys(p_model->'days') k;
      if coalesce(array_length(v_dates,1),0)<>7
-        or v_dates[1]<>v_week::text or v_dates[7]<>(v_week+6)::text
+        or exists(select 1 from unnest(v_dates) with ordinality as x(d,ord)
+          where x.d<>(v_week+(x.ord::integer-1))::text)
      then
        v_outcome='rejected';p_detail='Dates du planning incohérentes';
      else
@@ -185,7 +187,7 @@ begin
    elsif w.source_path not like 'sync-inbox/%'
      and w.imported_at > c.modified_at then
      v_outcome='skipped';p_detail='Une importation manuelle est plus récente que le fichier Excel';
-   elsif w.updated_at > j.created_at then
+   elsif w.updated_at > j.created_at and coalesce(w.source_path,'') not like 'sync-inbox/%' then
      v_outcome='skipped';p_detail='Le planning a été modifié depuis la réception du fichier';
    else
      update public.planning_weeks
