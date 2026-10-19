@@ -68,8 +68,9 @@ test('le verrouillage se réajuste si le terminal ou le pointage change',()=>{
 
 test('les pages mobiles gardent le défilement et les champs sans zoom iOS',()=>{
  const css=read('mobile.css');
- assert.match(css,/html\.nethor-zoom-locked #app \*/);
- assert.match(css,/touch-action:pan-x pan-y !important/);
+ assert.match(css,/html\.nethor-zoom-locked #app \{/);
+ assert.match(css,/touch-action:pan-x pan-y;/);
+ assert.doesNotMatch(css,/html\.nethor-zoom-locked #app \*/);
  assert.match(css,/font-size:16px !important/);
  const js=read('src/ui/live.js');
  assert.match(js,/import \{installMobileZoomLock\} from '\.\/mobile-zoom\.js'/);
@@ -77,5 +78,5 @@ test('les pages mobiles gardent le défilement et les champs sans zoom iOS',()=>
  const workflow=read('.github/workflows/preview-pages.yml');
  const sw=read('sw.js'),server=read('scripts/dev-server.js');
  for(const item of [workflow,sw,server])assert.match(item,/mobile-zoom\.js/);
- assert.match(sw,/nethor-mobile-nozoom-v16/);
+ assert.match(sw,/nethor-mobile-drawer-recovery-v17/);
 });
