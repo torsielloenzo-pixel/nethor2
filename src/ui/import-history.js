@@ -12,7 +12,7 @@ export function formatHistoryDate(value,{fallback='Date de modification inconnue
 const time=row=>Date.parse(row?.occurredAt||row?.imported_at||'')||0;
 export function mergeImportHistory(manual=[],sync=[]){
  const list=[
- ...manual.map(item=>({...item,source:'manual',occurredAt:item.imported_at})),
+ ...manual.map(item=>({...item,source:String(item.storage_path||'').startsWith('sync-inbox/')?'auto':'manual',occurredAt:item.imported_at})),
  ...sync.map(item=>({...item,source:'sync'}))
  ];
  return list.sort((a,b)=>time(b)-time(a)||String(b.id).localeCompare(String(a.id)));
@@ -40,9 +40,9 @@ export function renderImportHistory(entries=[]){
      '<time>'+occurred+'</time></div>'+
      '<h3>'+(replaced?'Fichier remplacé':row.kind==='moved'?'Fichier déplacé / copié':'Fichier transféré')+'</h3>'+
      syncVersionMarkup(row)+
-     '<p class="n2hist-note">Transféré vers NethorSync · Publication du planning non automatique.</p></article>';
+     '<p class="n2hist-note">Transféré par NethorSync · Publication automatique seulement si ce fichier modifié est récent, lisible et plus récent que le planning publié.</p></article>';
   }
-  return '<article class="n2hist-entry manual" data-origin="manual"><div class="n2hist-top"><span class="n2hist-source manual">Import manuel</span>'+
+  return '<article class="n2hist-entry '+(row.source==='auto'?'sync':'manual')+'" data-origin="'+esc(row.source)+'"><div class="n2hist-top"><span class="n2hist-source '+(row.source==='auto'?'sync':'manual')+'">'+(row.source==='auto'?'NethorSync · Publication':'Import manuel')+'</span>'+
    '<time>'+occurred+'</time></div>'+
    '<h3>'+esc(row.file_name||'Fichier inconnu')+'</h3>'+
    '<p class="n2hist-meta">Semaine du '+esc(row.week_start||'—')+' · '+esc(row.imported_by_name||'Utilisateur inconnu')+'</p>'+
