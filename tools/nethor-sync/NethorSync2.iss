@@ -121,7 +121,7 @@ begin
   else
   begin
     MsgBox('La configuration n''est pas achevée : aucune synchronisation automatique n''a été activée.' +
-      #13#10 + 'Relancez cet installateur pour reprendre là où il s''est arrêté.',
+      Chr(13) + Chr(10) + 'Relancez cet installateur pour reprendre là où il s''est arrêté.',
       mbInformation, MB_OK);
   end;
 end;
