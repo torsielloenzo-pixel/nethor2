@@ -50,7 +50,7 @@ begin
       and p.role in ('admin','role_point-de-vente')) then
     raise exception 'NETHOR_SYNC_NOT_AUTHORIZED' using errcode='42501';
   end if;
-  if p_device_id is null or p_secret is null or p_device_label is null or p_secret !~ '^[a-fA-F0-9]{64}
+  if p_device_id is null or p_secret is null or p_device_label is null or p_secret !~ '^[a-fA-F0-9]{64}$'
     or length(btrim(p_device_label)) not between 2 and 80 then
     raise exception 'NETHOR_SYNC_INVALID_DEVICE';
   end if;
