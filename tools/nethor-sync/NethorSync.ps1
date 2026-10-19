@@ -225,8 +225,9 @@ if ($networkEnabled) {
   # Enregistrer les versions réelles du fichier AVANT l'accusé de réception
   # du contrôle. Le stockage précédent conserve l'ancienne date LastWriteTimeUtc ;
   # la date d'envoi ne sert jamais de date de version.
-  if ($errors.Count -eq 0) {
-    $changes = @()
+  # Les fichiers correctement transmis doivent etre historises meme si un autre
+  # fichier du dossier a echoue : sinon le prochain scan les verrait inchanges.
+  $changes = @()
     foreach ($entry in @($entries)) {
       if ($entry.status -notin @('new', 'modified', 'moved_or_copied')) { continue }
       if ($entry.upload -notin @('staged', 'already_staged')) { continue }
@@ -263,7 +264,6 @@ if ($networkEnabled) {
         p_generation=$device.generation; p_changes=$batch
       }
     }
-  }
   # Ne pas accuser reception d'une demande manuelle si l'operation a echoue.
   if ($errors.Count -eq 0) {
     $outcome = if (@($entries | Where-Object { $_.upload -eq "staged" }).Count -gt 0) { "transferred" }
