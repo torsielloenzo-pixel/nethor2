@@ -1,14 +1,9 @@
 name: NethorSync - Installateur compatible MSI
 
+# L'ancien outil de comparaison ne doit plus remplacer automatiquement
+# l'installateur public fonctionnel 2.1.2 lors des changements serveur.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/build-nethor-sync-compat.yml'
-      - 'tools/nethor-sync/NethorSync.ps1'
-      - 'tools/nethor-sync/Connect-NethorSync.ps1'
-      - 'tools/nethor-sync/Verify-NethorSyncBinding.ps1'
 
 permissions:
   contents: write
@@ -133,6 +128,6 @@ jobs:
           $public='build/installer/NethorSync-Setup.exe'
           gh release view $tag --repo $env:GH_REPO --json tagName
           if ($LASTEXITCODE -ne 0) {throw 'Release NethorSync existante introuvable'}
-          gh release upload $tag $exe $public --repo $env:GH_REPO --clobber
+          gh release upload $tag $exe --repo $env:GH_REPO --clobber
           if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier le téléchargement NethorSync'}
-          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync-Setup.exe") | .name'
+          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync2-Setup-Compatibility-213.exe") | .name'
