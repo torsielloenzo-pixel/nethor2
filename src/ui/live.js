@@ -119,7 +119,7 @@ function renderLogin(message=''){
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>Nethor</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'">'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">Nethor</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>Nethor</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">Nethor</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -712,7 +712,7 @@ function render(){
   if(!screen||!state.profile)return;
   if(state.page==='import'&&state.access!=='manage')state.page='planning';
   if(state.page==='history'&&state.profile.role!=='admin')state.page='planning';
-  if(!canNavigate(state.page,state.profile))state.page='planning';
+  if(!canNavigate(state.page,state.profile,smallScreen()))state.page='planning';
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
   ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
   ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&isMobileHome());
@@ -721,7 +721,12 @@ function render(){
   ROOT.querySelector('#breadPage').textContent=TITLES[state.page];
   ROOT.querySelector('#mobileCurrentPage').textContent=MOBILE_PAGE_TITLES[state.page]||TITLES[state.page];
   const anomaliesNav=ROOT.querySelector('[data-nav="anomalies"]');
-  if(anomaliesNav?.lastChild?.nodeType===3)anomaliesNav.lastChild.textContent=smallScreen()?'NethorSync':'Anomalies';
+  if(anomaliesNav){
+    const permitted=canNavigate('anomalies',state.profile,smallScreen());
+    anomaliesNav.hidden=!permitted;
+    anomaliesNav.style.display=permitted?'':'none';
+    if(anomaliesNav.lastChild?.nodeType===3)anomaliesNav.lastChild.textContent=smallScreen()?'NethorSync':'Anomalies';
+  }
   const syncTab=ROOT.querySelector('.live-navigator [data-page="anomalies"] .nav-label');
   if(syncTab)syncTab.textContent=smallScreen()?'NethorSync':'Alertes';
   ROOT.querySelectorAll('[data-page]').forEach(el=>{
@@ -738,7 +743,7 @@ function render(){
   syncController?.paint();
 }
 function go(page){
-  if(!(page in TITLES)||!canNavigate(page,state.profile))return;
+  if(!(page in TITLES)||!canNavigate(page,state.profile,smallScreen()))return;
   state.page=page;state.notice='';state.error='';
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
@@ -944,7 +949,7 @@ async function verifyResume(){
     const roleChanged=state.profile?.role!==gate.gate.profile?.role;
     state.profile={...state.profile,...gate.gate.profile};
     if(state.access!=='manage'&&state.page==='import')state.page='planning';
-    if(!canNavigate(state.page,state.profile))state.page='planning';
+    if(!canNavigate(state.page,state.profile,smallScreen()))state.page='planning';
     if(roleChanged){
       closeFirstLoginRecovery();
       renderShell();
