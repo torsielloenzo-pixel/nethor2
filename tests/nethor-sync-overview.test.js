@@ -161,7 +161,7 @@ test('Absence de données NethorSync : jamais de chiffres fictifs',()=>{
 test('Connexion historique sécurisée et fonctionnalité limitée au desktop gestionnaire',()=>{
  const live=read('src/ui/live.js');
  const control=read('src/data/nethor-sync-control.js');
- assert.match(live,/Promise\.allSettled\(\[readSyncStatus\(client\),readSyncHistory\(client\)\]\)/);
+ assert.match(live,/Promise\.allSettled\(\[readSyncStatus\(client\),readSyncHistory\(client\),readSyncAutoPublications\(client,\{limit:20\}\)\]\)/);
  assert.match(live,/action==='nethor-sync-chart-30'/);
  assert.match(control,/client\.rpc\('nethor_sync_history',\{p_days:30\}\)/);
 });
