@@ -77,8 +77,11 @@ test('Zip installer publié sans exposer de secret et sans cache PWA',()=>{
  assert.doesNotMatch(sw,/nethor-sync-2.zip/);
  assert.match(installer,/FolderBrowserDialog/);
  assert.match(installer,/Connect-NethorSync.ps1/);
- assert.match(installer,/19:00/);
- assert.match(installer,/12:00/);
+ const scheduler=read('tools/nethor-sync/Register-NethorSyncTasks.ps1');
+ assert.match(scheduler,/Hour=19/);
+ assert.match(scheduler,/Hour=12/);
+ assert.match(scheduler,/Days=126/);
+ assert.match(scheduler,/Days=1/);
  assert.doesNotMatch(installer,/service_role|SUPABASE_SERVICE_ROLE/i);
 });
 
