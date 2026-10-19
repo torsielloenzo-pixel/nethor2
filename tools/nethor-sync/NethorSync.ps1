@@ -6,7 +6,8 @@ No planning is published by this script. Publication stays in Nethor2.
 [CmdletBinding()]
 param(
   [string]$ConfigPath = (Join-Path $PSScriptRoot "config.json"),
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$PollOnly
 )
 $ErrorActionPreference = "Stop"
 
@@ -54,6 +55,31 @@ function Get-RemoteSession($Settings, [string]$SecretPath) {
     if ([string]$permission -ne "manage") { throw "Ce compte ne possede pas le droit de gestion du planning." }
     return $auth.access_token
   } finally { $refresh = $null }
+}
+
+function Invoke-SyncRpc($Settings, [string]$Token, [string]$Method, $Params) {
+  $headers = @{ apikey=[string]$Settings.publishableKey; Authorization="Bearer " + $Token }
+  return Invoke-RestMethod -Method Post -Uri ($Settings.supabaseUrl.TrimEnd("/") + "/rest/v1/rpc/" + $Method) -Headers $headers -ContentType "application/json" -Body ($Params | ConvertTo-Json -Depth 6)
+}
+function Get-DeviceIdentity([string]$StateDir) {
+  $bindingPath = Join-Path $StateDir "device-binding.json"
+  $secretPath = Join-Path $StateDir "device-secret.dat"
+  if (-not (Test-Path -LiteralPath $bindingPath) -or -not (Test-Path -LiteralPath $secretPath)) {
+    throw "Le poste n'est pas configure. Executer Connect-NethorSync.ps1."
+  }
+  $device = Get-Content -LiteralPath $bindingPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  $secret = Get-SecretText ((Get-Content -LiteralPath $secretPath -Raw -Encoding UTF8).Trim())
+  if (-not $device.deviceId -or -not $device.generation -or -not $secret) {
+    throw "Identite de poste incomplete."
+  }
+  return @{ id=[string]$device.deviceId; generation=[long]$device.generation; secret=$secret }
+}
+function Check-ActiveDevice($Settings,[string]$AccessToken,$Device) {
+  return Invoke-SyncRpc $Settings $AccessToken 'nethor_sync_heartbeat' @{
+    p_device_id=$Device.id
+    p_secret=$Device.secret
+    p_generation=$Device.generation
+  }
 }
 function Upload-Candidate($Settings, [string]$Token, $File, [string]$Hash) {
   $name = [IO.Path]::GetFileName($File.Name)
@@ -122,8 +148,22 @@ $files = @(Get-ChildItem -LiteralPath $root -File -Recurse -ErrorAction Stop |
   Sort-Object FullName)
 $entries = @()
 $errors = @()
+
 $token = $null
+$device = $null
+$manualVersion = [long]0
 $networkEnabled = ($config.uploadEnabled -eq $true) -and (-not $DryRun)
+if ($networkEnabled) {
+  $token = Get-RemoteSession $config $authPath
+  $device = Get-DeviceIdentity $stateDir
+  # Le controle du serveur DOIT preceder meme la comparaison locale.
+  $remote = Check-ActiveDevice $config $token $device
+  $manualVersion = [long]$remote.manualRequestVersion
+  if ($PollOnly -and -not $remote.pendingManual) {
+    Write-Host "Aucune synchronisation manuelle demandee; dossier non analyse."
+    exit 0
+  }
+}
 foreach ($file in $files) {
   $relative = $file.FullName.Substring($root.TrimEnd("\").Length).TrimStart("\")
   $entry = [ordered]@{ path = $relative; size = $file.Length; modifiedUtc = $file.LastWriteTimeUtc.ToString("o"); sha256 = $null; status = "unread"; upload = "not_sent"; storageKey = $null }
@@ -148,9 +188,9 @@ foreach ($file in $files) {
     if ($uploaded.ContainsKey($hash)) {
       $entry.upload = "already_sent"
     } elseif ($networkEnabled) {
-      if (-not $token) {
-        $token = Get-RemoteSession $config $authPath
-      }
+
+      # Le poste revoque ne peut poursuivre les transferts avec notre agent.
+      $null = Check-ActiveDevice $config $token $device
       $result = Upload-Candidate $config $token $file $hash
       $entry.upload = $result.status
       $entry.storageKey = $result.key
@@ -169,6 +209,28 @@ $report = [ordered]@{
   scanned = $files.Count
   entries = $entries
   errors = $errors
+}
+
+if ($networkEnabled) {
+  # Ne pas accuser reception d'une demande manuelle si l'operation a echoue.
+  if ($errors.Count -eq 0) {
+    $outcome = if (@($entries | Where-Object { $_.upload -eq "staged" }).Count -gt 0) { "transferred" }
+               elseif ($files.Count -eq 0) { "no_files" } else { "unchanged" }
+    $null = Invoke-SyncRpc $config $token 'nethor_sync_report' @{
+      p_device_id=$device.id; p_secret=$device.secret
+      p_generation=$device.generation; p_manual_version=$manualVersion
+      p_result=$outcome; p_transferred=($outcome -eq "transferred")
+    }
+  } else {
+    # Une erreur laisse la demande manuelle dans la file, sans fausse synchronisation reussie.
+    try {
+      $null = Invoke-SyncRpc $config $token 'nethor_sync_report' @{
+        p_device_id=$device.id; p_secret=$device.secret
+        p_generation=$device.generation; p_manual_version=0
+        p_result="error"; p_transferred=$false
+      }
+    } catch { Write-Warning "Etat serveur non mis a jour: $($_.Exception.Message)" }
+  }
 }
 Save-JsonAtomic $reportPath $report
 if (-not $DryRun) {
