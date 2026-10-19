@@ -13,7 +13,7 @@ test('desktop : logo puis Nethor / page ouverte, sans ancien sous-titre',()=>{
  assert.ok(icon>0&&desktop>icon&&page>desktop);
  assert.match(shell,/<strong class="nethor-desktop-name">Nethor<\/strong><span class="sep">\/<\/span><span id="breadPage">Accueil<\/span>/);
  assert.doesNotMatch(shell,/Netto Le Thor · Planning du personnel/);
- assert.match(js,/ROOT\.querySelector\('#breadPage'\)\.textContent=MOBILE_PAGE_TITLES\[state\.page\]\|\|TITLES\[state\.page\]/);
+ assert.match(js,/ROOT\.querySelector\('#breadPage'\)\.textContent=TITLES\[state\.page\]/);
 });
 test('sidebar desktop : logo, Nethor et sous-titre Planning',()=>{
  assert.match(shell,/class="nethor-sidebar-logo" src="\.\/assets\/icon\.svg"/);
