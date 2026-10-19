@@ -831,3 +831,75 @@ html.nethor-zoom-locked select {
  .n2hist-version{padding:9px 10px}
  .n2hist-version strong{font-size:11px}
 }
+
+
+/* Vue annuelle — calendrier Nethor 1 adapté à Nethor 2 Mobile / PWA Mobile.
+   Défilement uniquement dans #screen (entête NETHOR et nav inférieure fixes). */
+@media(max-width:760px){
+ #app.mobile-planning-active .n2pm-toolbar{grid-template-columns:minmax(0,1fr) auto}
+ #app.mobile-planning-active .n2pm-segmented{gap:2px}
+ #app.mobile-planning-active .n2pm-segmented button{padding:9px 8px}
+ #app.mobile-planning-active .n2pm-year-btn{color:#285ba9;font-weight:850}
+ #app.mobile-planning-active .n2py{--py-blue:#1556c1;min-width:0;padding:0 0 20px;color:#213a5c}
+ #app.mobile-planning-active .n2py-fixed{
+   position:sticky;top:-14px;z-index:5;background:#f5f7fc;
+   padding:9px 0 12px;display:grid;gap:10px;border-bottom:1px solid #e4eaf2;
+ }
+ #app.mobile-planning-active .n2py-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+ #app.mobile-planning-active .n2py-head>div{min-width:0}
+ #app.mobile-planning-active .n2py-head span{display:block;font-size:9px;letter-spacing:1.3px;font-weight:850;color:#7e95b8}
+ #app.mobile-planning-active .n2py-head h2{font-size:24px;letter-spacing:-.9px;line-height:1.1;font-weight:900;margin:3px 0}
+ #app.mobile-planning-active .n2py-head p{font-size:11px;color:#7387a6;line-height:1.4;margin:3px 0 0}
+ #app.mobile-planning-active .n2py-head>button{display:grid;place-items:center;width:38px;height:38px;flex:none;font-size:19px;border-radius:11px;border:1px solid #dfe7f2;color:#587199;background:#fff}
+ #app.mobile-planning-active .n2py-controls{
+   display:grid;grid-template-columns:43px minmax(0,1fr) 43px;gap:8px;align-items:center
+ }
+ #app.mobile-planning-active .n2py-controls button{min-height:42px;border:1px solid #dbe5f2;border-radius:11px;background:#fff;color:#2356a1;font-weight:850;font-size:22px}
+ #app.mobile-planning-active .n2py-controls .n2py-current{font-size:19px;color:#fff;background:#101f3e;border-color:#101f3e;font-variant-numeric:tabular-nums}
+ #app.mobile-planning-active .n2py-legend{display:flex;align-items:center;gap:7px 13px;flex-wrap:wrap;color:#677d9a;font-size:10px;font-weight:700}
+ #app.mobile-planning-active .n2py-legend>span{display:inline-flex;align-items:center;gap:5px}
+ #app.mobile-planning-active .n2py-legend i{width:11px;height:11px;border-radius:4px;display:inline-block;flex:none}
+ #app.mobile-planning-active .n2py-legend .available{background:#ddebff;border:1px solid #a6c5f4}
+ #app.mobile-planning-active .n2py-legend .today{border:2px solid #1556c1;background:#fff}
+ #app.mobile-planning-active .n2py-legend .unavailable{background:#edf0f5;border:1px solid #e5e8ee}
+ #app.mobile-planning-active .n2py-error{background:#fff2ef;border:1px solid #f0d2ce;border-radius:10px;color:#a03c3c;font-size:11px;padding:10px}
+ #app.mobile-planning-active .n2py-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:11px;margin-top:13px}
+ #app.mobile-planning-active .n2py-month{
+   min-width:0;padding:13px 12px 14px;border-radius:17px;background:#fff;
+   border:1px solid #e0e7f1;box-shadow:0 4px 15px #152d560a
+ }
+ #app.mobile-planning-active .n2py-month-head{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:13px}
+ #app.mobile-planning-active .n2py-month-head h3{font-size:16px;font-weight:850;color:#233e63;margin:0}
+ #app.mobile-planning-active .n2py-month-head>span{font-size:10px;color:#94a2b5;background:#f2f4f8;border-radius:999px;padding:5px 9px;font-weight:750}
+ #app.mobile-planning-active .n2py-month-head>span.has-planning{color:#215b9a;background:#e9f1ff}
+ #app.mobile-planning-active .n2py-weekdays,.n2py-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center;min-width:0}
+ #app.mobile-planning-active .n2py-weekdays{margin-bottom:5px;color:#8c9bb1;font-size:10px;font-weight:850}
+ #app.mobile-planning-active .n2py-weekdays span{padding:5px 0}
+ #app.mobile-planning-active .n2py-blank{min-height:41px}
+ #app.mobile-planning-active .n2py-day{
+   position:relative;display:grid;place-items:center;min-height:41px;padding:5px 1px 8px;
+   border-radius:10px;border:1px solid transparent;background:#f3f5f8;
+   color:#9aa6b6;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums
+ }
+ #app.mobile-planning-active .n2py-day.weekend:not(.published){background:#eef1f6}
+ #app.mobile-planning-active .n2py-day.published{background:#e7f0ff;color:#2155a4;border-color:#c9dcf7;font-weight:850}
+ #app.mobile-planning-active .n2py-day.published i{position:absolute;bottom:5px;width:4px;height:4px;border-radius:50%;background:#1c62cb}
+ #app.mobile-planning-active .n2py-day.today{outline:2px solid #1556c1;outline-offset:-2px}
+ #app.mobile-planning-active .n2py-day.selected:not(.today){box-shadow:inset 0 0 0 2px #90b6eb}
+ #app.mobile-planning-active .n2py-day:active{transform:scale(.96)}
+ #app.mobile-planning-active .n2py-day:focus-visible,.n2py-controls button:focus-visible,.n2py-head button:focus-visible{outline:2px solid #1556c1;outline-offset:2px}
+}
+@media(min-width:540px) and (max-width:760px){
+ #app.mobile-planning-active .n2py-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+ #app.mobile-planning-active .n2py-month{padding:10px 8px 12px}
+ #app.mobile-planning-active .n2py-day{min-height:35px;font-size:11px}
+ #app.mobile-planning-active .n2py-blank{min-height:35px}
+}
+@media(max-width:365px){
+ #app.mobile-planning-active .n2pm-toolbar{grid-template-columns:minmax(0,1fr);gap:7px}
+ #app.mobile-planning-active .n2pm-segmented{justify-content:center}
+ #app.mobile-planning-active .n2pm-segmented button{flex:1;min-height:38px}
+ #app.mobile-planning-active .n2py-fixed{gap:8px}
+ #app.mobile-planning-active .n2py-day{min-height:36px}
+ #app.mobile-planning-active .n2py-blank{min-height:36px}
+}
