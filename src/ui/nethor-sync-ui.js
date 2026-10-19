@@ -1,4 +1,4 @@
-import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
+import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth,setSyncMode} from '../data/nethor-sync-control.js';
 const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/archive/refs/heads/feature/nethor-sync-2.zip';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
@@ -27,6 +27,7 @@ export function createSyncController(client,root,profile){
    '<p>Lié par : '+esc(status?.registeredBy||'—')+'</p>'+
    '<p>Dernier contrôle : '+esc(time(status?.lastCheckAt))+' · Dernier transfert : '+esc(time(status?.lastTransferAt))+'</p>'+
    '<p class="live-muted">Automatique : lundi au samedi 19 h ; dimanche 12 h (heure du poste réglée sur Europe/Paris). Manuel : via demande, contrôlée toutes les 5 minutes lorsque le PC est allumé.</p>'+
+   (isInstalled()?'<p>Mode : <strong>'+esc(status.mode==='manual'?'Manuel':'Automatique')+'</strong></p><button type="button" class="btn" data-action="sync-mode-manual">Manuel</button> <button type="button" class="btn" data-action="sync-mode-automatic">Automatique</button>':'')+
    '<p class="live-muted">Les fichiers transférés restent soumis à la validation du planning dans Nethor2.</p>'+
    (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+'</div></section>';
  }
@@ -56,6 +57,11 @@ export function createSyncController(client,root,profile){
   if(name==='sync-request-manual'){
     if(!isInstalled())return true;
     try{await requestManualSync(client);notice='Synchronisation demandée au poste actif.';error='';await refresh();}
+    catch(e){error=String(e.message||e);}paint();return true;
+  }
+  if(name==='sync-mode-manual'||name==='sync-mode-automatic'){
+    if(!isInstalled())return true;
+    try{await setSyncMode(client,name==='sync-mode-manual'?'manual':'automatic');notice='Mode de synchronisation mis à jour.';error='';await refresh();}
     catch(e){error=String(e.message||e);}paint();return true;
   }
   if(name==='sync-reset-device'){
