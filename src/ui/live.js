@@ -12,7 +12,7 @@ import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
 import {renderPlanningYear} from './planning-year.js';
-import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications} from '../data/nethor-sync-control.js';
+import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics} from '../data/nethor-sync-control.js';
 import {mergeImportHistory,renderImportHistory} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
@@ -386,7 +386,7 @@ async function loadNethorSyncStatus(){
  const userId=state.user.id;
  state.nethorSync.loading=true;
  if(state.page==='home')render();
- const [current,history,auto]=await Promise.allSettled([readSyncStatus(client),readSyncHistory(client),readSyncAutoPublications(client,{limit:20})]);
+ const [current,history,auto,diags]=await Promise.allSettled([readSyncStatus(client),readSyncHistory(client),readSyncAutoPublications(client,{limit:20}),readSyncDiagnostics(client,{limit:8})]);
  if(state.user?.id!==userId)return;
  state.nethorSync={
   loaded:current.status==='fulfilled',loading:false,
@@ -398,7 +398,8 @@ async function loadNethorSyncStatus(){
   historyError:history.status==='fulfilled'?'':'Historique temporairement indisponible',
   autoLoaded:auto.status==='fulfilled',
   autoPublications:auto.status==='fulfilled'?auto.value:[],
-  autoError:auto.status==='fulfilled'?'':'Suivi temporairement indisponible'
+  autoError:auto.status==='fulfilled'?'':'Suivi temporairement indisponible',
+  diagnostics:diags.status==='fulfilled'?diags.value:[]
  };
  if(state.page==='home')render();
 }
