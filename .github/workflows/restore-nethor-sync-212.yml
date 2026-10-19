@@ -1,0 +1,37 @@
+name: NethorSync - Restaurer le téléchargement 2.1.2
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/restore-nethor-sync-212.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Reprendre le binaire compatible 2.1.2 déjà publié
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release download nethor-sync2-latest --repo "$GH_REPO" \
+            --pattern NethorSync2-Setup-Compatibility-212.exe --dir .
+          test -s NethorSync2-Setup-Compatibility-212.exe
+          cp NethorSync2-Setup-Compatibility-212.exe NethorSync-Setup.exe
+          sha256sum NethorSync2-Setup-Compatibility-212.exe NethorSync-Setup.exe
+          cmp NethorSync2-Setup-Compatibility-212.exe NethorSync-Setup.exe
+      - name: Mettre le téléchargement stable sur 2.1.2 sans recompilation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release upload nethor-sync2-latest NethorSync-Setup.exe \
+            --repo "$GH_REPO" --clobber
+          gh release view nethor-sync2-latest --repo "$GH_REPO" \
+            --json assets --jq '.assets[] | select(.name=="NethorSync-Setup.exe") | .name'
