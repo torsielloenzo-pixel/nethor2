@@ -1,4 +1,4 @@
-import {canManageSync,readSyncStatus,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
+import {canManageSync,readSyncStatus,readSyncDiagnostics,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
 const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
@@ -37,10 +37,35 @@ export function renderManualSyncPipeline(status){
    '</div>';
 }
 
+// Historique accessible uniquement aux gestionnaires (autorisation serveur).
+export function renderSyncDiagnostics(records,error=''){
+ const stages={file_scan:'Lecture Excel',storage_upload:'Transfert Supabase',file_history:'Historisation',sync_report:'Confirmation Windows',startup:'Démarrage'};
+ const codes={file_access:'Accès au fichier',http_error:'Erreur HTTP',request_rejected:'Requête rejetée',timeout:'Délai dépassé',network:'Réseau indisponible',authorization:'Accès refusé',unexpected:'Erreur technique',mixed:'Plusieurs erreurs'};
+ if(error)return '<p class="sync-diagnostic-empty">Rapports d’erreurs indisponibles pour le moment.</p>';
+ if(!Array.isArray(records)||records.length===0)
+   return '<p class="sync-diagnostic-empty">Aucun rapport automatique reçu. Une nouvelle version de l’agent doit être installée pour transmettre les erreurs Windows.</p>';
+ return '<div class="sync-diagnostic-history">'+records.slice(0,12).map(report=>{
+   const code=String(report.code||'unexpected');
+   const stage=String(report.stage||'startup');
+   const http=Number(report.httpStatus);
+   const showHttp=Number.isInteger(http)&&http>=100&&http<=599;
+   const groups=Array.isArray(report.breakdown)?report.breakdown.slice(0,5):[];
+   return '<article class="sync-diagnostic-item">'+
+     '<div><strong>'+esc(stages[stage]||'Étape inconnue')+' · '+esc(codes[code]||'Erreur technique')+
+     (showHttp?' · HTTP '+http:'')+'</strong><time>'+esc(time(report.at))+'</time></div>'+
+     '<p>'+esc(report.failed||0)+' erreur(s) sur '+esc(report.scanned||0)+' fichiers analysés · '+esc(report.transferred||0)+' transfert(s)</p>'+
+     (groups.length>1?'<small>'+groups.map(g=>
+       esc(stages[g.stage]||'Étape inconnue')+' : '+esc(g.count||0)+' × '+esc(codes[g.code]||'Erreur')).join(' · ')+'</small>':'')+
+     '<small>Agent '+esc(report.clientVersion||'—')+' · Diagnostic #'+esc(report.id||'—')+'</small>'+
+     '</article>';
+ }).join('')+'</div>';
+}
+
 export function createSyncController(client,root,profile){
  if(!canManageSync(profile?.role))return null;
  const admin=profile.role==='admin';
  let status=null,error='',loading=false,notice='',watchTimer=null,requestStartedAt=0;
+ let diagnostics=[],diagnosticsError='';
  const isInstalled=()=>status?.installed===true;
  function markup(){
   const state=syncHealth(status);
@@ -67,7 +92,8 @@ export function createSyncController(client,root,profile){
    '<p><strong>Mode : Automatique</strong></p>'+
    '<p class="live-muted">Les versions Excel réellement modifiées et récentes sont publiées après vérification automatique ; les fichiers inconnus ou refusés ne remplacent jamais le planning.</p>'+
    (isInstalled()?'<button type="button" class="btn" data-action="sync-download">Télécharger la version corrigée 2.1.4</button>':'')+
-   (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+'</div></section>';
+   (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+
+   '<section class="sync-diagnostic-panel"><h3>Rapports d’erreurs NethorSync</h3><p class="live-muted">Diagnostics techniques automatiques, sans données personnelles ni noms de fichiers. Conservation : 30 jours.</p>'+renderSyncDiagnostics(diagnostics,diagnosticsError)+'</section></div></section>';
  }
  function paint(){
   const side=root.querySelector('#syncSideCard');if(side)side.innerHTML=markup();
@@ -76,7 +102,15 @@ export function createSyncController(client,root,profile){
  async function refresh(){
   if(loading)return;
   loading=true;
-  try{const wasPending=status?.pendingManual===true;const next=await readSyncStatus(client);status=next;error='';if(wasPending&&!next.pendingManual&&next.installed)notice='Vérification ponctuelle terminée sur le poste '+(next.deviceLabel||'autorisé')+'.';}
+  try{
+   const wasPending=status?.pendingManual===true;
+   const [state,diag]=await Promise.allSettled([readSyncStatus(client),readSyncDiagnostics(client,{limit:12})]);
+   if(state.status!=='fulfilled')throw state.reason;
+   const next=state.value;status=next;error='';
+   diagnostics=diag.status==='fulfilled'?diag.value:[];
+   diagnosticsError=diag.status==='fulfilled'?'':'Rapports temporairement indisponibles';
+   if(wasPending&&!next.pendingManual&&next.installed)notice='Vérification ponctuelle terminée sur le poste '+(next.deviceLabel||'autorisé')+'.';
+  }
   catch(e){error=String(e.message||e);status=null;}
   finally{loading=false;if(!status?.pendingManual)requestStartedAt=0;paint();}
  }
