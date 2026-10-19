@@ -11,7 +11,8 @@ import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.j
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
-import {readSyncStatus,readSyncHistory} from '../data/nethor-sync-control.js';
+import {readSyncStatus,readSyncHistory,readSyncFileChanges} from '../data/nethor-sync-control.js';
+import {mergeImportHistory,renderImportHistory} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
 import {createSyncController} from './nethor-sync-ui.js';
@@ -650,7 +651,10 @@ function pageImport(){
 }
 function pageHistory(){
   if(state.profile.role!=='admin')return '<div class="live-error">Historique réservé à l’administration.</div>';
-  return renderPageHeader('TRAÇABILITÉ','Historique des imports','Fichiers et versions archivés dans Supabase.',button('Actualiser','history-refresh'))+'<section class="card"><div class="card-head"><h2 class="card-title">Archives Excel</h2></div><div class="mini-list">'+(state.history.length?state.history.map(x=>'<div class="mini-row"><div><strong>'+escapeHtml(x.file_name)+'</strong><small>Semaine '+escapeHtml(x.week_start)+' · '+escapeHtml(x.imported_by_name)+' · '+escapeHtml(x.imported_at?new Date(x.imported_at).toLocaleString('fr-FR'):'')+'</small></div>'+(x.storage_path?'<button class="btn" data-download="'+escapeHtml(String(x.storage_path))+'">Télécharger</button>':'')+'</div>').join(''):'<div class="live-empty"><strong>Aucune archive disponible</strong>Les imports publiés et archivés apparaîtront ici.</div>')+'</div></section>';
+  return renderPageHeader('TRAÇABILITÉ','Historique des imports','Imports manuels et transferts NethorSync · versions et remplacements.',button('Actualiser','history-refresh'))+
+    '<section class="card n2hist-card"><div class="card-head"><div><h2 class="card-title">Historique des fichiers</h2>'+
+    '<p class="sub">Les transferts NethorSync ne publient pas automatiquement le planning.</p></div></div>'+
+    '<div class="n2hist-list">'+renderImportHistory(state.history)+'</div></section>';
 }
 function render(){
   const screen=ROOT.querySelector('#screen');
@@ -696,9 +700,22 @@ function go(page){
   window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadHistory(){
-  state.loading=true;render();
-  try{state.history=await getImportHistory(client,{limit:100});state.error='';}
-  catch(err){state.error='Impossible de charger l’historique : '+String(err.message||err);}
+  if(state.profile?.role!=='admin')return;
+  state.loading=true;state.error='';render();
+  try{
+    const [manual,sync]=await Promise.allSettled([
+      getImportHistory(client,{limit:200}),readSyncFileChanges(client,{limit:200})
+    ]);
+    if(manual.status==='rejected'&&sync.status==='rejected'){
+      throw Error('Les deux historiques sont temporairement indisponibles.');
+    }
+    state.history=mergeImportHistory(
+      manual.status==='fulfilled'?manual.value:[],
+      sync.status==='fulfilled'?sync.value:[]
+    );
+    state.error=manual.status==='rejected'?'Imports manuels temporairement indisponibles.':
+      sync.status==='rejected'?'Historique NethorSync temporairement indisponible.':'';
+  }catch(err){state.error='Impossible de charger l’historique : '+String(err.message||err);}
   finally{state.loading=false;render();}
 }
 function resolveExcelColor({cell,workbook}){
@@ -813,7 +830,7 @@ async function saveLink(name){
 }
 async function downloadHistory(path){
   if(state.profile.role!=='admin')return;
-  const record=state.history.find(x=>x.storage_path===path);
+  const record=state.history.find(x=>x.source==='manual'&&x.storage_path===path);
   if(!record)return;
   const {data,error}=await client.storage.from('planning-files').download(path);
   if(error){state.error='Téléchargement refusé : '+error.message;render();return;}
