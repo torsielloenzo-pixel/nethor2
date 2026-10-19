@@ -51,7 +51,7 @@ function New-TaskDefinition([string]$Name,[string]$Mode,[int]$Days,[int]$Hour,[i
   if ($TriggerType -eq 3) {
     $trigger.DaysOfWeek = $Days
     $trigger.WeeksInterval = 1
-  } else {
+  } elseif ($TriggerType -eq 2) {
     $trigger.DaysInterval = 1
     $trigger.Repetition.Interval = 'PT5M'
     $trigger.Repetition.Duration = 'P1D'
