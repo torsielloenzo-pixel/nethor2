@@ -1,0 +1,82 @@
+name: NethorSync - Comparaison installateur 2.1.1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-nethor-sync-compat.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nethor-sync-compat-baseline
+  cancel-in-progress: true
+
+jobs:
+  build-baseline:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Recuperer la version 2.1.1 qui fonctionnait avant la refonte
+        uses: actions/checkout@v4
+        with:
+          ref: 55b1d728aa770d2e4bd875f62521c7a6271fbcd4
+          persist-credentials: false
+      - name: Verifier le code source fixe
+        shell: pwsh
+        run: |
+          $actual=(git rev-parse HEAD).Trim()
+          if ($actual -ne '55b1d728aa770d2e4bd875f62521c7a6271fbcd4') {
+            throw "Version source non conforme"
+          }
+          $iss=Get-Content -LiteralPath 'tools\nethor-sync\NethorSync2.iss' -Raw
+          if ($iss -notmatch '#define AppVersion "2\.1\.1"') { throw 'Version Inno Setup incorrecte' }
+          if ($iss -match 'Watch-NethorSync.ps1') { throw 'La version de reference ne doit pas contenir le processus d ecoute' }
+          Write-Host 'Source connue : version 2.1.1, sans écoute continue.'
+      - name: Installer Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress --limit-output
+          if ($LASTEXITCODE -ne 0) {throw "Inno Setup indisponible"}
+      - name: Compiler exactement le code source de la version de reference
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {$compiler="$env:ProgramFiles\Inno Setup 6\ISCC.exe"}
+          if (-not (Test-Path $compiler)) {throw 'Compilateur absent'}
+          & $compiler 'tools\nethor-sync\NethorSync2.iss'
+          if ($LASTEXITCODE -ne 0) {throw 'Compilation échouée'}
+          $original='build\installer\NethorSync2-Setup.exe'
+          $result='build\installer\NethorSync2-Setup-Compatibility-211.exe'
+          if (-not (Test-Path $original)) {throw 'Exécutable absent'}
+          Copy-Item $original $result -Force
+          Get-FileHash -Algorithm SHA256 $result | Format-List
+      - name: Test présence du fichier EXE
+        shell: pwsh
+        run: |
+          $file=Get-Item 'build\installer\NethorSync2-Setup-Compatibility-211.exe'
+          if ($file.Length -lt 100000) { throw 'Taille de fichier incohérente' }
+      - name: Joindre l exécutable à GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: NethorSync2-Compatibility-211
+          path: build/installer/NethorSync2-Setup-Compatibility-211.exe
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publier une release de comparaison independante
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $tag='nethor-sync2-compat-211'
+          $exe='build/installer/NethorSync2-Setup-Compatibility-211.exe'
+          gh release view $tag --repo $env:GH_REPO *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo $env:GH_REPO --target '55b1d728aa770d2e4bd875f62521c7a6271fbcd4' --title 'NethorSync 2.1.1 - Diagnostic compatibilité' --notes 'Recompilation de la dernière version ayant fonctionné sur le MSI, sans écoute continue et sans changement de stratégie de synchronisation. EXE non signé : peut encore être bloqué par Smart App Control. Cette variante fonctionne avec les horaires automatiques et une vérification ponctuelle à la prochaine interrogation du poste (5 minutes maximum si actif).' --latest=false
+            if ($LASTEXITCODE -ne 0) {throw 'Impossible de créer la release'}
+          }
+          gh release upload $tag $exe --repo $env:GH_REPO --clobber
+          if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier la comparaison'}
