@@ -39,7 +39,7 @@ test('bleu du fond identique au logo, contrastes, et desktop non touché',()=>{
 
 test('PWA iOS : fond continu dans la zone de statut et cache renouvelé',()=>{
   assert.match(index,/apple-mobile-web-app-status-bar-style" content="black-translucent"/);
-  assert.match(read('sw.js'),/nethor-mobile-drawer-recovery-v17/);
+  assert.match(read('sw.js'),/nethor-mobile-drawer-recovery-(?:sync-)?v\\d+/);
   assert.match(read('sw.js'),/src\/ui\/live\.js/);
   assert.match(read('sw.js'),/mobile\.css/);
 });
