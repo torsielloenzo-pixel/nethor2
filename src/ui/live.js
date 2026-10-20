@@ -141,7 +141,7 @@ function renderLogin(message=''){
   // perte de session ou retour sur l'écran de connexion.
   document.getElementById('firstLoginRecoveryPrompt')?.remove();
   recoveryPrompt.step='closed';
-  ROOT.classList.remove('menu-open','staff-desktop-layout','personal-home-active','mobile-planning-active');
+  ROOT.classList.remove('menu-open','staff-desktop-layout','personal-home-active','mobile-planning-active','mobile-sync-active','mobile-content-scroll');
   document.title='Nethor · Connexion';
   ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand"><img class="nethor-login-logo" src="./assets/icon.svg" width="50" height="50" alt=""><span>NETHOR²<small>PLANNING · LE THOR</small></span></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><button type="button" class="n2sec-forgot" data-action="forgot-password">Mot de passe oublié ?</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
 }
@@ -761,6 +761,11 @@ function render(){
   ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
   ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&isMobileHome());
   ROOT.classList.toggle('mobile-sync-active',state.page==='anomalies'&&smallScreen());
+  // Mobile / PWA : entête NETHOR hors défilement pour les autres écrans.
+  // Accueil personnel, Planning personnel et NethorSync conservent leur structure dédiée.
+  ROOT.classList.toggle('mobile-content-scroll',smallScreen()&&
+    !(state.page==='home'&&isMobileHome())&&
+    !(state.page==='planning'&&isMobileHome())&&state.page!=='anomalies');
   document.title='Nethor · '+(smallScreen()?MOBILE_PAGE_TITLES[state.page]:TITLES[state.page]);
   ROOT.querySelector('#breadPage').textContent=TITLES[state.page];
   ROOT.querySelector('#mobileCurrentPage').textContent=MOBILE_PAGE_TITLES[state.page]||TITLES[state.page];
