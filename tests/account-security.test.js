@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {normalizeRecoveryEmail,validateRecoveryEmail,validateNewPassword,validateRecoveryPassword,RESET_REQUEST_MESSAGE} from '../src/auth/account-security.js';
-import {renderSecuritySettings} from '../src/ui/settings-security.js';
+import {renderSecuritySettings,renderSettingsPage} from '../src/ui/settings-security.js';
 
 const file=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -42,10 +42,50 @@ test('Nethor : fonctions Supabase existantes et changement de mot de passe avec 
  assert.match(code,/'password-recovery-email',\{action:'request',identifier:text\}/);
  assert.match(code,/client\.auth\.updateUser\(changes\)/);
  assert.match(code,/data-action="forgot-password"/);
- assert.match(code,/renderSecuritySettings\(state\.accountSecurity\)/);
+ assert.match(code,/renderSettingsPage\(/);
  // La connexion historique est intacte : aucun remplacement de @stock-fl.local.
  assert.match(file('src/auth/login-identifier.js'),/@stock-fl\.local/);
 });
+test('Sous-menus : formulaires sensibles affichés uniquement au bon endroit',()=>{
+ const password=renderSecuritySettings({configured:true},'password');
+ const email=renderSecuritySettings({configured:true},'email');
+ assert.match(password,/id="changePasswordForm"/);
+ assert.doesNotMatch(password,/id="recoveryEmailForm"/);
+ assert.match(email,/id="recoveryEmailForm"/);
+ assert.doesNotMatch(email,/id="changePasswordForm"/);
+ const home=renderSettingsPage({view:'home',account:{configured:true}});
+ assert.match(home,/Mot de passe et sécurité/);
+ assert.match(home,/Application et assistance/);
+ assert.match(home,/data-settings-view="sessions"/);
+ assert.doesNotMatch(home,/id="changePasswordForm"/);
+ const detail=renderSettingsPage({view:'password',account:{configured:true}});
+ assert.match(detail,/id="changePasswordForm"/);
+ assert.doesNotMatch(detail,/id="recoveryEmailForm"/);
+});
+test('Paramètres : XSS échappé, état manquant explicite, accès NethorSync filtré',()=>{
+ const page=renderSettingsPage({view:'profile',displayName:'<img src=x onerror=alert(1)>',identifier:'personne@stock-fl.local'});
+ assert.doesNotMatch(page,/<img src=x/);
+ assert.match(page,/&lt;img/);
+ const sessions=renderSettingsPage({view:'sessions',lastSignIn:'Non disponible'});
+ assert.match(sessions,/Non disponible/);
+ assert.match(sessions,/autres appareils/);
+ const home=renderSettingsPage({view:'home'});
+ assert.doesNotMatch(home,/data-settings-view="sync"/);
+ const privileged=renderSettingsPage({view:'home',syncMarkup:'<section id="syncSettings"></section>'});
+ assert.match(privileged,/data-settings-view="sync"/);
+});
+test('Préférence locale et rapport diagnostique sans données personnelles',()=>{
+ const details=renderSettingsPage({view:'planning',preferredView:'year',allowYear:true});
+ assert.match(details,/data-settings-choice="year"/);
+ assert.match(details,/aria-pressed="true"/);
+ assert.doesNotMatch(renderSettingsPage({view:'planning',allowYear:false}),/data-settings-choice="year"/);
+ const live=file('src/ui/live.js');
+ assert.match(live,/planningPreferenceKey/);
+ assert.match(live,/settings-copy-diagnostic/);
+ assert.match(live,/Copier le diagnostic|Diagnostic copié/);
+ assert.match(file('sw.js'),/nethor-settings-groups-v25/);
+});
+
 test('lien Resend : jeton vérifié par Supabase et supprimé de l’URL',()=>{
  const page=file('reset-password.html');
  const code=file('src/auth/password-recovery-page.js');
