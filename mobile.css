@@ -977,3 +977,55 @@ html.nethor-zoom-locked select {
  .n2settings-fact{gap:12px}
 }
 @media(prefers-reduced-motion:reduce){.n2settings-link{transition:none}}
+
+
+/* Mobile / PWA Mobile : l'en-tête NETHOR reste fixe sur les pages classiques.
+   Comme pour le Planning, seul main#screen défile. Les vues dédiées
+   (accueil personnel, planning personnel, NethorSync) gardent leurs règles. */
+@media(max-width:760px){
+  body:has(#app.mobile-content-scroll){
+    height:100dvh;
+    overflow:hidden;
+    overscroll-behavior-y:none;
+  }
+  #app.mobile-content-scroll{
+    height:100dvh;
+    min-height:0;
+    overflow:hidden;
+  }
+  #app.mobile-content-scroll .app{
+    height:100dvh;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+  }
+  #app.mobile-content-scroll .workspace{
+    height:100dvh;
+    min-height:0;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    padding-bottom:calc(74px + env(safe-area-inset-bottom));
+    overflow:hidden;
+  }
+  #app.mobile-content-scroll .topbar{
+    flex:0 0 auto;
+    position:relative;
+    top:auto;
+    z-index:9;
+  }
+  #app.mobile-content-scroll main#screen{
+    flex:1 1 auto;
+    display:block;
+    min-height:0;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    margin:0;
+    padding:16px 13px 17px;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+}
