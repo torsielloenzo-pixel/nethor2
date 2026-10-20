@@ -69,7 +69,10 @@ test('la page Alertes est NethorSync seulement sur mobile et le scroll est bloqu
  assert.match(read('src/ui/mobile-sync-summary.js'),/data-action="nethor-sync-mobile-refresh"/);
  const start=css.indexOf('/* NethorSync public : écran unique Mobile/PWA Mobile sans défilement.');
  assert.ok(start>0);
- const rule=css.slice(start);
+ // Limiter la vérification aux styles NethorSync : les pages suivantes
+ // ont légitimement leur propre zone de défilement.
+ const nextSection=css.indexOf('/* ============================================================',start);
+ const rule=css.slice(start,nextSection>start?nextSection:undefined);
  assert.match(rule,/@media\(max-width:760px\)/);
  assert.match(rule,/body:has\(#app\.mobile-sync-active\)\{height:100dvh;overflow:hidden/);
  assert.match(rule,/#app\.mobile-sync-active main#screen\{/);
