@@ -368,7 +368,7 @@ function mobileOverviewPage(){
   return '<div class="n2h-home" aria-label="Mon accueil personnel">'+
     '<header class="n2h-greeting"><div><span class="n2h-overline">MON ESPACE · NETTO LE THOR</span><h1>Bonjour'+(name?' '+escapeHtml(name):'')+'</h1><p>'+escapeHtml(dayWord)+'</p></div>'+homePwaInstall()+'</header>'+
     '<section class="n2h-card n2h-schedule" aria-label="Mes horaires">'+
-       '<div class="n2h-heading"><div>'+navIcon('planning')+'<h2>Mes horaires</h2></div><span class="n2h-week-total">'+(ready&&loadedPlanning&&linked?escapeHtml(hours(data.hours)):'7 jours')+'</span></div>'+
+       '<div class="n2h-heading"><div>'+navIcon('planning')+'<h2>Mes horaires</h2></div></div>'+
        '<div class="n2h-days">'+schedule+'</div>'+
     '</section>'+
     '<section class="n2h-card n2h-leave" aria-label="Prochains congés">'+
