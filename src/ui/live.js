@@ -3,7 +3,7 @@ import {loadAuthorizedSession} from '../auth/session-gate.js';
 import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
-import {renderSecuritySettings} from './settings-security.js';
+import {renderSettingsPage} from './settings-security.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {installMobileZoomLock} from './mobile-zoom.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek,getPublishedWeeksForYear} from '../data/planning-repository.js';
@@ -82,7 +82,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
 let syncChartPeriod=7;
@@ -90,6 +90,34 @@ let booted=false;
 let personalRequestId=0;
 let annualRequestId=0;
 let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
+// Préférence de planning locale, cloisonnée par compte et par navigateur.
+const planningPreferenceKey=id=>'nethor2-planning-start-v1:'+id;
+function readPlanningPreference(id){
+ try{
+  const value=localStorage.getItem(planningPreferenceKey(id));
+  return ['day','week','year'].includes(value)?value:'week';
+ }catch(_){return 'week';}
+}
+function savePlanningPreference(id,value){
+ try{localStorage.setItem(planningPreferenceKey(id),value);return true;}
+ catch(_){return false;}
+}
+const isInstalledPwa=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const settingsDate=value=>{
+ const date=new Date(value||'');
+ return Number.isFinite(date.getTime())?date.toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'Non disponible';
+};
+const settingsDiagnostics=()=>{
+ const lines=[
+  'Nethor 2 — informations de diagnostic',
+  'Mode : '+(isInstalledPwa()?'PWA':'Navigateur'),
+  'Format : '+(smallScreen()?'Mobile':'Ordinateur'),
+  'Réseau (navigateur) : '+(navigator.onLine?'En ligne':'Hors ligne'),
+  'Service Worker : '+(navigator.serviceWorker?.controller?'Actif':'Inactif'),
+  'Dernière vérification d’accès : '+settingsDate(state.lastCheck)
+ ];
+ return lines.join('\n');
+};
 const recoveryDismissKey=userId=>'nethor-recovery-later:'+userId;
 function recoveryDismissed(userId){
  try{return sessionStorage.getItem(recoveryDismissKey(userId))==='1';}catch{return false;}
@@ -145,6 +173,7 @@ async function signOut(){
   state.importSync={loaded:false,loading:false,status:null,error:'',checkedAt:0};
   state.mobileSync={loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
+  state.settingsPanel='home';state.settingsFeedback='';state.planningPreference='week';
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
   syncController?.dispose();
@@ -158,6 +187,8 @@ async function startAuthorized(access){
   state.mobilePlanning.annual={year:null,weeks:[],loading:false,loaded:false,error:''};
   state.user=access.gate.user;
   state.profile=access.gate.profile;
+  state.settingsPanel='home';state.settingsFeedback='';
+  state.planningPreference=readPlanningPreference(state.user.id);
   recoveryPrompt={step:'closed',dismissed:recoveryDismissed(state.user.id),saving:false,error:'',mailStatus:''};
   state.nethorSync={loaded:false,loading:false,status:null,error:''};
   state.importSync={loaded:false,loading:false,status:null,error:'',checkedAt:0};
@@ -684,7 +715,20 @@ async function requestRecoveryEmail(identifier,fromLogin=false){
 }
 
 function pageSettings(){
-  return renderPageHeader('SESSION','Paramètres','Droits et informations de ton accès Nethor.')+'<div class="layout"><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Mon compte</h2></div><div class="mini-list"><div class="mini-row"><span>Nom</span><strong>'+escapeHtml(state.profile.display_name||'—')+'</strong></div><div class="mini-row"><span>Rôle</span><strong>'+escapeHtml(listRole(state.profile.role))+'</strong></div><div class="mini-row"><span>Accès Planning</span><span class="chip">'+escapeHtml(state.access)+'</span></div><div class="mini-row"><span>Source</span><span class="chip info">Supabase connecté</span></div></div></section></div><div class="stack"><section class="card"><div class="card-head"><h2 class="card-title">Sécurité</h2></div><div class="card-body"><p class="muted">Les sessions sont contrôlées et les données personnelles ne sont pas enregistrées dans le cache applicatif.</p><div style="margin-top:16px">'+button('Déconnexion','logout')+'</div></div></section></div></div>'+renderSecuritySettings(state.accountSecurity)+(syncController?.settingsMarkup()||'');
+ const syncMarkup=syncController?.settingsMarkup()||'';
+ return renderPageHeader('MON ESPACE','Paramètres','Informations personnelles, sécurité et préférences de ton compte.')+
+  renderSettingsPage({
+   view:state.settingsPanel,account:state.accountSecurity,
+   displayName:state.profile?.display_name||'—',
+   identifier:state.user?.email||'Non disponible',
+   role:listRole(state.profile?.role),access:state.access,
+   lastSignIn:settingsDate(state.user?.last_sign_in_at),
+   preferredView:state.planningPreference,allowYear:smallScreen(),
+   isPwa:isInstalledPwa(),isOnline:navigator.onLine,
+   workerActive:Boolean(navigator.serviceWorker?.controller),
+   lastCheck:settingsDate(state.lastCheck),
+   syncMarkup,feedback:state.settingsFeedback
+  });
 }
 function pageImport(){
   if(state.access!=='manage')return '<div class="live-error">Tu n’as pas les droits de gérer le planning.</div>';
@@ -744,13 +788,23 @@ function render(){
 }
 function go(page){
   if(!(page in TITLES)||!canNavigate(page,state.profile,smallScreen()))return;
+  const previousPage=state.page;
   state.page=page;state.notice='';state.error='';
+  if(page==='settings'&&previousPage!==page){state.settingsPanel='home';state.settingsFeedback='';}
+  if(page==='planning'&&previousPage!==page){
+   state.view=state.planningPreference==='year'&&!smallScreen()?'week':state.planningPreference;
+   if(state.view==='year'){
+    state.mobilePlanning.year=Number((state.day||dateInParis()).slice(0,4));
+    state.mobilePlanning.annual={year:null,weeks:[],loading:false,loaded:false,error:''};
+   }
+  }
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
   if(page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
   if(page==='import'&&!smallScreen())void loadImportSyncStatus();
   if(page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&!state.nethorSync.loading)void loadNethorSyncStatus();
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
+  if(page==='planning'&&state.view==='year'&&smallScreen())void loadAnnualWeeks(true);
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   const planningScroller=ROOT.querySelector('#screen');
   if(state.page==='planning'&&smallScreen()&&planningScroller)planningScroller.scrollTop=0;
@@ -1052,6 +1106,36 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(state.page==='settings'){
+   if(action==='settings-open'){
+    const allowed=['profile','permissions','password','email','sessions','planning','notifications','application','diagnostic','sync'];
+    const view=b.dataset.settingsView;
+    if(!allowed.includes(view)||(view==='sync'&&!syncController))return;
+    state.settingsPanel=view;state.settingsFeedback='';render();
+    ROOT.querySelector('#screen')?.scrollTo({top:0});return;
+   }
+   if(action==='settings-back'){
+    state.settingsPanel='home';state.settingsFeedback='';render();
+    ROOT.querySelector('#screen')?.scrollTo({top:0});return;
+   }
+   if(action==='settings-planning-view'){
+    const choice=b.dataset.settingsChoice;
+    if(!['week','day','year'].includes(choice)||(choice==='year'&&!smallScreen())||!state.user?.id)return;
+    if(savePlanningPreference(state.user.id,choice)){
+     state.planningPreference=choice;
+     state.settingsFeedback='Vue enregistrée pour cet appareil.';
+    }else state.settingsFeedback='Impossible d’enregistrer la préférence dans ce navigateur.';
+    render();return;
+   }
+   if(action==='settings-copy-diagnostic'){
+    try{
+     if(!navigator.clipboard?.writeText)throw Error('Presse-papiers indisponible');
+     await navigator.clipboard.writeText(settingsDiagnostics());
+     state.settingsFeedback='Diagnostic copié, sans données de compte.';
+    }catch(_){state.settingsFeedback='Copie impossible. Vérifie les autorisations du navigateur.';}
+    render();return;
+   }
+  }
   if(state.page==='planning'&&smallScreen()&&['year-view','year-prev','year-next','year-current','year-close'].includes(action)){
     if(action==='year-close'){state.view='week';annualRequestId++;render();return;}
     if(action==='year-view'){
