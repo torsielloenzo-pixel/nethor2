@@ -47,6 +47,15 @@ export async function readSyncDiagnostics(client,{limit=20}={}){
  return data;
 }
 
+
+export async function readSyncUpdateHistory(client,{limit=12}={}){
+ if(!Number.isInteger(limit)||limit<1||limit>40)throw new RangeError('Limite invalide');
+ const {data,error}=await client.rpc('nethor_sync_update_recent',{p_limit:limit});
+ if(error)throw Error(error.message||'Historique des mises à jour indisponible');
+ if(!Array.isArray(data))throw Error('Format de mise à jour invalide');
+ return data;
+}
+
 export async function requestManualSync(client) {
   return rpcResult(await client.rpc('nethor_sync_request_manual'));
 }
