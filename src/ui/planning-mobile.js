@@ -83,14 +83,17 @@ function strip(dates,selected,today){
    '<span>'+SHORT[i]+'</span><strong>'+Number(date.slice(-2))+'</strong></button>').join('')+'</div>';
 }
 function toolbar(weekStart,view,allowYear=false){
- return '<div class="n2pm-toolbar"><div class="n2pm-pager">'+
-  '<button type="button" data-action="prev" aria-label="Semaine précédente">‹</button>'+
-  '<span><strong>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</strong><small>Semaine du '+safe(dateLabel(weekStart))+'</small></span>'+
-  '<button type="button" data-action="next" aria-label="Semaine suivante">›</button></div>'+
+ return '<div class="n2pm-toolbar">'+
   '<div class="n2pm-segmented" aria-label="Mode du planning">'+
   '<button type="button" data-action="week-view" class="'+(view==='week'?'selected':'')+'" aria-pressed="'+(view==='week')+'">Semaine</button>'+
   '<button type="button" data-action="day-view" class="'+(view==='day'?'selected':'')+'" aria-pressed="'+(view==='day')+'">Jour</button>'+
-  (allowYear?'<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false" aria-label="Ouvrir la vue annuelle">Année</button>':'')+'</div></div>';
+  (allowYear?'<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false" aria-label="Ouvrir la vue annuelle">Année</button>':'')+'</div>'+
+}
+  '<div class="n2pm-pager">'+
+  '<button type="button" data-action="prev" aria-label="Semaine précédente">‹</button>'+
+  '<span><strong>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</strong><small>Semaine du '+safe(dateLabel(weekStart))+'</small></span>'+
+  '<button type="button" data-action="next" aria-label="Semaine suivante">›</button></div>'+
+  '</div></div>';
 }
 function summary(cells){
  return '<div class="n2pm-summary">'+cells.map(c=>'<div><span>'+safe(c[0])+'</span><strong>'+safe(c[1])+'</strong></div>').join('')+'</div>';
@@ -176,8 +179,6 @@ export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,
  else if(view==='day')content=dayView(result,selected,clock.key,clock.minute,filter,awayExpanded);
  else content=weekView(result,selected,clock.key);
  return '<section class="n2pm" aria-label="Planning mobile de l’équipe">'+
-  '<header class="n2pm-page-heading"><div><span>NETTO LE THOR</span><h1>Planning</h1></div>'+
-  '<button type="button" data-action="refresh" aria-label="Actualiser le planning" title="Actualiser">↻</button></header>'+
   toolbar(weekStart,view,allowYear)+
   (error?'<p class="n2pm-error" role="alert">'+safe(error)+'</p>':'')+
   content+'</section>';
