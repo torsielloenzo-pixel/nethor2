@@ -20,84 +20,13 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  // BIFF8 conserve les couleurs des archives .xls, que SheetJS ne restitue pas toujours.
  // Sans une couleur exploitable, on conserve le refus explicite plutôt que de deviner.
  const legacy=/\.xls$/i.test(fileName)?legacyStyleReader(buffer):null;
- const ambiguous:Array<Record<string,unknown>>=[];
  const verifiedColor=({sheetName,rowIndex,colIndex,cell,workbook}:{
-   sheetName:string;rowIndex:number;colIndex:number;cell:any;workbook:unknown
+   sheetName:string;rowIndex:number;colIndex:number;cell:unknown;workbook:unknown
  })=>{
    const biff=legacy?.color(sheetName,rowIndex,colIndex);
-   const resolved=biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
-   if(resolved===undefined||
-      ((resolved===null||resolved==='w')&&cell?.v!==undefined&&cell.v!==null
-       &&cell.v!==''&&cell.v!==0&&cell.v!==false)){
-     const value=cell.v;
-     ambiguous.push({sheet:sheetName,row:rowIndex+1,column:colIndex+1,
-       valueKind:value===1?'one':typeof value,
-       valueNumber:typeof value==='number'&&Number.isFinite(value)?value:null,
-       valueText:typeof value==='string'?value.slice(0,12).replace(/[^A-Za-z0-9 ]/g,''):null,
-       sheetStyleKind:typeof cell.s,styleId:typeof cell.s==='number'?cell.s:null,
-       style:legacy?.inspect(sheetName,rowIndex,colIndex)||null});
-     if(ambiguous.length>8)ambiguous.shift();
-   }
-   return resolved;
+   return biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
  };
- let model;
- try{model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);}
- catch(e){
-   if(String((e as Error)?.message||e).includes('cellule B2')){
-     const first=workbook.SheetNames.find(n=>String(n).trim().toUpperCase()==='LUNDI');
-     const value=workbook.Sheets[first||workbook.SheetNames[0]]?.B2?.v;
-     console.info('NethorSync B2 diagnostic',JSON.stringify({
-       type:value instanceof Date?'date':typeof value,
-       date:value instanceof Date&&!Number.isNaN(+value)?value.toISOString().slice(0,10):null,
-       numeric:typeof value==='number'&&Number.isFinite(value)?value:null,
-       cleaned:typeof value==='string'?value.slice(0,70).replace(/[^a-zA-Z0-9 .:/-]/g,''):null
-     }));
-   }
-   if(legacy&&ambiguous.length){
-     console.info('NethorSync BIFF ambiguous',JSON.stringify(ambiguous));
-     const matrix:Record<string,Record<string,number>>={};
-     for(const sheetName of workbook.SheetNames.slice(0,8)){
-       const ws=workbook.Sheets[sheetName];
-       for(let row=3;row<45;row++){
-         for(let col=2;col<60;col++){
-           const cell=ws[XLSX.utils.encode_cell({r:row,c:col})];
-           if(!cell||typeof cell.v!=='number'||!Number.isFinite(cell.v))continue;
-           const value=Math.abs(cell.v)<=16?String(cell.v):'other';
-           const fill=legacy.color(sheetName,row,col)||'unknown';
-           (matrix[value]??={})[fill]=(matrix[value]?.[fill]||0)+1;
-         }
-       }
-     }
-     console.info('NethorSync BIFF numeric matrix',JSON.stringify(matrix));
-     const labelFlags=[10,11,12,13,14,15].map(r=>{
-       const label=String(workbook.Sheets[workbook.SheetNames[0]]?.['B'+r]?.v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-       const kinds=['TOTAL','TOTAUX','NOMBRE','NB','EFFECTIF','COUVERTURE','PERSONNE','SALARIE','PRESENT','HEURE','COMPTE','SOMME','CALCUL','BILAN'];
-       return{row:r,blank:!label.trim(),summaryWords:kinds.filter(w=>new RegExp('\\b'+w+'\\b').test(label)),
-        startsWithTotal:/^TOTA(?:L|UX)/.test(label.trim()),length:label.length};
-     });
-     console.info('NethorSync BIFF row labels',JSON.stringify(labelFlags));
-     const byRow=[];
-     const knownDays=workbook.SheetNames.filter(n=>/^(LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)/i.test(n));
-     for(let ri=3;ri<16;ri++){
-       const counts:Record<string,number>={g:0,b:0,r:0,y:0,o:0,w1:0,wOther:0,missing:0};
-       for(const sn of knownDays){
-         const ws=workbook.Sheets[sn];
-         for(let ci=2;ci<60;ci++){
-           const cell=ws[XLSX.utils.encode_cell({r:ri,c:ci})];
-           const x=legacy.color(sn,ri,ci);
-           if(x==='g'||x==='b'||x==='r'||x==='y'||x==='o')counts[x]++;
-           else if(cell?.v===1)counts.w1++;
-           else if(typeof cell?.v==='number'&&cell.v!==0)counts.wOther++;
-           else if(x===null&&cell?.v!=null&&cell.v!=='')counts.missing++;
-         }
-       }
-       byRow.push({r:ri+1,...counts});
-     }
-     console.info('NethorSync BIFF row fill profile',JSON.stringify(byRow));
-
-   }
-   throw e;
- }
+ const model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);
  if(model.employees.length>200)throw new Error("Nombre de salariés supérieur à 200");
  // Si aucun créneau ne peut être déchiffré, le lecteur n'est pas suffisamment sûr.
  if((model.colorCounts.g+model.colorCounts.b)===0)
