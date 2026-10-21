@@ -178,6 +178,7 @@ jobs:
             $script:captured=$Params
           }
           $device=@{id='00000000-0000-4000-8000-000000000001';secret='test';generation=1}
+          function Get-SyncClientVersion {return '2.1.8'}
           Send-SafeSyncDiagnostic @{} 'jeton-fictif' $device 338 338 0
           if (-not $script:captured) {throw 'Rapport jamais transmis'}
           if ($script:captured.p_error_code -ne 'request_rejected') {throw 'Code HTTP 400 mal classe'}
@@ -251,7 +252,7 @@ jobs:
              throw 'Les accents ou les sous-dossiers ont ete alteres'
           }
           if ($script:capture -notmatch 'Août' -or $script:capture -notmatch 'ÉTÉ') {throw 'Unicode corrompu'}
-          $realVersion=(Get-SyncClientVersion)
+          $realVersion=(Get-SyncClientVersion 'tools/nethor-sync')
           if ($realVersion -ne '2.1.8') { throw ('Version reelle incorrecte: '+$realVersion) }
           Write-Host 'JSON UTF-8 explicite, accents, chemin et numero de version valides.'
       - name: Tester la validation de mise a jour via Supabase
