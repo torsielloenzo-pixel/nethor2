@@ -41,7 +41,23 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  let model;
  try{model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);}
  catch(e){
-   if(legacy&&ambiguous.length)console.info('NethorSync BIFF ambiguous',JSON.stringify(ambiguous));
+   if(legacy&&ambiguous.length){
+     console.info('NethorSync BIFF ambiguous',JSON.stringify(ambiguous));
+     const matrix:Record<string,Record<string,number>>={};
+     for(const sheetName of workbook.SheetNames.slice(0,8)){
+       const ws=workbook.Sheets[sheetName];
+       for(let row=3;row<45;row++){
+         for(let col=2;col<60;col++){
+           const cell=ws[XLSX.utils.encode_cell({r:row,c:col})];
+           if(!cell||typeof cell.v!=='number'||!Number.isFinite(cell.v))continue;
+           const value=Math.abs(cell.v)<=16?String(cell.v):'other';
+           const fill=legacy.color(sheetName,row,col)||'unknown';
+           (matrix[value]??={})[fill]=(matrix[value]?.[fill]||0)+1;
+         }
+       }
+     }
+     console.info('NethorSync BIFF numeric matrix',JSON.stringify(matrix));
+   }
    throw e;
  }
  if(model.employees.length>200)throw new Error("Nombre de salariés supérieur à 200");
