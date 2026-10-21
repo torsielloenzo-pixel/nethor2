@@ -37,6 +37,16 @@ export async function readSyncAutoPublications(client,{limit=20}={}){
  return data;
 }
 
+// Import historique initial et intégration des nouvelles semaines manquantes.
+// Les statistiques sont agrégées : aucun nom de fichier n'est divulgué ici.
+export async function readSyncHistoricalSummary(client){
+ const {data,error}=await client.rpc('nethor_sync_historical_summary');
+ if(error)throw Error(error.message||'Import historique indisponible');
+ if(!data||typeof data!=='object'||!Number.isInteger(data.imported))
+   throw Error('État de l’import historique invalide');
+ return data;
+}
+
 // Rapports techniques expurgés (30 jours). Les jetons, chemins et noms de
 // fichiers ne sont jamais transférés par cette RPC.
 export async function readSyncDiagnostics(client,{limit=20}={}){
