@@ -5,6 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import XLSX from "npm:xlsx@0.18.5";
 import { parsePlanningWorkbook } from "./excel-structure.js";
 import { resolveExcelColor } from "./excel-color.js";
+import { legacyStyleReader } from "./xls-legacy-colors.js";
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{
@@ -16,7 +17,16 @@ const digest=async (bytes:ArrayBuffer):Promise<string>=>{
 };
 function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:string,uploadedAt:string,sourceKind:string) {
  const workbook=XLSX.read(new Uint8Array(buffer),{type:"array",cellDates:true,cellStyles:true});
- const model=parsePlanningWorkbook(workbook,XLSX,resolveExcelColor);
+ // BIFF8 conserve les couleurs des archives .xls, que SheetJS ne restitue pas toujours.
+ // Sans une couleur exploitable, on conserve le refus explicite plutôt que de deviner.
+ const legacy=/\.xls$/i.test(fileName)?legacyStyleReader(buffer):null;
+ const verifiedColor=({sheetName,rowIndex,colIndex,cell,workbook}:{
+   sheetName:string;rowIndex:number;colIndex:number;cell:unknown;workbook:unknown
+ })=>{
+   const biff=legacy?.color(sheetName,rowIndex,colIndex);
+   return biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
+ };
+ const model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);
  if(model.employees.length>200)throw new Error("Nombre de salariés supérieur à 200");
  // Si aucun créneau ne peut être déchiffré, le lecteur n'est pas suffisamment sûr.
  if((model.colorCounts.g+model.colorCounts.b)===0)
