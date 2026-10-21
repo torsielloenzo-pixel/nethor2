@@ -55,7 +55,13 @@ export function parsePlanningWorkbook(workbook, XLSX, resolveColor) {
         if(color!==null && color!==undefined && !['g','b','r','y','o','w'].includes(color))
           throw new Error('Couleur Excel non reconnue '+sheetName+' ligne '+emp.excelRow+' colonne '+(col+1));
         if(color===undefined) throw new Error('Lecture des styles incomplète : '+sheetName+' ligne '+emp.excelRow);
-        if((color===null||color==='w') && cell?.v!=null && cell.v!=='' && cell.v!==0 && cell.v!==false)
+        // Dans les vieux .xls, une cellule explicitement sans remplissage
+        // contient parfois un total (2, 3, 5, 7.5, etc.) et non un horaire.
+        // Ne pas le confondre avec une présence : le chiffre 1 reste ambigu.
+        const legacyUnfilledNumber=color==='w'&&typeof cell?.v==='number'
+          &&Number.isFinite(cell.v)&&cell.v!==1;
+        if(!legacyUnfilledNumber&&(color===null||color==='w')
+          && cell?.v!=null && cell.v!=='' && cell.v!==0 && cell.v!==false)
           throw new Error('Cellule renseignée sans couleur fiable : '+sheetName+' ligne '+emp.excelRow);
         const value=color && color!=='w'?color:null;
         if(value)colorCounts[value]++;
