@@ -268,7 +268,7 @@ begin
  where id=j.id;
  return jsonb_build_object('status',v_outcome,'weekStart',v_week);
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.nethor_sync_auto_scan_storage()
  RETURNS integer
@@ -333,7 +333,7 @@ begin
   count_queued=count_queued+private.nethor_sync_queue_missing_weeks(12,null);
   return count_queued;
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.nethor_sync_cloud_audit(p_immediate boolean DEFAULT false)
  RETURNS jsonb
@@ -458,6 +458,6 @@ begin
      'objectsSeen',v_seen,'candidates',v_candidates,'jobsQueued',v_enqueued,
      'source','supabase_only');
 end
-$function$
+$function$;
 
 commit;
