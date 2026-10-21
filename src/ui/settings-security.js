@@ -113,7 +113,7 @@ export function renderSettingsPage(context={}){
   if(view==='planning')return '<section class="n2settings-detail-card"><h3>Vue du planning à l’ouverture</h3>'+
     '<p class="n2settings-note">Choisis la vue à afficher chaque fois que tu ouvres le planning sur cet appareil.</p>'+
     '<div class="n2settings-choices">'+
-    [['week','Semaine','Les horaires de la semaine'],['day','Jour','Le détail d’une journée'],...(allowYear?[['year','Année','Calendrier annuel sur mobile']]:[])]
+    [['week','Semaine','Les horaires de la semaine'],['day','Jour','Le détail d’une journée'],...(allowYear?[['year','Année','Calendrier des plannings publiés sur l’année']]:[])]
       .map(([value,title,desc])=>'<button type="button" class="n2settings-choice" aria-pressed="'+String(preferredView===value)+'" data-action="settings-planning-view" data-settings-choice="'+esc(value)+'">'+
        '<span><strong>'+esc(title)+'</strong><small>'+esc(desc)+'</small></span><span class="n2settings-radio" aria-hidden="true"></span></button>').join('')+
     '</div><p class="n2settings-note">Cette préférence est enregistrée uniquement dans le navigateur ou la PWA utilisée.</p></section>';
