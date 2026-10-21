@@ -26,7 +26,7 @@ test('ne jamais solliciter si adresse liée ou état incertain',()=>{
 test('fenêtre de proposition non bloquante et choix Plus tard',()=>{
  const markup=renderRecoveryPrompt({step:'offer'});
  assert.match(markup,/role="dialog" aria-modal="true"/);
- assert.match(markup,/Sécurise ton accès à Nethor/);
+ assert.match(markup,/Sécurise ton accès à NETHOR/);
  assert.match(markup,/Ajouter mon adresse/);
  assert.match(markup,/Plus tard/);
  assert.match(markup,/data-action="recovery-later"/);

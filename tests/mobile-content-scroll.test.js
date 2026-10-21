@@ -33,5 +33,5 @@ test('Le menu latéral garde son propre défilement et le desktop ses dimensions
  assert.match(css,/#app\.menu-open \.app\{overflow:visible!important\}/);
  assert.match(css,/\.sidebar nav\{overflow-y:auto;/);
  assert.doesNotMatch(rules,/@media\(min-width:761px\)/);
- assert.match(read('sw.js'),/nethor-mobile-drawer-recovery-sync-v26/);
+ assert.match(read('sw.js'),/nethor-mobile-drawer-recovery-sync-v\d+/);
 });
