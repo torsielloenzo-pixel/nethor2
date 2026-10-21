@@ -31,6 +31,8 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
      const value=cell.v;
      ambiguous.push({sheet:sheetName,row:rowIndex+1,column:colIndex+1,
        valueKind:value===1?'one':typeof value,
+       valueNumber:typeof value==='number'&&Number.isFinite(value)?value:null,
+       valueText:typeof value==='string'?value.slice(0,12).replace(/[^A-Za-z0-9 ]/g,''):null,
        sheetStyleKind:typeof cell.s,styleId:typeof cell.s==='number'?cell.s:null,
        style:legacy?.inspect(sheetName,rowIndex,colIndex)||null});
    }
