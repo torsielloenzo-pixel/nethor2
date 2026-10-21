@@ -73,8 +73,9 @@ function ConvertTo-SyncUtf8JsonBytes($Value) {
   $null=ConvertFrom-Json -InputObject $json -ErrorAction Stop
   return ,([System.Text.UTF8Encoding]::new($false,$true).GetBytes($json))
 }
-function Get-SyncClientVersion {
-  $versionPath=Join-Path $PSScriptRoot 'NethorSync-Version.txt'
+function Get-SyncClientVersion([string]$AppDir='') {
+  if (-not $AppDir) { $AppDir=$PSScriptRoot }
+  $versionPath=Join-Path $AppDir 'NethorSync-Version.txt'
   if (Test-Path -LiteralPath $versionPath -PathType Leaf) {
     $version=(Get-Content -LiteralPath $versionPath -Raw -Encoding UTF8).Trim()
     if ($version -match '^2[.]1[.][0-9]{1,2}$') { return $version }
