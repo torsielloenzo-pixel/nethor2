@@ -89,6 +89,8 @@ let syncChartPeriod=7;
 let booted=false;
 let personalRequestId=0;
 let annualRequestId=0;
+let collaboratorsRequestId=0;
+const collaboratorHistory={loaded:false,loading:false,items:[],error:'',open:false};
 let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
 // Préférence de planning locale, cloisonnée par compte et par navigateur.
 const planningPreferenceKey=id=>'nethor2-planning-start-v1:'+id;
@@ -278,10 +280,37 @@ function shift(ranges){
   if(!ranges?.length)return '<div class="off">Repos</div>';
   return '<div class="shift">'+ranges.map(r=>hhmm(r.startMinutes)+'–'+hhmm(r.endMinutes)).join('<i>puis</i>')+'</div>';
 }
+const adminPlanningDesktop=()=>!smallScreen()&&state.page==='planning'&&state.profile?.role==='admin';
+async function loadCollaboratorHistory(){
+ if(!adminPlanningDesktop()||collaboratorHistory.loading||collaboratorHistory.loaded)return;
+ const request=++collaboratorsRequestId;
+ collaboratorHistory.loading=true;collaboratorHistory.error='';render();
+ try{
+  const first=new Map();
+  for(let from=0;from<100000;from+=500){
+   const {data,error}=await client.from('planning_weeks').select('week_start,data').order('week_start',{ascending:true}).range(from,from+499);
+   if(error)throw error;
+   if(request!==collaboratorsRequestId)return;
+   for(const row of data||[]){
+    for(const employee of row.data?.employees||[]){
+     const name=String(employee?.name||'').trim();const key=normalizeName(name);
+     if(!key)continue;
+     if(!first.has(key))first.set(key,{name,date:row.week_start});
+    }
+   }
+   if(!data||data.length<500)break;
+   if(from>=99500)throw Error('Historique trop volumineux pour être affiché intégralement.');
+  }
+  collaboratorHistory.items=[...first.values()].sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name,'fr'));
+  collaboratorHistory.loaded=true;
+ }catch(_){collaboratorHistory.error='Lecture de l’historique indisponible. Réessayer ultérieurement.';}
+ finally{if(request===collaboratorsRequestId){collaboratorHistory.loading=false;render();}}
+}
 function summary(metrics){
   const planned=metrics.people.filter(p=>p.total>0).length;
   const total=metrics.people.reduce((sum,p)=>sum+p.total,0);
-  return '<section class="live-summary"><article class="live-stat"><label>Collaborateurs planifiés</label><strong>'+planned+'</strong><small>Sur la semaine</small></article><article class="live-stat"><label>Heures planifiées</label><strong>'+hours(total)+'</strong><small>Total calculé</small></article><article class="live-stat"><label>Points à vérifier</label><strong>'+metrics.issues.length+'</strong><small>Contrôles automatiques</small></article></section>';
+  const third=adminPlanningDesktop()?'<article class="live-stat n2collab-stat"><button type="button" class="n2collab-trigger" data-action="collaborators-toggle" aria-expanded="'+collaboratorHistory.open+'"><label>Collaborateurs</label><strong>'+(collaboratorHistory.loaded?collaboratorHistory.items.length:'—')+'</strong><small>Historique des plannings · Ouvrir ↗</small></button></article>':'<article class="live-stat"><label>Points à vérifier</label><strong>'+metrics.issues.length+'</strong><small>Contrôles automatiques</small></article>';
+  return '<section class="live-summary"><article class="live-stat"><label>Collaborateurs planifiés</label><strong>'+planned+'</strong><small>Sur la semaine</small></article><article class="live-stat"><label>Heures planifiées</label><strong>'+hours(total)+'</strong><small>Total calculé</small></article>'+third+'</section>';
 }
 const desktopAnnualAllowed=()=>!smallScreen()&&['admin','responsable','employe'].includes(state.profile?.role);
 const annualAllowed=()=>smallScreen()||desktopAnnualAllowed();
@@ -492,6 +521,13 @@ async function loadAnnualWeeks(force=false){
   if(request===annualRequestId&&state.user?.id===userId&&state.page==='planning'&&state.view==='year'&&annualAllowed())render();
  }
 }
+function collaboratorPanel(){
+ if(!adminPlanningDesktop()||!collaboratorHistory.open)return '';
+ const c=collaboratorHistory;
+ const content=c.loading?'<p>Recherche des premières apparitions…</p>':c.error?'<p role="alert">'+escapeHtml(c.error)+'</p><button class="btn" data-action="collaborators-retry">Réessayer</button>':!c.items.length?'<p>Aucun collaborateur trouvé dans les plannings publiés.</p>':
+ '<div class="n2collab-list">'+c.items.map(item=>'<div class="n2collab-row"><strong>'+escapeHtml(item.name)+'</strong><span>Première semaine publiée : '+escapeHtml(shortDate(item.date))+' '+escapeHtml(item.date.slice(0,4))+'</span></div>').join('')+'</div>';
+ return '<section class="card n2collab-panel" aria-label="Historique des collaborateurs"><div class="card-head"><div><h2 class="card-title">Collaborateurs</h2><p class="sub">Première apparition dans les plannings publiés disponibles, pas nécessairement date d’embauche.</p></div><button type="button" class="btn" data-action="collaborators-toggle">Fermer ✕</button></div>'+content+'</section>';
+}
 function pagePlanning(metrics){
   if(annualAllowed()&&state.view==='year'){
     return renderPlanningYear({...state.mobilePlanning.annual,year:state.mobilePlanning.year,
@@ -503,7 +539,7 @@ function pagePlanning(metrics){
     currentProfile:state.profile,allowYear:annualAllowed(),filter:state.mobilePlanning.dayFilter,
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error
   });
-  return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+planningCard(metrics);
+  return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+collaboratorPanel()+planningCard(metrics);
 }
 
 async function loadMobileSyncStatus(force=false){
@@ -1165,6 +1201,13 @@ ROOT.addEventListener('click',async event=>{
     const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=0;
     void loadAnnualWeeks();
     return;
+  }
+  if(action==='collaborators-toggle'&&adminPlanningDesktop()){
+    collaboratorHistory.open=!collaboratorHistory.open;render();
+    if(collaboratorHistory.open)void loadCollaboratorHistory();return;
+  }
+  if(action==='collaborators-retry'&&adminPlanningDesktop()){
+    collaboratorHistory.loaded=false;void loadCollaboratorHistory();return;
   }
   if(action==='nethor-sync-mobile-refresh'){
     if(state.page==='anomalies'&&smallScreen())await loadMobileSyncStatus(true);
