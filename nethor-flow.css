@@ -181,3 +181,16 @@
 @media(max-width:760px) and (display-mode:fullscreen){
   .live-navigator{bottom:calc(2px + env(safe-area-inset-bottom,0px))!important}
 }
+
+/* V7 audit fix — prevent inherited truncation in compact dashboard cards. */
+@media(max-width:760px){
+ .n2h-dashboard .n2h-bottom-grid .n2h-meta-value,
+ .n2h-dashboard .n2h-bottom-grid small{
+   white-space:normal!important;
+   overflow:visible!important;
+   text-overflow:clip!important;
+   overflow-wrap:anywhere;
+ }
+ .n2h-dashboard .n2h-bottom-grid .n2h-card{align-content:start}
+ .n2h-dashboard .n2h-bottom-grid .n2h-leave-state{max-width:100%;white-space:normal;text-align:center;line-height:1.2}
+}
