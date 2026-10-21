@@ -58,6 +58,13 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
        }
      }
      console.info('NethorSync BIFF numeric matrix',JSON.stringify(matrix));
+     const labelFlags=[10,11,12,13,14,15].map(r=>{
+       const label=String(workbook.Sheets[workbook.SheetNames[0]]?.['B'+r]?.v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+       const kinds=['TOTAL','TOTAUX','NOMBRE','NB','EFFECTIF','COUVERTURE','PERSONNE','SALARIE','PRESENT','HEURE','COMPTE','SOMME','CALCUL','BILAN'];
+       return{row:r,blank:!label.trim(),summaryWords:kinds.filter(w=>new RegExp('\\b'+w+'\\b').test(label)),
+        startsWithTotal:/^TOTA(?:L|UX)/.test(label.trim()),length:label.length};
+     });
+     console.info('NethorSync BIFF row labels',JSON.stringify(labelFlags));
    }
    throw e;
  }
