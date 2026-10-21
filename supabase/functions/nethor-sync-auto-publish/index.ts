@@ -43,6 +43,16 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  let model;
  try{model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);}
  catch(e){
+   if(String((e as Error)?.message||e).includes('cellule B2')){
+     const first=workbook.SheetNames.find(n=>String(n).trim().toUpperCase()==='LUNDI');
+     const value=workbook.Sheets[first||workbook.SheetNames[0]]?.B2?.v;
+     console.info('NethorSync B2 diagnostic',JSON.stringify({
+       type:value instanceof Date?'date':typeof value,
+       date:value instanceof Date&&!Number.isNaN(+value)?value.toISOString().slice(0,10):null,
+       numeric:typeof value==='number'&&Number.isFinite(value)?value:null,
+       cleaned:typeof value==='string'?value.slice(0,70).replace(/[^a-zA-Z0-9 .:/-]/g,''):null
+     }));
+   }
    if(legacy&&ambiguous.length){
      console.info('NethorSync BIFF ambiguous',JSON.stringify(ambiguous));
      const matrix:Record<string,Record<string,number>>={};
