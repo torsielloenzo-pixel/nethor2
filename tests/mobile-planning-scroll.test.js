@@ -8,7 +8,7 @@ test('planning mobile: en-tête et navigation restent hors du défilement',()=>{
  const css=read('mobile.css');
  const start=css.indexOf("/* Planning Mobile / PWA Mobile : l'entête Nethor reste immobile.");
  assert.ok(start>0,'règles dédiées au planning');
- const rules=css.slice(start);
+ const rules=css.slice(start,css.indexOf('/* NethorSync public',start));
  assert.match(rules,/@media\(max-width:760px\)\{/);
  assert.match(rules,/body:has\(#app\.mobile-planning-active\)\{[^}]*height:100dvh;[^}]*overflow:hidden;/);
  assert.match(rules,/#app\.mobile-planning-active \.workspace\{[^}]*height:100dvh;[^}]*display:flex;[^}]*flex-direction:column;/);
