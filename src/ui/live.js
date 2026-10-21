@@ -12,7 +12,7 @@ import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
 import {renderPlanningYear} from './planning-year.js';
-import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics} from '../data/nethor-sync-control.js';
+import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics,readSyncHistoricalSummary} from '../data/nethor-sync-control.js';
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
 import {mergeImportHistory,renderImportHistory} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
@@ -420,7 +420,7 @@ async function loadNethorSyncStatus(){
  const userId=state.user.id;
  state.nethorSync.loading=true;
  if(state.page==='home')render();
- const [current,history,auto,diags]=await Promise.allSettled([readSyncStatus(client),readSyncHistory(client),readSyncAutoPublications(client,{limit:20}),readSyncDiagnostics(client,{limit:8})]);
+ const [current,history,auto,diags,historical]=await Promise.allSettled([readSyncStatus(client),readSyncHistory(client),readSyncAutoPublications(client,{limit:20}),readSyncDiagnostics(client,{limit:8}),readSyncHistoricalSummary(client)]);
  if(state.user?.id!==userId)return;
  state.nethorSync={
   loaded:current.status==='fulfilled',loading:false,
@@ -433,6 +433,7 @@ async function loadNethorSyncStatus(){
   autoLoaded:auto.status==='fulfilled',
   autoPublications:auto.status==='fulfilled'?auto.value:[],
   autoError:auto.status==='fulfilled'?'':'Suivi temporairement indisponible',
+  historicalImport:historical.status==='fulfilled'?historical.value:null,
   diagnostics:diags.status==='fulfilled'?diags.value:[]
  };
  if(state.page==='home')render();
