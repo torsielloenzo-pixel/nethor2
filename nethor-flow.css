@@ -19,3 +19,38 @@
   .live-navigator::before,.live-navigator button,.live-navigator button .nav-icon-wrap,.live-navigator .nav-label{transition:none!important}
   #screen.flow-enter-forward,#screen.flow-enter-backward,.live-navigator button.flow-pop .nav-icon-wrap{animation:none!important}
 }
+/* NETHOR FLOAT V2 — premium floating dock, isolated to phone layouts. */
+@media(max-width:760px){
+  .live-navigator{
+    position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));
+    width:auto;min-height:70px;padding:6px!important;
+    border:1px solid rgba(211,224,245,.94);border-radius:25px;
+    background:rgba(255,255,255,.94);
+    -webkit-backdrop-filter:blur(20px) saturate(145%);backdrop-filter:blur(20px) saturate(145%);
+    box-shadow:0 12px 36px rgba(19,43,81,.13),0 2px 8px rgba(19,43,81,.045);
+    overflow:visible;isolation:isolate;
+  }
+  .live-navigator::before{
+    top:6px;bottom:6px;border-radius:19px;
+    background:linear-gradient(145deg,#edf4ff 0%,#e1ecff 100%);
+    box-shadow:inset 0 0 0 1px rgba(66,110,198,.08),0 3px 9px rgba(40,93,189,.05);
+    transition:left 390ms cubic-bezier(.22,1,.32,1),width 390ms cubic-bezier(.22,1,.32,1);
+  }
+  .live-navigator button{
+    min-height:62px!important;border-radius:19px;padding:7px 2px!important;
+    gap:4px!important;outline-offset:3px;
+  }
+  .live-navigator .nav-icon-wrap{width:35px;height:33px;border-radius:12px}
+  .live-navigator .nav-icon{width:24px;height:24px;stroke-width:2.1}
+  .live-navigator .nav-label{font-size:10.5px!important;letter-spacing:-.12px;font-weight:700!important}
+  .live-navigator button.active .nav-label{font-weight:850!important}
+  .live-navigator button.active .nav-icon-wrap{background:transparent!important}
+  .live-navigator button:focus-visible{outline:2px solid #2462ca}
+  #screen{padding-bottom:calc(115px + env(safe-area-inset-bottom))}
+}
+@media(max-width:760px) and (prefers-reduced-transparency:reduce){
+ .live-navigator{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+@media(max-width:760px) and (prefers-reduced-motion:reduce){
+ .live-navigator::before{transition:none!important}
+}
