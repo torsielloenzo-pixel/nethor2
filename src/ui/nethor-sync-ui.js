@@ -1,4 +1,4 @@
-import {canManageSync,readSyncStatus,readSyncDiagnostics,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
+import {canManageSync,readSyncStatus,readSyncDiagnostics,readSyncUpdateHistory,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
 const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>{const ms=Date.parse(v||'');return Number.isFinite(ms)?new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';};
@@ -66,6 +66,7 @@ export function createSyncController(client,root,profile){
  const admin=profile.role==='admin';
  let status=null,error='',loading=false,notice='',watchTimer=null,requestStartedAt=0;
  let diagnostics=[],diagnosticsError='';
+ let updates=[],updatesError='';
  const isInstalled=()=>status?.installed===true;
  function markup(){
   const state=syncHealth(status);
@@ -77,7 +78,7 @@ export function createSyncController(client,root,profile){
    ? '<button class="sync-action" type="button" data-action="sync-state-refresh">Réessayer la vérification</button>'
    : !isInstalled()
    ? '<button class="sync-action" type="button" data-action="sync-download">Installer NethorSync</button>'
-   : '<button class="sync-action" type="button" data-action="sync-request-manual"'+(status?.pendingManual&&status?.manualStage!=='pc_error'?' disabled':'')+'>'+(status?.manualStage==='pc_error'?'Réessayer la vérification':status?.pendingManual?'Traitement en cours…':'Synchroniser')+'</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button><button class="sync-subaction" type="button" data-action="sync-download">Télécharger le correctif 2.1.6</button>';
+   : '<button class="sync-action" type="button" data-action="sync-request-manual"'+(status?.pendingManual&&status?.manualStage!=='pc_error'?' disabled':'')+'>'+(status?.manualStage==='pc_error'?'Réessayer la vérification':status?.pendingManual?'Traitement en cours…':'Synchroniser')+'</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button><button class="sync-subaction" type="button" data-action="sync-download">Télécharger le correctif 2.1.7</button>';
   return '<div class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><strong>'+label+'</strong></div>'+details+
    (error?'<p class="sync-side-small sync-error">'+esc(error)+'</p>':'')+
    (notice?'<p class="sync-side-small">'+esc(notice)+'</p>':'')+
@@ -91,8 +92,21 @@ export function createSyncController(client,root,profile){
    '<p class="live-muted">Sur Supabase : audit des fichiers Excel stockés à 00 h, 04 h, 08 h, 12 h, 16 h et 20 h UTC, suivi d’une publication automatique des versions valides si nécessaire. Après chaque contrôle Windows terminé et chaque nouveau transfert, analyse côté serveur également. Aucun ordre n’est envoyé au PC par cet audit. Sur le MSI : les tâches Windows restent à 19 h du lundi au samedi et à 12 h le dimanche. Le bouton « Synchroniser » conserve uniquement sa fonction de demande ponctuelle au MSI.</p>'+
    '<p><strong>Mode : Automatique</strong></p>'+
    '<p class="live-muted">Les versions Excel réellement modifiées et récentes sont publiées après vérification automatique ; les fichiers inconnus ou refusés ne remplacent jamais le planning.</p>'+
-   (isInstalled()?'<button type="button" class="btn" data-action="sync-download">Télécharger la version corrigée 2.1.6</button>':'')+
+   (isInstalled()?'<button type="button" class="btn" data-action="sync-download">Télécharger la version corrigée 2.1.7</button>':'')+
    (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+
+   '<section class="sync-diagnostic-panel"><h3>Mises à jour automatiques · Supabase</h3>'+
+   '<p class="live-muted">NethorSync 2.1.7 recherche une nouvelle version à l’ouverture de session Windows puis toutes les 4 h. Les versions sont autorisées par Supabase et vérifiées par empreinte SHA-256 avant installation. Aucun planning ni compte n’est réinitialisé.</p>'+
+   (updatesError?'<p class="live-muted">Historique des mises à jour temporairement indisponible.</p>':
+    updates.length?'<div class="sync-diagnostic-history">'+updates.slice(0,8).map(r=>
+      '<article class="sync-diagnostic-item"><div><strong>'+esc(({
+       available:'Correctif détecté',verified:'Téléchargement vérifié',installed:'Mise à jour installée',
+       failed:'Échec de mise à jour',rolled_back:'Version précédente restaurée'
+      })[r.status]||r.status)+' · '+esc(r.targetVersion||r.installedVersion||'—')+
+      '</strong><time>'+esc(time(r.at))+'</time></div>'+
+      '<small>Poste version '+esc(r.installedVersion||'—')+
+      (r.errorCode?' · Code : '+esc(r.errorCode):'')+'</small></article>').join('')+'</div>':
+    '<p class="live-muted">Aucune mise à jour distante enregistrée. Le premier contrôle apparaîtra après installation de la version 2.1.7.</p>')+
+   '</section>'+
    '<section class="sync-diagnostic-panel"><h3>Rapports d’erreurs NethorSync</h3><p class="live-muted">Diagnostics techniques automatiques, sans données personnelles ni noms de fichiers. Conservation : 30 jours.</p>'+renderSyncDiagnostics(diagnostics,diagnosticsError)+'</section></div></section>';
  }
  function paint(){
@@ -104,11 +118,13 @@ export function createSyncController(client,root,profile){
   loading=true;
   try{
    const wasPending=status?.pendingManual===true;
-   const [state,diag]=await Promise.allSettled([readSyncStatus(client),readSyncDiagnostics(client,{limit:12})]);
+   const [state,diag,up]=await Promise.allSettled([readSyncStatus(client),readSyncDiagnostics(client,{limit:12}),readSyncUpdateHistory(client,{limit:12})]);
    if(state.status!=='fulfilled')throw state.reason;
    const next=state.value;status=next;error='';
    diagnostics=diag.status==='fulfilled'?diag.value:[];
    diagnosticsError=diag.status==='fulfilled'?'':'Rapports temporairement indisponibles';
+   updates=up.status==='fulfilled'?up.value:[];
+   updatesError=up.status==='fulfilled'?'':'Historique indisponible';
    if(wasPending&&!next.pendingManual&&next.installed)notice='Vérification ponctuelle terminée sur le poste '+(next.deviceLabel||'autorisé')+'.';
   }
   catch(e){error=String(e.message||e);status=null;}
@@ -123,7 +139,7 @@ export function createSyncController(client,root,profile){
  async function action(name){
   if(name==='sync-download'){
     window.open(INSTALLER,'_blank','noopener,noreferrer');
-    notice='Version 2.1.6 : ouvrez NethorSync-Setup.exe sur Windows, en conservant le dossier suivi et la liaison du poste.';
+    notice='Version 2.1.7 : ouvrez NethorSync-Setup.exe sur Windows, en conservant le dossier suivi et la liaison du poste.';
     paint();return true;
   }
   if(name==='sync-state-refresh'){await refresh();return true;}
