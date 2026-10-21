@@ -24,7 +24,7 @@ test('remplacement: mêmes noms possibles, dates ancien et nouveau affichées di
  assert.match(html,/14\/10\/2026/);
  assert.equal((html.match(/PLANNING 12.10.26 SEMAINE C/g)||[]).length,2);
  assert.match(html,/NethorSync/);
- assert.match(html,/Publication automatique seulement si/);
+ assert.match(html,/Les nouvelles semaines datées et lisibles peuvent être publiées automatiquement/);
 });
 test('archives manuelles: téléchargement préservé, aucun bouton sync illégitime',()=>{
  const rows=mergeImportHistory([{id:1,file_name:'PLANNING.xls',imported_at:'2026-10-18T14:00:00Z',
