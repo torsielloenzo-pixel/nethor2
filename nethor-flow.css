@@ -148,3 +148,22 @@
  .n2h-dashboard .n2h-activity p{font-size:11px;line-height:1.5;color:#788da8;margin:0}
 }
 @media(max-width:365px){.n2h-dashboard .n2h-bottom-grid{grid-template-columns:1fr}}
+
+/* V5 — translucent floating navigation with readable glass treatment. */
+@media(max-width:760px){
+  .live-navigator{
+    background:rgba(255,255,255,.70)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(135%)!important;
+    backdrop-filter:blur(14px) saturate(135%)!important;
+    border-color:rgba(211,225,246,.70)!important;
+    box-shadow:0 10px 30px rgba(19,43,81,.11),0 1px 6px rgba(19,43,81,.04)!important;
+  }
+  .live-navigator::before{
+    background:linear-gradient(145deg,rgba(229,240,255,.83),rgba(207,225,255,.72))!important;
+  }
+  /* Preserve unobstructed scrolling below the final item on all mobile pages. */
+  #app{--flow-dock-clearance:calc(110px + env(safe-area-inset-bottom));}
+}
+@media(max-width:760px) and (prefers-reduced-transparency:reduce){
+  .live-navigator{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+}
