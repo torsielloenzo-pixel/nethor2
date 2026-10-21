@@ -35,7 +35,7 @@ test('Poste opérationnel : date, heure, dernier transfert et nom de poste',()=>
  assert.match(html,/CAISSE-03/);
  assert.match(html,/Dernière synchronisation/);
  assert.match(html,/Dernier transfert de fichier/);
- assert.match(html,/Télécharger la correction 2\.1\.6/);
+ assert.match(html,/Télécharger la correction 2\.1\.8/);
  assert.match(html,/data-action="nethor-sync-refresh"/);
  assert.equal(syncHealth(snapshot.status,now),'online');
 });
@@ -44,7 +44,7 @@ test('Poste associé mais hors ligne : garder informations sans suggérer instal
  const html=renderSyncOverviewCard({loaded:true,status},now);
  assert.match(html,/Poste hors ligne/);
  assert.match(html,/BUREAU-01/);
- assert.match(html,/Télécharger la correction 2\.1\.6/);
+ assert.match(html,/Télécharger la correction 2\.1\.8/);
 });
 test('Statut indisponible : interdire toute nouvelle installation',()=>{
  const html=renderSyncOverviewCard({loaded:false,error:'RPC error',status:null},now);
@@ -102,29 +102,25 @@ test('EXE autonome : le packaging demande explicitement le dossier et travaille 
  assert.doesNotMatch(runner,/service_role|password|refresh_token/i);
 });
 
-test('Mode unique automatique, synchronisation ponctuelle indépendante et écoute rapide',()=>{
+test('Mode unique automatique, synchronisation ponctuelle et contrôles Windows non résidents',()=>{
  const ui=read('src/ui/nethor-sync-ui.js');
- const watcher=read('tools/nethor-sync/Watch-NethorSync.ps1');
- const installer=read('tools/nethor-sync/Installer-Sync.ps1');
  const runner=read('tools/nethor-sync/NethorSyncRunner.vbs');
  const scheduler=read('tools/nethor-sync/Register-NethorSyncTasks.ps1');
- const spec=read('tools/nethor-sync/NethorSync2.iss');
+ const installer=read('tools/nethor-sync/NethorSync2-218.iss');
  assert.match(ui,/Traitement en cours…/);
  assert.match(ui,/Réessayer la vérification/);
  assert.match(ui,/renderManualSyncPipeline\(status\)/);
  assert.doesNotMatch(ui,/data-action="sync-mode-manual"|data-action="sync-mode-automatic"/);
  assert.match(ui,/Mode : Automatique/);
  assert.match(ui,/pendingManual/);
- assert.match(watcher,/nethor_sync_poll/);
- assert.match(watcher,/IntervalSeconds=8/);
- assert.match(watcher,/\-PollOnly/);
- assert.match(runner,/Case "watch"/);
- assert.match(scheduler,/Mode='watch'/);
- assert.match(scheduler,/Type=9/);
+ assert.match(runner,/Case "poll"/);
+ assert.match(runner,/Case "update"/);
+ assert.match(scheduler,/Mode='poll'/);
+ assert.match(scheduler,/PT5M/);
  assert.match(scheduler,/Hour=19/);
  assert.match(scheduler,/Hour=12/);
- assert.match(installer,/Watch-NethorSync\.ps1/);
- assert.match(spec,/Watch-NethorSync\.ps1/);
+ assert.match(installer,/Update-NethorSync\.ps1/);
+ assert.doesNotMatch(installer,/Watch-NethorSync\.ps1/);
 });
 
 test('Graphique réel : périodes 7 / 30 jours, jours manquants à zéro',()=>{
@@ -163,7 +159,7 @@ test('Absence de données NethorSync : jamais de chiffres fictifs',()=>{
 test('Connexion historique sécurisée et fonctionnalité limitée au desktop gestionnaire',()=>{
  const live=read('src/ui/live.js');
  const control=read('src/data/nethor-sync-control.js');
- assert.match(live,/Promise\.allSettled\(\[readSyncStatus\(client\),readSyncHistory\(client\),readSyncAutoPublications\(client,\{limit:20\}\),readSyncDiagnostics\(client,\{limit:8\}\)\]\)/);
+ assert.match(live,/Promise\.allSettled\(\[readSyncStatus\(client\),readSyncHistory\(client\),readSyncAutoPublications\(client,\{limit:20\}\),readSyncDiagnostics\(client,\{limit:8\}\),readSyncHistoricalSummary\(client\)\]\)/);
  assert.match(live,/action==='nethor-sync-chart-30'/);
  assert.match(control,/client\.rpc\('nethor_sync_history',\{p_days:30\}\)/);
 });
