@@ -109,3 +109,42 @@
  #app.personal-home-active .n2h-home{min-height:535px;grid-template-rows:auto minmax(255px,1fr) auto auto}
  #app.mobile-sync-active .n2ms{min-height:510px;grid-template-rows:auto minmax(110px,1fr) auto minmax(150px,1fr) auto}
 }
+
+/* NETHOR personal dashboard V4 — mobile and installed mobile PWA only */
+@media(max-width:760px){
+ #app.personal-home-active #screen{display:block!important;overflow-y:auto!important;padding:0 0 18px!important}
+ #app.personal-home-active .n2h-dashboard{
+  display:flex!important;flex-direction:column;gap:12px;min-height:100%;height:auto!important;
+  padding:8px 0 16px;overflow:visible!important;
+ }
+ .n2h-dashboard .n2h-greeting{flex:none;padding:0 4px 3px}
+ .n2h-dashboard .n2h-today{border-radius:19px;padding:17px 18px;color:#fff;background:linear-gradient(135deg,#102344,#1c467f);box-shadow:0 8px 22px #16396825;display:grid;gap:13px}
+ .n2h-dashboard .n2h-today-top,.n2h-dashboard .n2h-today-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ .n2h-dashboard .n2h-today-top{font-size:10px;font-weight:800;letter-spacing:.9px;color:#c8daf5}
+ .n2h-dashboard .n2h-today-tag{font-size:9px;letter-spacing:.3px;background:#ffffff1d;border:1px solid #ffffff25;padding:5px 8px;border-radius:20px;white-space:nowrap}
+ .n2h-dashboard .n2h-today-hours{font-size:clamp(23px,6.4vw,34px);letter-spacing:-.8px;line-height:1.2;overflow-wrap:anywhere}
+ .n2h-dashboard .n2h-today-bottom{font-size:11px;color:#d5e5fa}
+ .n2h-dashboard .n2h-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .n2h-dashboard .n2h-kpi{min-width:0;border-radius:16px;border:1px solid #e0e8f3;background:#fff;padding:13px 12px;display:flex;flex-direction:column;gap:7px}
+ .n2h-dashboard .n2h-kpi-label{font-size:9px;letter-spacing:.4px;font-weight:850;color:#778ba8}
+ .n2h-dashboard .n2h-kpi strong{font-size:clamp(17px,4.8vw,24px);line-height:1.12;color:#233e65;overflow-wrap:anywhere}
+ .n2h-dashboard .n2h-kpi small{font-size:10px;line-height:1.4;color:#758aa7}
+ .n2h-dashboard .n2h-schedule{display:block!important;min-height:0!important;padding:13px 12px 9px;overflow:visible!important}
+ .n2h-dashboard .n2h-heading{margin-bottom:8px;padding-bottom:4px}
+ .n2h-dashboard .n2h-week-link{border:0;background:transparent;color:#2e65bb;font-size:11px;font-weight:800;padding:8px 0;white-space:nowrap}
+ .n2h-dashboard .n2h-days{display:block!important;overflow:visible!important}
+ .n2h-dashboard .n2h-day{min-height:45px;grid-template-columns:66px minmax(0,1fr) 44px;padding:8px 6px}
+ .n2h-dashboard .n2h-bottom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .n2h-dashboard .n2h-bottom-grid .n2h-card{min-width:0;display:flex;flex-direction:column;gap:8px;padding:13px 11px}
+ .n2h-dashboard .n2h-bottom-grid .n2h-meta{display:block}
+ .n2h-dashboard .n2h-bottom-grid .n2h-meta-label{gap:6px;align-items:center}
+ .n2h-dashboard .n2h-bottom-grid h2{font-size:11px;white-space:normal;line-height:1.3}
+ .n2h-dashboard .n2h-bottom-grid .n2h-meta-value{font-size:clamp(13px,3.5vw,17px);line-height:1.2;overflow-wrap:anywhere}
+ .n2h-dashboard .n2h-bottom-grid small{font-size:10px;line-height:1.35;overflow-wrap:anywhere}
+ .n2h-dashboard .n2h-leave-state{align-self:flex-start;font-size:9px}
+ .n2h-dashboard .n2h-activity{border:1px solid #e0e8f3;border-radius:16px;background:#fff;padding:14px;display:grid;gap:8px}
+ .n2h-dashboard .n2h-activity-head{display:flex;align-items:center;gap:8px;color:#346cbd}
+ .n2h-dashboard .n2h-activity h2{font-size:12px;color:#28446c;margin:0}
+ .n2h-dashboard .n2h-activity p{font-size:11px;line-height:1.5;color:#788da8;margin:0}
+}
+@media(max-width:365px){.n2h-dashboard .n2h-bottom-grid{grid-template-columns:1fr}}
