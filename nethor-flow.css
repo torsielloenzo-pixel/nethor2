@@ -194,3 +194,209 @@
  .n2h-dashboard .n2h-bottom-grid .n2h-card{align-content:start}
  .n2h-dashboard .n2h-bottom-grid .n2h-leave-state{max-width:100%;white-space:normal;text-align:center;line-height:1.2}
 }
+
+/* V9 — unified mobile shell.
+   Home now follows the same viewport/scroll model as Planning and other mobile pages. */
+@media(max-width:760px){
+  #app{
+    --mobile-page-gutter:clamp(10px,3.25vw,14px);
+  }
+
+  /* One bottom-dock clearance for every mobile screen. */
+  #app.personal-home-active .workspace,
+  #app.mobile-planning-active .workspace,
+  #app.mobile-sync-active .workspace,
+  #app.mobile-content-scroll .workspace{
+    height:100dvh!important;
+    min-height:0!important;
+    min-width:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    padding-bottom:var(--flow-dock-clearance)!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+
+  #app.personal-home-active .topbar,
+  #app.mobile-planning-active .topbar,
+  #app.mobile-sync-active .topbar,
+  #app.mobile-content-scroll .topbar{
+    flex:0 0 auto!important;
+    position:relative!important;
+    top:auto!important;
+    z-index:9!important;
+  }
+
+  /* Home uses the exact same scrolling contract as Planning. */
+  #app.personal-home-active main#screen{
+    flex:1 1 auto!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:14px var(--mobile-page-gutter) 18px!important;
+    box-sizing:border-box!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch;
+    scroll-padding-top:14px;
+    scroll-padding-bottom:24px;
+  }
+
+  #app.personal-home-active .n2h-dashboard{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0 0 8px!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+  }
+
+  #app.personal-home-active .n2h-dashboard > *,
+  #app.personal-home-active .n2h-dashboard section,
+  #app.personal-home-active .n2h-dashboard div{
+    min-width:0;
+    max-width:100%;
+    box-sizing:border-box;
+  }
+
+  /* Header and install CTA can wrap rather than forcing horizontal overflow. */
+  #app.personal-home-active .n2h-greeting{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+  }
+  #app.personal-home-active .n2h-greeting>div:first-child{
+    flex:1 1 190px!important;
+    min-width:0!important;
+    max-width:100%;
+  }
+  #app.personal-home-active .n2h-greeting .pwa-home-install{
+    flex:0 1 auto!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
+  .n2h-dashboard .n2h-today,
+  .n2h-dashboard .n2h-kpis,
+  .n2h-dashboard .n2h-schedule,
+  .n2h-dashboard .n2h-bottom-grid,
+  .n2h-dashboard .n2h-activity{
+    width:100%;
+    max-width:100%;
+  }
+
+  .n2h-dashboard .n2h-today-top,
+  .n2h-dashboard .n2h-today-bottom,
+  .n2h-dashboard .n2h-heading{
+    flex-wrap:wrap;
+  }
+
+  .n2h-dashboard .n2h-today-top>span,
+  .n2h-dashboard .n2h-today-bottom>span{
+    min-width:0;
+    max-width:100%;
+    overflow-wrap:anywhere;
+  }
+
+  .n2h-dashboard .n2h-today-hours{
+    max-width:100%;
+    font-size:clamp(21px,6.2vw,32px);
+    line-height:1.16;
+    overflow-wrap:anywhere;
+  }
+
+  .n2h-dashboard .n2h-kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .n2h-dashboard .n2h-kpi{
+    width:auto;
+    min-width:0;
+    overflow:hidden;
+  }
+  .n2h-dashboard .n2h-kpi strong,
+  .n2h-dashboard .n2h-kpi small,
+  .n2h-dashboard .n2h-kpi-label{
+    min-width:0;
+    max-width:100%;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+
+  .n2h-dashboard .n2h-heading>div{
+    flex:1 1 130px;
+    min-width:0;
+  }
+  .n2h-dashboard .n2h-week-link{
+    flex:0 1 auto;
+    max-width:100%;
+    white-space:normal!important;
+    text-align:right;
+  }
+
+  .n2h-dashboard .n2h-day{
+    width:100%;
+    max-width:100%;
+    grid-template-columns:minmax(54px,66px) minmax(0,1fr) auto!important;
+    gap:6px;
+    overflow:hidden;
+  }
+  .n2h-dashboard .n2h-day-date,
+  .n2h-dashboard .n2h-day-value,
+  .n2h-dashboard .n2h-day-hours{
+    min-width:0;
+    max-width:100%;
+  }
+  .n2h-dashboard .n2h-day-hours{
+    width:auto;
+    justify-self:end;
+  }
+
+  .n2h-dashboard .n2h-bottom-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+/* Narrow iPhones: stack dense cards instead of cropping their content. */
+@media(max-width:390px){
+  .n2h-dashboard .n2h-bottom-grid{
+    grid-template-columns:1fr!important;
+  }
+  .n2h-dashboard .n2h-kpis{
+    gap:8px;
+  }
+  .n2h-dashboard .n2h-kpi{
+    padding:12px 10px;
+  }
+  .n2h-dashboard .n2h-heading{
+    align-items:flex-start;
+  }
+  #app.personal-home-active .n2h-greeting .pwa-home-install{
+    flex:1 1 100%!important;
+    width:100%;
+    justify-content:space-between;
+  }
+}
+
+/* Very narrow / zoomed displays: never create horizontal scrolling. */
+@media(max-width:340px){
+  .n2h-dashboard .n2h-kpis{
+    grid-template-columns:1fr!important;
+  }
+  .n2h-dashboard .n2h-day{
+    grid-template-columns:52px minmax(0,1fr) auto!important;
+    padding-left:4px;
+    padding-right:4px;
+  }
+}
