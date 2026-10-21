@@ -88,13 +88,12 @@ function toolbar(weekStart,view,allowYear=false){
   '<button type="button" data-action="week-view" class="'+(view==='week'?'selected':'')+'" aria-pressed="'+(view==='week')+'">Semaine</button>'+
   '<button type="button" data-action="day-view" class="'+(view==='day'?'selected':'')+'" aria-pressed="'+(view==='day')+'">Jour</button>'+
   (allowYear?'<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false" aria-label="Ouvrir la vue annuelle">Année</button>':'')+'</div>'+
-}
   '<div class="n2pm-pager">'+
   '<button type="button" data-action="prev" aria-label="Semaine précédente">‹</button>'+
   '<span><strong>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</strong><small>Semaine du '+safe(dateLabel(weekStart))+'</small></span>'+
-  '<button type="button" data-action="next" aria-label="Semaine suivante">›</button></div>'+
-  '</div></div>';
+  '<button type="button" data-action="next" aria-label="Semaine suivante">›</button></div></div>';
 }
+
 function summary(cells){
  return '<div class="n2pm-summary">'+cells.map(c=>'<div><span>'+safe(c[0])+'</span><strong>'+safe(c[1])+'</strong></div>').join('')+'</div>';
 }
