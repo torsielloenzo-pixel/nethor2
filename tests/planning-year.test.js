@@ -78,7 +78,7 @@ test('intégration: état annuel, chargement, clic jour, responsive, PWA',()=>{
  assert.match(js,/state\.week=mondayFor\(day\)/);
  assert.match(js,/state\.view='week'/);
  assert.match(js,/if\(annualAllowed\(\)\&\&state\.view==='year'\)/);
- assert.match(js,/allowYear:smallScreen\(\)/);
+ assert.match(js,/allowYear:annualAllowed\(\)/);
  assert.match(css,/#app\.mobile-planning-active \.n2py-grid/);
  assert.match(css,/#app\.mobile-planning-active \.n2py-fixed/);
  assert.match(css,/position:sticky;top:-14px/);
