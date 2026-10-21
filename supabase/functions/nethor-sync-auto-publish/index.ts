@@ -65,6 +65,25 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
         startsWithTotal:/^TOTA(?:L|UX)/.test(label.trim()),length:label.length};
      });
      console.info('NethorSync BIFF row labels',JSON.stringify(labelFlags));
+     const byRow=[];
+     const knownDays=workbook.SheetNames.filter(n=>/^(LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)/i.test(n));
+     for(let ri=3;ri<16;ri++){
+       const counts:Record<string,number>={g:0,b:0,r:0,y:0,o:0,w1:0,wOther:0,missing:0};
+       for(const sn of knownDays){
+         const ws=workbook.Sheets[sn];
+         for(let ci=2;ci<60;ci++){
+           const cell=ws[XLSX.utils.encode_cell({r:ri,c:ci})];
+           const x=legacy.color(sn,ri,ci);
+           if(x==='g'||x==='b'||x==='r'||x==='y'||x==='o')counts[x]++;
+           else if(cell?.v===1)counts.w1++;
+           else if(typeof cell?.v==='number'&&cell.v!==0)counts.wOther++;
+           else if(x===null&&cell?.v!=null&&cell.v!=='')counts.missing++;
+         }
+       }
+       byRow.push({r:ri+1,...counts});
+     }
+     console.info('NethorSync BIFF row fill profile',JSON.stringify(byRow));
+
    }
    throw e;
  }
