@@ -12,6 +12,7 @@ import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
 import {renderMobilePlanning} from './planning-mobile.js';
 import {renderPlanningYear} from './planning-year.js';
+import {renderDesktopPlanningDay,renderDesktopPlanningLegend} from './planning-desktop-colors.js';
 import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics,readSyncHistoricalSummary} from '../data/nethor-sync-control.js';
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
 import {mergeImportHistory,renderImportHistory} from './import-history.js';
@@ -241,7 +242,7 @@ function analyze(model){
       const cells=model.days[date]?.cells?.[i];
       if(!Array.isArray(cells)||cells.length!==slots)return {date,hours:0,ranges:[],issues:[{code:'INVALID_ROW',severity:'error'}]};
       try{
-        return {date,...analyzeEmployeeDay({employeeId:profile?.id||null,cells,startMinutes:start,minutesPerSlot:minutes})};
+        return {date,cells,...analyzeEmployeeDay({employeeId:profile?.id||null,cells,startMinutes:start,minutesPerSlot:minutes})};
       }catch{return {date,hours:0,ranges:[],issues:[{code:'INVALID_ROW',severity:'error'}]};}
     });
     const total=Number(days.reduce((sum,d)=>sum+d.hours,0).toFixed(2));
@@ -320,16 +321,21 @@ function weekNav(){
 function planningCard(metrics){
   let content='';
   const dates=datesFor(state.week);
+  // La palette est réservée à la consultation sur la page Planning Desktop/PWA.
+  const desktopColors=state.page==='planning'&&!smallScreen();
+  const first=Number(state.weekData?.model?.startTime??6)*60;
+  const step=Number(state.weekData?.model?.slotMinutes)||15;
+  const planningDay=day=>desktopColors?renderDesktopPlanningDay(day.cells,first,step):shift(day.ranges);
   if(!state.weekData)content='<div class="live-empty"><strong>Aucun planning publié pour cette semaine</strong>Utilise les flèches pour choisir une semaine existante.</div>';
   else if(state.view==='week'){
-    content='<div class="desktop-planning-table table-scroll"><table class="table"><thead><tr><th>Collaborateur</th>'+dates.map((d,i)=>'<th>'+DAYS[i]+'<br>'+shortDate(d)+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+metrics.people.map(p=>'<tr><td>'+person(p.name)+'</td>'+p.days.map(day=>'<td>'+shift(day.ranges)+'</td>').join('')+'<td class="live-hours">'+hours(p.total)+'</td></tr>').join('')+'</tbody></table></div>'+
+    content='<div class="desktop-planning-table table-scroll"><table class="table"><thead><tr><th>Collaborateur</th>'+dates.map((d,i)=>'<th>'+DAYS[i]+'<br>'+shortDate(d)+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+metrics.people.map(p=>'<tr><td>'+person(p.name)+'</td>'+p.days.map(day=>'<td>'+planningDay(day)+'</td>').join('')+'<td class="live-hours">'+hours(p.total)+'</td></tr>').join('')+'</tbody></table></div>'+
     '<div class="mobile-week-list">'+(metrics.people.length?metrics.people.map(p=>'<article class="mobile-week-person"><header><div>'+person(p.name)+'<small>'+p.days.filter(d=>d.hours>0).length+' jour(s) planifié(s)</small></div><span class="mobile-hours">'+hours(p.total)+'</span></header><div class="mobile-week-days">'+p.days.map((d,i)=>'<button type="button" class="mobile-week-day" data-day="'+dates[i]+'"><span class="mobile-week-date"><b>'+DAYS[i]+'</b><small>'+shortDate(d.date)+'</small></span><span class="mobile-week-shift">'+shift(d.ranges)+'</span><span class="mobile-week-duration">'+(d.hours?hours(d.hours):'')+'</span></button>').join('')+'</div></article>').join(''):'<div class="live-empty">Aucun collaborateur planifié.</div>')+'</div>';
   }else{
     if(!dates.includes(state.day))state.day=state.week;
     const di=dates.indexOf(state.day);
-    content='<div class="live-day-nav">'+dates.map((d,i)=>'<button data-day="'+d+'" class="'+(d===state.day?'active':'')+'">'+DAYS[i]+'<br>'+shortDate(d)+'</button>').join('')+'</div><div class="live-day-grid">'+metrics.people.map(p=>'<div class="live-day-item">'+person(p.name)+shift(p.days[di].ranges)+'<div class="sub">'+hours(p.days[di].hours)+' travaillées</div></div>').join('')+'</div>';
+    content='<div class="live-day-nav">'+dates.map((d,i)=>'<button data-day="'+d+'" class="'+(d===state.day?'active':'')+'">'+DAYS[i]+'<br>'+shortDate(d)+'</button>').join('')+'</div><div class="live-day-grid">'+metrics.people.map(p=>'<div class="live-day-item">'+person(p.name)+planningDay(p.days[di])+(desktopColors&&!p.days[di].hours?'':'<div class="sub">'+hours(p.days[di].hours)+' travaillées</div>')</div>').join('')+'</div>';
   }
-  return '<section class="card live-week-card"><div class="card-head"><div><h2 class="card-title">Planning de l’équipe</h2><p class="sub">'+(state.weekData?escapeHtml(state.weekData.sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div><button type="button" class="text-link" data-action="refresh">Actualiser ↻</button></div>'+weekNav()+content+'</section>';
+  return '<section class="card live-week-card'+(desktopColors?' n2-desktop-planning-palette':'')+'"><div class="card-head"><div><h2 class="card-title">Planning de l’équipe</h2><p class="sub">'+(state.weekData?escapeHtml(state.weekData.sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div><button type="button" class="text-link" data-action="refresh">Actualiser ↻</button></div>'+weekNav()+(desktopColors&&state.weekData?renderDesktopPlanningLegend():'')+content+'</section>';
 }
 const issueLabels={SHORT_SHIFT:['Créneau très court','Plage de travail de 30 minutes ou moins'],LONG_BREAK:['Longue coupure','Interruption d’au moins 2 heures'],LONG_DAY:['Journée longue','Plus de 10 heures planifiées sur une journée'],CONTRACT_DIFFERENCE:['Différence heures contrat','Écart informatif entre heures planifiées et volume contractuel'],LOW_COVERAGE:['Couverture limitée','Une seule personne planifiée pendant une période prolongée'],INVALID_ROW:['Données incohérentes','Le tableau ne correspond pas à la structure attendue']};
 function issueRows(issues,limit=Infinity){
