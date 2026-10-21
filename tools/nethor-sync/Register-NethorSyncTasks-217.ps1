@@ -96,4 +96,4 @@ foreach ($legacy in @('Nethor Sync 2 - Toutes les 3h','Nethor Sync 2 - Ouverture
     Write-Output ('Ancienne tâche absente ou impossible à supprimer : ' + $legacy)
   }
 }
-Write-Output 'Planification NethorSync 2 activée pour l’utilisateur Windows courant.'
+Write-Output 'Planification NethorSync 2 activée pour l utilisateur Windows courant.'
