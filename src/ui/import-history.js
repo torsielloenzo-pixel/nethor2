@@ -40,7 +40,7 @@ export function renderImportHistory(entries=[]){
      '<time>'+occurred+'</time></div>'+
      '<h3>'+(replaced?'Fichier remplacé':row.kind==='moved'?'Fichier déplacé / copié':'Fichier transféré')+'</h3>'+
      syncVersionMarkup(row)+
-     '<p class="n2hist-note">Transféré par NethorSync · Publication automatique seulement si ce fichier modifié est récent, lisible et plus récent que le planning publié.</p></article>';
+     '<p class="n2hist-note">Transféré par NethorSync · Les nouvelles semaines datées et lisibles peuvent être publiées automatiquement ; une semaine déjà publiée reste protégée contre un ancien fichier.</p></article>';
   }
   return '<article class="n2hist-entry '+(row.source==='auto'?'sync':'manual')+'" data-origin="'+esc(row.source)+'"><div class="n2hist-top"><span class="n2hist-source '+(row.source==='auto'?'sync':'manual')+'">'+(row.source==='auto'?'NethorSync · Publication':'Import manuel')+'</span>'+
    '<time>'+occurred+'</time></div>'+
