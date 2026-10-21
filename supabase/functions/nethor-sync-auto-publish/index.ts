@@ -26,7 +26,7 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  })=>{
    const biff=legacy?.color(sheetName,rowIndex,colIndex);
    const resolved=biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
-   if((resolved===null||resolved===undefined||resolved==='w')&&(resolved===null||resolved===undefined||resolved==='w')
+   if((resolved===null||resolved===undefined||resolved==='w')
      && cell?.v!==undefined&&cell.v!==null&&cell.v!==''&&cell.v!==0&&cell.v!==false){
      const value=cell.v;
      ambiguous.push({sheet:sheetName,row:rowIndex+1,column:colIndex+1,
