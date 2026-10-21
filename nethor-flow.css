@@ -54,3 +54,58 @@
 @media(max-width:760px) and (prefers-reduced-motion:reduce){
  .live-navigator::before{transition:none!important}
 }
+
+/* V3: responsive content clearance for the floating dock.
+   The bottom dock never overlays the final home or NethorSync panel. */
+@media(max-width:760px){
+  #app{--flow-dock-clearance:calc(102px + env(safe-area-inset-bottom));}
+  #app.personal-home-active .workspace,
+  #app.mobile-sync-active .workspace,
+  #app.mobile-content-scroll .workspace{
+    padding-bottom:var(--flow-dock-clearance);
+    box-sizing:border-box;
+  }
+  /* Dedicated pages were originally clipped to one screen. Allow inner
+     scrolling only when content does not fit, preserving fixed header/dock. */
+  #app.personal-home-active main,
+  #app.mobile-sync-active main#screen{min-height:0;}
+  #app.personal-home-active #screen,
+  #app.mobile-sync-active main#screen{
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+    scroll-padding-bottom:16px;
+  }
+  #app.personal-home-active #screen{
+    display:block;
+    height:auto;
+    padding:0 0 12px;
+  }
+  #app.personal-home-active .n2h-home{
+    min-height:560px;
+    height:100%;
+    grid-template-rows:auto minmax(280px,1fr) auto auto;
+    overflow:visible;
+    padding-bottom:4px;
+  }
+  #app.mobile-sync-active main#screen{
+    display:block;
+    padding-bottom:16px;
+  }
+  #app.mobile-sync-active .n2ms{
+    min-height:535px;
+    height:100%;
+    grid-template-rows:auto minmax(120px,1.05fr) auto minmax(170px,1.25fr) auto;
+    overflow:visible;
+    padding-bottom:4px;
+  }
+  #app.mobile-content-scroll main#screen{
+    padding-bottom:24px;
+    scroll-padding-bottom:24px;
+  }
+}
+@media(max-width:760px) and (max-height:700px){
+ #app.personal-home-active .n2h-home{min-height:535px;grid-template-rows:auto minmax(255px,1fr) auto auto}
+ #app.mobile-sync-active .n2ms{min-height:510px;grid-template-rows:auto minmax(110px,1fr) auto minmax(150px,1fr) auto}
+}
