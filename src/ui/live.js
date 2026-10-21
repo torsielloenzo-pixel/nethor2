@@ -433,20 +433,47 @@ function mobileOverviewPage(){
   const restDetail=rest?'Prochain jour sans horaire de travail':
     'Selon les plannings publiés';
   const dayWord=new Date(today+'T12:00:00Z').toLocaleDateString('fr-FR',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long'});
-  return '<div class="n2h-home" aria-label="Mon accueil personnel">'+
+  const days=data?.days||[];
+  const todayRow=days.find(row=>row.date===today);
+  const todayWork=ready&&todayRow?.kind==='work';
+  const todayHours=todayWork?mobileOverviewHours(todayRow.ranges):
+    !ready?'Chargement…':todayRow?.kind==='leave'?'En congé':todayRow?.kind==='rest'?'Repos':
+    snapshot.weeksError?'Planning indisponible':'Aucun horaire publié';
+  const todayDuration=todayWork?hours(todayRow.hours):'';
+  const nextWork=days.find(row=>row.kind==='work'&&row.date>today);
+  const nextWorkDate=nextWork?mobileOverviewDate(nextWork.date,false):'Non déterminé';
+  const nextWorkHours=nextWork?mobileOverviewHours(nextWork.ranges):'Selon les plannings publiés';
+  const knownDays=days.filter(row=>row.kind==='work');
+  const totalHours=knownDays.reduce((sum,row)=>sum+(Number(row.hours)||0),0);
+  const summaryHours=!ready?'…':snapshot.weeksError?'—':hours(totalHours);
+  const dataCaption=linked?'Selon les plannings accessibles':'Compte non associé au planning';
+  return '<div class="n2h-home n2h-dashboard" aria-label="Mon accueil personnel">'+
     '<header class="n2h-greeting"><div><span class="n2h-overline">MON ESPACE · NETTO LE THOR</span><h1>Bonjour'+(name?' '+escapeHtml(name):'')+'</h1><p>'+escapeHtml(dayWord)+'</p></div>'+homePwaInstall()+'</header>'+
+    '<section class="n2h-today" aria-label="Mes horaires aujourd’hui">'+
+      '<div class="n2h-today-top"><span>MES HORAIRES AUJOURD’HUI</span><span class="n2h-today-tag">'+(todayWork?'AU PLANNING':ready?'INFORMATION':'CHARGEMENT')+'</span></div>'+
+      '<strong class="n2h-today-hours">'+escapeHtml(todayHours)+'</strong>'+
+      '<div class="n2h-today-bottom"><span>'+escapeHtml(todayDuration?todayDuration+' prévues':dataCaption)+'</span><span>NETTO LE THOR</span></div>'+
+    '</section>'+
+    '<div class="n2h-kpis">'+
+      '<section class="n2h-kpi"><span class="n2h-kpi-label">7 PROCHAINS JOURS</span><strong>'+escapeHtml(summaryHours)+'</strong><small>Heures planifiées</small></section>'+
+      '<section class="n2h-kpi"><span class="n2h-kpi-label">PROCHAINS HORAIRES</span><strong>'+escapeHtml(ready?nextWorkDate:'…')+'</strong><small>'+escapeHtml(ready?nextWorkHours:'Chargement…')+'</small></section>'+
+    '</div>'+
     '<section class="n2h-card n2h-schedule" aria-label="Mes horaires">'+
-       '<div class="n2h-heading"><div>'+navIcon('planning')+'<h2>Mes horaires</h2></div></div>'+
-       '<div class="n2h-days">'+schedule+'</div>'+
+      '<div class="n2h-heading"><div>'+navIcon('planning')+'<h2>Ma semaine</h2></div><button type="button" class="n2h-week-link" data-page="planning">Voir le planning →</button></div>'+
+      '<div class="n2h-days">'+schedule+'</div>'+
     '</section>'+
-    '<section class="n2h-card n2h-leave" aria-label="Prochains congés">'+
-       '<div class="n2h-meta"><div class="n2h-meta-label">'+navIcon('planning')+'<h2>Prochains congés</h2></div><span class="n2h-leave-state '+leaveTone+'">'+escapeHtml(leaveStatus)+'</span></div>'+
-       '<strong class="n2h-meta-value">'+escapeHtml(leaveLabel)+'</strong><small>'+escapeHtml(leave?leaveRange:ready?'Selon les demandes et plannings accessibles':'Vérification en cours')+'</small>'+
-    '</section>'+
-    '<section class="n2h-card n2h-rest" aria-label="Prochain jour de repos">'+
-       '<div class="n2h-meta"><div class="n2h-meta-label">'+navIcon('history')+'<h2>Prochain repos</h2></div></div>'+
-       '<strong class="n2h-meta-value">'+escapeHtml(restLabel)+'</strong><small>'+escapeHtml(restDetail)+'</small>'+
-    '</section>'+
+    '<div class="n2h-bottom-grid">'+
+      '<section class="n2h-card n2h-leave" aria-label="Prochains congés">'+
+        '<div class="n2h-meta"><div class="n2h-meta-label">'+navIcon('planning')+'<h2>Prochains congés</h2></div></div>'+
+        '<strong class="n2h-meta-value">'+escapeHtml(leaveLabel)+'</strong><small>'+escapeHtml(leave?leaveRange:ready?'Selon les demandes accessibles':'Vérification en cours')+'</small>'+
+        '<span class="n2h-leave-state '+leaveTone+'">'+escapeHtml(leaveStatus)+'</span>'+
+      '</section>'+
+      '<section class="n2h-card n2h-rest" aria-label="Prochain jour de repos">'+
+        '<div class="n2h-meta"><div class="n2h-meta-label">'+navIcon('history')+'<h2>Prochain repos</h2></div></div>'+
+        '<strong class="n2h-meta-value">'+escapeHtml(restLabel)+'</strong><small>'+escapeHtml(restDetail)+'</small>'+
+      '</section>'+
+    '</div>'+
+    '<section class="n2h-activity" aria-label="Informations de planning"><div class="n2h-activity-head">'+navIcon('history')+'<h2>Informations de planning</h2></div><p>'+escapeHtml(!ready?'Chargement des informations…':snapshot.weeksError?'Certaines données de planning sont temporairement indisponibles.':dataCaption+'. Consulte le planning pour les détails et les mises à jour.')+'</p></section>'+
     '</div>';
 }
 
