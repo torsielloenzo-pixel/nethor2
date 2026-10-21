@@ -26,7 +26,7 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  })=>{
    const biff=legacy?.color(sheetName,rowIndex,colIndex);
    const resolved=biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
-   if(ambiguous.length<5&&(resolved===null||resolved===undefined||resolved==='w')
+   if((resolved===null||resolved===undefined||resolved==='w')&&(resolved===null||resolved===undefined||resolved==='w')
      && cell?.v!==undefined&&cell.v!==null&&cell.v!==''&&cell.v!==0&&cell.v!==false){
      const value=cell.v;
      ambiguous.push({sheet:sheetName,row:rowIndex+1,column:colIndex+1,
@@ -35,6 +35,7 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
        valueText:typeof value==='string'?value.slice(0,12).replace(/[^A-Za-z0-9 ]/g,''):null,
        sheetStyleKind:typeof cell.s,styleId:typeof cell.s==='number'?cell.s:null,
        style:legacy?.inspect(sheetName,rowIndex,colIndex)||null});
+     if(ambiguous.length>8)ambiguous.shift();
    }
    return resolved;
  };
