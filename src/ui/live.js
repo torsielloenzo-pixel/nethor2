@@ -763,6 +763,7 @@ function render(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
   ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
   ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&isMobileHome());
+  ROOT.classList.toggle('desktop-year-active',state.page==='planning'&&state.view==='year'&&desktopAnnualAllowed());
   ROOT.classList.toggle('mobile-sync-active',state.page==='anomalies'&&smallScreen());
   // Mobile / PWA : entête NETHOR hors défilement pour les autres écrans.
   // Accueil personnel, Planning personnel et NethorSync conservent leur structure dédiée.
