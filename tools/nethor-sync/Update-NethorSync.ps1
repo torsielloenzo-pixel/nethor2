@@ -1,6 +1,6 @@
 #requires -Version 5.1
 <#
-NethorSync 2.1.7 - mise a jour pilotée depuis Supabase.
+NethorSync 2.1.8 - mise a jour pilotée depuis Supabase.
 Le controle distant ne peut modifier les fichiers Excel, le manifeste local,
 l'identite du poste, ni les jetons. Binaire epingle par SHA-256.
 #>
@@ -15,7 +15,7 @@ $versionFile=Join-Path $agentDir 'NethorSync-Version.txt'
 $configFile=Join-Path $agentDir 'config.json'
 $script:stage='startup'
 $script:targetVersion=$null
-$script:installedVersion='2.1.7'
+$script:installedVersion='2.1.8'
 $script:latestErrorCode=$null
 $mutex=$null
 $hasLock=$false
@@ -62,7 +62,7 @@ function Get-UpdateAuthHeaders($Config) {
   try {
     $headers=@{apikey=[string]$Config.publishableKey}
     $auth=Invoke-RestMethod -Method Post -Uri ($Config.supabaseUrl.TrimEnd('/')+
-      '/auth/v1/token?grant_type=refresh_token') -Headers $headers -ContentType 'application/json' -Body (@{refresh_token=$refresh} | ConvertTo-Json)
+      '/auth/v1/token?grant_type=refresh_token') -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes((@{refresh_token=$refresh} | ConvertTo-Json)))
     if (-not $auth.access_token -or -not $auth.refresh_token) { return $null }
     $sealed=ConvertTo-SecureString -String $auth.refresh_token -AsPlainText -Force
     try {
@@ -94,7 +94,7 @@ function Send-UpdateTelemetry($Config,[string]$Status,[string]$ErrorCode='') {
     }|ConvertTo-Json -Depth 4
     $secretText=$null
     $null=Invoke-RestMethod -Method Post -Uri ($Config.supabaseUrl.TrimEnd('/')+
-      '/rest/v1/rpc/nethor_sync_update_report') -Headers $headers -ContentType 'application/json' -Body $payload
+      '/rest/v1/rpc/nethor_sync_update_report') -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($payload))
   } catch {
     # Une panne du journal distant ne doit pas interrompre une mise a jour valide.
   }
@@ -111,7 +111,7 @@ try {
       -not $config.publishableKey) { throw 'bad_supabase_configuration' }
   $script:stage='manifest'
   $manifest=Invoke-RestMethod -Method Post -Uri ($config.supabaseUrl.TrimEnd('/')+
-    '/rest/v1/rpc/nethor_sync_update_manifest') -Headers @{apikey=[string]$config.publishableKey} -ContentType 'application/json' -Body '{}'
+    '/rest/v1/rpc/nethor_sync_update_manifest') -Headers @{apikey=[string]$config.publishableKey} -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes('{}'))
   $release=Validate-UpdateManifest $manifest $script:installedVersion
   if ($null -eq $release) {
     Save-UpdateReport 'up_to_date'
