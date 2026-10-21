@@ -20,6 +20,7 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  // BIFF8 conserve les couleurs des archives .xls, que SheetJS ne restitue pas toujours.
  // Sans une couleur exploitable, on conserve le refus explicite plutôt que de deviner.
  const legacy=/\.xls$/i.test(fileName)?legacyStyleReader(buffer):null;
+ if(legacy?.stats)console.info('NethorSync BIFF stats',JSON.stringify(legacy.stats));
  const verifiedColor=({sheetName,rowIndex,colIndex,cell,workbook}:{
    sheetName:string;rowIndex:number;colIndex:number;cell:unknown;workbook:unknown
  })=>{
