@@ -315,3 +315,57 @@
 .n2collab-row strong{color:#213b60;font-size:14px}
 .n2collab-row span{color:#657c9b;font-size:12px}
 @media(max-width:1050px){.n2collab-list{grid-template-columns:1fr}}
+
+/* Consultation des plannings : palette bleue, Desktop et PWA Desktop uniquement. */
+@media(min-width:761px){
+  #app .n2-desktop-planning-palette{
+    --n2p-morning:#7DD3FC;
+    --n2p-afternoon:#2563EB;
+    --n2p-leave:#1E40AF;
+    --n2p-rest:#DBEAFE;
+  }
+  #app .n2-desktop-planning-palette .n2pday-legend{
+    display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;
+    gap:8px 17px;padding:0 20px 16px;color:#48638b;
+    font-size:11px;font-weight:750;
+  }
+  #app .n2-desktop-planning-palette .n2pday-legend span{display:inline-flex;align-items:center;gap:7px}
+  #app .n2-desktop-planning-palette .n2pday-legend i{
+    display:inline-block;flex:none;width:13px;height:13px;border-radius:4px;
+    border:1px solid #173b7520;
+  }
+  #app .n2-desktop-planning-palette [data-tone="morning"]{background:var(--n2p-morning);color:#075985}
+  #app .n2-desktop-planning-palette [data-tone="afternoon"]{background:var(--n2p-afternoon);color:#fff}
+  #app .n2-desktop-planning-palette [data-tone="leave"]{background:var(--n2p-leave);color:#fff}
+  #app .n2-desktop-planning-palette [data-tone="rest"]{background:var(--n2p-rest);color:#1E40AF}
+  #app .n2-desktop-planning-palette .n2pday-list{display:grid;gap:4px;min-width:0}
+  #app .n2-desktop-planning-palette .n2pday-chip{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;width:100%;min-width:0;min-height:43px;padding:7px 4px;
+    border-radius:8px;text-align:center;line-height:1.3;font-size:11px;font-weight:800;
+  }
+  #app .n2-desktop-planning-palette .n2pday-chip span{
+    font-size:9px;font-weight:850;letter-spacing:.1px;
+  }
+  #app .n2-desktop-planning-palette .n2pday-chip strong{
+    display:block;font-size:10px;font-weight:850;font-variant-numeric:tabular-nums;
+  }
+  #app .n2-desktop-planning-palette .n2pday-chip[data-tone="unknown"],
+  #app .n2-desktop-planning-palette .n2pday-chip[data-tone="empty"],
+  #app .n2-desktop-planning-palette .n2pday-chip[data-tone="unavailable"]{
+    background:#f3f7ff;color:#49678d;border:1px dashed #c5d7f0;
+  }
+  #app .n2-desktop-planning-palette .desktop-planning-table .table td{
+    vertical-align:middle;
+  }
+  #app .n2-desktop-planning-palette .desktop-planning-table .table td:not(:first-child):not(:last-child){
+    min-width:102px;padding:8px 5px;
+  }
+  #app .n2-desktop-planning-palette .live-day-item .n2pday-list,
+  #app .n2-desktop-planning-palette .live-day-item .n2pday-chip{
+    margin-top:10px;
+  }
+  #app .n2-desktop-planning-palette .live-day-item .n2pday-list .n2pday-chip{
+    margin-top:0;
+  }
+}
