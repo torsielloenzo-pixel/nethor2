@@ -1086,3 +1086,11 @@ html.nethor-zoom-locked select {
  #app.desktop-year-active .n2py-day:hover{filter:brightness(.95)}
 }
 @media(min-width:761px) and (max-width:1100px){#app.desktop-year-active .n2py-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Planning Mobile / PWA : modes au-dessus de la navigation hebdomadaire. */
+@media(max-width:760px){
+ #app.mobile-planning-active .n2pm-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:12px;grid-template-columns:none}
+ #app.mobile-planning-active .n2pm-segmented{display:flex;width:100%;justify-content:stretch}
+ #app.mobile-planning-active .n2pm-segmented button{flex:1;min-width:0}
+ #app.mobile-planning-active .n2pm-pager{width:100%}
+}
