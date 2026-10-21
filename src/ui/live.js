@@ -283,8 +283,10 @@ function summary(metrics){
   const total=metrics.people.reduce((sum,p)=>sum+p.total,0);
   return '<section class="live-summary"><article class="live-stat"><label>Collaborateurs planifiés</label><strong>'+planned+'</strong><small>Sur la semaine</small></article><article class="live-stat"><label>Heures planifiées</label><strong>'+hours(total)+'</strong><small>Total calculé</small></article><article class="live-stat"><label>Points à vérifier</label><strong>'+metrics.issues.length+'</strong><small>Contrôles automatiques</small></article></section>';
 }
+const desktopAnnualAllowed=()=>!smallScreen()&&['admin','responsable','employe'].includes(state.profile?.role);
+const annualAllowed=()=>smallScreen()||desktopAnnualAllowed();
 function weekNav(){
-  return '<div class="live-week-wrapper"><div class="live-paging"><button class="icon-btn" data-action="prev" aria-label="Semaine précédente">‹</button><strong>'+shortDate(state.week)+' – '+shortDate(plusDays(state.week,6))+'</strong><button class="icon-btn" data-action="next" aria-label="Semaine suivante">›</button></div><div class="segmented"><button data-action="week-view" class="'+(state.view==='week'?'selected':'')+'">Semaine</button><button data-action="day-view" class="'+(state.view==='day'?'selected':'')+'">Jour</button></div></div>';
+  return '<div class="live-week-wrapper"><div class="live-paging"><button class="icon-btn" data-action="prev" aria-label="Semaine précédente">‹</button><strong>'+shortDate(state.week)+' – '+shortDate(plusDays(state.week,6))+'</strong><button class="icon-btn" data-action="next" aria-label="Semaine suivante">›</button></div><div class="segmented"><button data-action="week-view" class="'+(state.view==='week'?'selected':'')+'">Semaine</button><button data-action="day-view" class="'+(state.view==='day'?'selected':'')+'">Jour</button>'+(desktopAnnualAllowed()?'<button data-action="year-view">Année</button>':'')+'</div></div>';
 }
 function planningCard(metrics){
   let content='';
@@ -472,7 +474,7 @@ function pageHome(metrics){
   return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
 async function loadAnnualWeeks(force=false){
- if(!state.user||!smallScreen()||state.page!=='planning'||state.view!=='year')return;
+ if(!state.user||!annualAllowed()||state.page!=='planning'||state.view!=='year')return;
  const year=state.mobilePlanning.year;
  if(!force&&state.mobilePlanning.annual.loaded&&state.mobilePlanning.annual.year===year)return;
  if(!force&&state.mobilePlanning.annual.loading&&state.mobilePlanning.annual.year===year)return;
@@ -487,18 +489,18 @@ async function loadAnnualWeeks(force=false){
   if(request!==annualRequestId||state.user?.id!==userId||state.mobilePlanning.year!==year)return;
   state.mobilePlanning.annual={year,weeks:[],loading:false,loaded:true,error:'Impossible de consulter les semaines publiées.'};
  }finally{
-  if(request===annualRequestId&&state.user?.id===userId&&state.page==='planning'&&state.view==='year'&&smallScreen())render();
+  if(request===annualRequestId&&state.user?.id===userId&&state.page==='planning'&&state.view==='year'&&annualAllowed())render();
  }
 }
 function pagePlanning(metrics){
-  if(smallScreen()&&state.view==='year'){
+  if(annualAllowed()&&state.view==='year'){
     return renderPlanningYear({...state.mobilePlanning.annual,year:state.mobilePlanning.year,
       today:dateInParis(),selectedDay:state.day});
   }
   if(isMobileHome())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:state.loading?null:visibleModel(),profiles:state.profiles,
-    currentProfile:state.profile,allowYear:smallScreen(),filter:state.mobilePlanning.dayFilter,
+    currentProfile:state.profile,allowYear:annualAllowed(),filter:state.mobilePlanning.dayFilter,
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error
   });
   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+planningCard(metrics);
@@ -724,7 +726,7 @@ function pageSettings(){
    identifier:state.user?.email||'Non disponible',
    role:listRole(state.profile?.role),access:state.access,
    lastSignIn:settingsDate(state.user?.last_sign_in_at),
-   preferredView:state.planningPreference,allowYear:smallScreen(),
+   preferredView:state.planningPreference,allowYear:annualAllowed(),
    isPwa:isInstalledPwa(),isOnline:navigator.onLine,
    workerActive:Boolean(navigator.serviceWorker?.controller),
    lastCheck:settingsDate(state.lastCheck),
@@ -798,7 +800,7 @@ function go(page){
   state.page=page;state.notice='';state.error='';
   if(page==='settings'&&previousPage!==page){state.settingsPanel='home';state.settingsFeedback='';}
   if(page==='planning'&&previousPage!==page){
-   state.view=state.planningPreference==='year'&&!smallScreen()?'week':state.planningPreference;
+   state.view=state.planningPreference==='year'&&!annualAllowed()?'week':state.planningPreference;
    if(state.view==='year'){
     state.mobilePlanning.year=Number((state.day||dateInParis()).slice(0,4));
     state.mobilePlanning.annual={year:null,weeks:[],loading:false,loaded:false,error:''};
@@ -810,7 +812,7 @@ function go(page){
   if(page==='import'&&!smallScreen())void loadImportSyncStatus();
   if(page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&!state.nethorSync.loading)void loadNethorSyncStatus();
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
-  if(page==='planning'&&state.view==='year'&&smallScreen())void loadAnnualWeeks(true);
+  if(page==='planning'&&state.view==='year'&&annualAllowed())void loadAnnualWeeks(true);
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
   const planningScroller=ROOT.querySelector('#screen');
   if(state.page==='planning'&&smallScreen()&&planningScroller)planningScroller.scrollTop=0;
@@ -1067,7 +1069,7 @@ ROOT.addEventListener('click',async event=>{
 
   // La vue annuelle Nethor 1 est volontairement réservée au téléphone et à sa PWA.
   const yearDate=event.target.closest('[data-year-day]');
-  if(yearDate&&state.page==='planning'&&state.view==='year'&&smallScreen()){
+  if(yearDate&&state.page==='planning'&&state.view==='year'&&annualAllowed()){
     const day=yearDate.dataset.yearDay;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
     state.day=day;
@@ -1126,7 +1128,7 @@ ROOT.addEventListener('click',async event=>{
    }
    if(action==='settings-planning-view'){
     const choice=b.dataset.settingsChoice;
-    if(!['week','day','year'].includes(choice)||(choice==='year'&&!smallScreen())||!state.user?.id)return;
+    if(!['week','day','year'].includes(choice)||(choice==='year'&&!annualAllowed())||!state.user?.id)return;
     if(savePlanningPreference(state.user.id,choice)){
      state.planningPreference=choice;
      state.settingsFeedback='Vue enregistrée pour cet appareil.';
@@ -1142,7 +1144,7 @@ ROOT.addEventListener('click',async event=>{
     render();return;
    }
   }
-  if(state.page==='planning'&&smallScreen()&&['year-view','year-prev','year-next','year-current','year-close'].includes(action)){
+  if(state.page==='planning'&&annualAllowed()&&['year-view','year-prev','year-next','year-current','year-close'].includes(action)){
     if(action==='year-close'){state.view='week';annualRequestId++;render();return;}
     if(action==='year-view'){
       state.mobilePlanning.year=Number((state.day||dateInParis()).slice(0,4));
