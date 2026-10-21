@@ -45,7 +45,7 @@ function renderAutoPublication(snapshot){
  if(snapshot?.autoError)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Suivi des publications temporairement indisponible.</p></section>';
  const entries=Array.isArray(snapshot?.autoPublications)?snapshot.autoPublications:[];
  const last=entries[0];
- if(!last)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Active côté Supabase : les nouveaux transferts sont comparés aux semaines déjà publiées. Aucune nouvelle version traitée pour le moment.</p></section>';
+ if(!last)return '<section class="n2sync-auto"><strong>Publication automatique</strong><p>Active côté Supabase : les nouvelles semaines peuvent être créées et les semaines existantes comparées aux versions plus récentes. Aucun nouveau fichier traité pour le moment.</p></section>';
  const labels={queued:'En attente de traitement',processing:'Analyse Excel en cours',published:'Planning publié pour toute l’équipe',unchanged:'Horaires déjà à jour',skipped:'Publication ignorée pour sécurité',rejected:'Fichier Excel refusé',failed:'Échec de traitement'};
  const state=String(last.status||'');
  const when=formatSyncTimestamp(last.when);
@@ -53,6 +53,28 @@ function renderAutoPublication(snapshot){
    '<p>'+escapeHtml(last.fileName||'Planning Excel')+' · '+escapeHtml(when.date)+' à '+escapeHtml(when.time)+'</p>'+
    (last.weekStart?'<p>Semaine du '+escapeHtml(last.weekStart)+'</p>':'')+
    (last.detail?'<p>'+escapeHtml(last.detail)+'</p>':'')+'</section>';
+}
+
+// Progression de l'import initial, sans exposer des chemins de fichiers privés.
+export function renderSyncHistoricalImport(snapshot){
+ const info=snapshot?.historicalImport;
+ if(!info||info.mode!=='historical_and_future')return '';
+ const count=n=>Math.max(0,Number.isFinite(Number(n))?Math.trunc(Number(n)):0);
+ const added=count(info.imported),rejected=count(info.rejected),skipped=count(info.skipped),
+   pending=count(info.pending),analyzed=count(info.analyzed);
+ const byYear=Array.isArray(info.years)?info.years:[];
+ const years=byYear.filter(x=>Number.isInteger(x.year)&&count(x.weeks)>0)
+   .map(x=>x.year+' : '+count(x.weeks)+' sem.').join(' · ');
+ return '<section class="n2sync-auto" data-module="historical-import">'+
+   '<strong>Importation historique et futurs plannings</strong>'+
+   '<p><strong>'+escapeHtml(added)+'</strong> semaines créées · '+
+   '<strong>'+escapeHtml(pending)+'</strong> en cours ou en attente · '+
+   '<strong>'+escapeHtml(rejected)+'</strong> fichiers à contrôler</p>'+
+   '<p>'+escapeHtml(analyzed)+' fichiers pris en charge · '+
+   escapeHtml(skipped)+' ignorés sans écraser les plannings existants</p>'+
+   (years?'<p>Archives publiées par année · '+escapeHtml(years)+'</p>':'')+
+   '<p>Un fichier Excel invalide reste archivé sans être publié. Les nouvelles semaines fiables sont créées automatiquement.</p>'+
+   '</section>';
 }
 
 export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
@@ -88,6 +110,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
    '<span class="n2sync-status" data-state="'+escapeHtml(current)+'"><i aria-hidden="true"></i>'+escapeHtml(titles[current]||'État inconnu')+'</span></div>'+
    '<div class="card-body">'+details+(status?.installed?renderSyncHistory(snapshot,now,period):'')+
      renderRecentDiagnostic(snapshot)+
+     renderSyncHistoricalImport(snapshot)+
      renderAutoPublication(snapshot)+
      '<div class="n2sync-actions">'+action+'</div>'+guide+
      '<p id="n2sync-install-help" class="n2sync-install-help" hidden role="status"></p>'+
