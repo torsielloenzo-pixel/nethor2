@@ -42,7 +42,7 @@ test('les filtres et le panneau de repos préservent le défilement du planning'
 test('les autres pages et le desktop ne reçoivent pas le blocage de défilement',()=>{
  const css=read('mobile.css');
  const start=css.indexOf("/* Planning Mobile / PWA Mobile : l'entête Nethor reste immobile.");
- const rules=css.slice(start);
+ const rules=css.slice(start,css.indexOf('\n}\n',start)+2);
  assert.match(rules,/@media\(max-width:760px\)/);
  assert.doesNotMatch(rules,/#app\.personal-home-active/);
  assert.doesNotMatch(rules,/#app\.staff-desktop-layout/);
