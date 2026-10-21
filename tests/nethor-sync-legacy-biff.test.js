@@ -31,7 +31,10 @@ test('Les totaux numeriques blancs sont exclus sans effacer les vrais horaires',
  const ok=parse('g');
  assert.equal(ok.days['2026-03-02'].cells[0][0],null);
  assert.equal(ok.days['2026-03-02'].cells[0][1],'g');
- assert.throws(()=>parse('w'),/sans couleur fiable/);
+ const explicitWhite=parse('w');
+ assert.equal(explicitWhite.days['2026-03-02'].cells[0][1],null);
  for(const day of days)sheets[day].C4.v=1;
- assert.throws(()=>parse('g'),/sans couleur fiable/);
+ assert.equal(parse('g').days['2026-03-02'].cells[0][0],null);
+ for(const day of days)sheets[day].C4.v=3;
+ assert.throws(()=>parse(null),/sans couleur fiable/);
 });
