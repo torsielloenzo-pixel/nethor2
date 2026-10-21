@@ -15,7 +15,7 @@ export function legacyStyleReader(ab){try{const wb=oleWorkbookStream(ab),g=recor
  const fillPattern=(u32(rec,14)>>>26)&63;
  if(fillPattern===0)return 'w';
  if(fillPattern!==1)return null;
- const idx=u16(rec,18)&127,rgb=idx>=8&&idx<8+palette.length?palette[idx-8]:null;if(!rgb)return null;const [R,G,B]=rgb;if(R>245&&G>245&&B>245)return'w';if(R>210&&G<90&&B<90)return'r';if(G>130&&R<120&&B<130)return'g';if(B>150&&G>100&&R<130)return'b';if(R>235&&G>220&&B<70)return'y';if(R>190&&G>75&&G<220&&B<120)return'o';return null}function inspect(sheet,r,c){
+ const idx=u16(rec,18)&127,rgb=idx>=8&&idx<8+palette.length?palette[idx-8]:null;if(!rgb)return null;const [R,G,B]=rgb;if(R===255&&G===128&&B===128)return'r';if(R>245&&G>245&&B>245)return'w';if(R>210&&G<90&&B<90)return'r';if(G>130&&R<120&&B<130)return'g';if(B>150&&G>100&&R<130)return'b';if(R>235&&G>220&&B<70)return'y';if(R>190&&G>75&&G<220&&B<120)return'o';return null}function inspect(sheet,r,c){
  const xf=maps[norm(sheet)]?.get(r+','+c),rec=xfs[xf];
  if(!rec||rec.length<20)return{xf:xf??null,style:'missing'};
  const pat=(u32(rec,14)>>>26)&63,idx=u16(rec,18)&127;
