@@ -884,8 +884,8 @@ function go(page){
   if(page==='settings'&&!state.accountSecurity.loaded&&!state.accountSecurity.loading)void loadAccountRecoveryStatus();
   if(page==='planning'&&state.view==='year'&&annualAllowed())void loadAnnualWeeks(true);
   if(page==='home'&&isMobileHome()&&!state.personal.loading&&(!state.personal.loadedAt||Date.now()-state.personal.loadedAt>120000||state.personal.today!==dateInParis()))void loadPersonalHome();
-  const planningScroller=ROOT.querySelector('#screen');
-  if(state.page==='planning'&&smallScreen()&&planningScroller)planningScroller.scrollTop=0;
+  const mobileScroller=ROOT.querySelector('#screen');
+  if(smallScreen()&&mobileScroller)mobileScroller.scrollTop=0;
   window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadHistory(){
