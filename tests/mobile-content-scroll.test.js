@@ -6,7 +6,7 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const css=read('mobile.css');
 const js=read('src/ui/live.js');
 const marker="/* Mobile / PWA Mobile : l'en-tête NETHOR reste fixe sur les pages classiques.";
-const rules=css.slice(css.indexOf(marker));
+const rules=css.slice(css.indexOf(marker),css.indexOf('/* Vue annuelle ordinateur',css.indexOf(marker)));
 
 test('Mobile/PWA : entête fixe, seul le contenu de la page défile',()=>{
  assert.ok(css.includes(marker));
