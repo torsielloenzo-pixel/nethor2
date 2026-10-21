@@ -333,7 +333,7 @@ function planningCard(metrics){
   }else{
     if(!dates.includes(state.day))state.day=state.week;
     const di=dates.indexOf(state.day);
-    content='<div class="live-day-nav">'+dates.map((d,i)=>'<button data-day="'+d+'" class="'+(d===state.day?'active':'')+'">'+DAYS[i]+'<br>'+shortDate(d)+'</button>').join('')+'</div><div class="live-day-grid">'+metrics.people.map(p=>'<div class="live-day-item">'+person(p.name)+planningDay(p.days[di])+(desktopColors&&!p.days[di].hours?'':'<div class="sub">'+hours(p.days[di].hours)+' travaillées</div>')</div>').join('')+'</div>';
+    content='<div class="live-day-nav">'+dates.map((d,i)=>'<button data-day="'+d+'" class="'+(d===state.day?'active':'')+'">'+DAYS[i]+'<br>'+shortDate(d)+'</button>').join('')+'</div><div class="live-day-grid">'+metrics.people.map(p=>'<div class="live-day-item">'+person(p.name)+planningDay(p.days[di])+(desktopColors&&!p.days[di].hours?'':'<div class="sub">'+hours(p.days[di].hours)+' travaillées</div>')+'</div>').join('')+'</div>';
   }
   return '<section class="card live-week-card'+(desktopColors?' n2-desktop-planning-palette':'')+'"><div class="card-head"><div><h2 class="card-title">Planning de l’équipe</h2><p class="sub">'+(state.weekData?escapeHtml(state.weekData.sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div><button type="button" class="text-link" data-action="refresh">Actualiser ↻</button></div>'+weekNav()+(desktopColors&&state.weekData?renderDesktopPlanningLegend():'')+content+'</section>';
 }
