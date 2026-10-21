@@ -5,8 +5,6 @@ const mobile=()=>window.matchMedia('(max-width:760px)').matches;
 const reduced=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const order=['home','planning','anomalies','team','import','history','settings'];
 let previous='',direction=1,lastScreen=null,lastNav=null,screenObserver=null,navObserver=null;
-const positions=new Map();
-let pendingRestore=null;
 function active(nav){return nav?.querySelector('button.active[data-page]');}
 function indicator(){
  const nav=document.querySelector('.live-navigator');
@@ -34,8 +32,7 @@ function onScreen(){
      const btn=active(nav);
      btn?.classList.remove('flow-pop');
      if(btn&&!reduced()){void btn.offsetWidth;btn.classList.add('flow-pop');}
-     if(pendingRestore===page){screen.scrollTop=positions.get(page)||0;pendingRestore=null;}
-     else screen.scrollTop=0;
+     screen.scrollTop=0;
    }
  }
  indicator();
@@ -45,7 +42,6 @@ document.addEventListener('click',e=>{
  const target=e.target.closest('[data-page]');if(!target)return;
  const screen=document.querySelector('#screen'),nav=document.querySelector('.live-navigator');
  const next=target.dataset.page,old=active(nav)?.dataset.page;
- if(old&&next!==old&&screen){positions.set(old,screen.scrollTop);pendingRestore=next;}
  if(nav?.contains(target)&&next!==old&&navigator.vibrate&&!reduced())navigator.vibrate(8);
 },true);
 function attach(){
