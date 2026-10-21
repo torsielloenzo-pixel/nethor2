@@ -1,0 +1,21 @@
+/* NETHOR FLOW — mobile/PWA only. Desktop intentionally untouched. */
+@media (max-width:760px){
+  .live-navigator{isolation:isolate;overflow:hidden;contain:layout style;box-shadow:0 -8px 28px rgba(23,49,91,.045);border-top:1px solid #e6ecf6;background:rgba(255,255,255,.97)}
+  .live-navigator::before{content:"";position:absolute;z-index:-1;top:8px;bottom:calc(8px + env(safe-area-inset-bottom));left:var(--flow-left,8px);width:var(--flow-width,calc((100% - 16px)/3));border-radius:18px;background:linear-gradient(150deg,#edf3ff,#e3edff);box-shadow:inset 0 0 0 1px rgba(74,124,216,.07);transition:left 360ms cubic-bezier(.22,1,.36,1),width 360ms cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .live-navigator button{position:relative;z-index:1;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:color 220ms ease,transform 200ms cubic-bezier(.22,1,.36,1)}
+  .live-navigator button:active{transform:scale(.94)}
+  .live-navigator button.active{color:#235bc7}
+  .live-navigator button.active .nav-icon-wrap{background:transparent!important;color:#235bc7}
+  .live-navigator button .nav-icon-wrap{transition:transform 340ms cubic-bezier(.2,1.6,.4,1),color 220ms ease!important}
+  .live-navigator button.flow-pop .nav-icon-wrap{animation:flow-icon-pop 340ms cubic-bezier(.2,1.6,.4,1)}
+  .live-navigator .nav-label{transition:color 220ms ease,opacity 220ms ease}
+  #screen.flow-enter-forward{animation:flow-page-forward 300ms cubic-bezier(.22,1,.36,1) both}
+  #screen.flow-enter-backward{animation:flow-page-backward 300ms cubic-bezier(.22,1,.36,1) both}
+  @keyframes flow-page-forward{from{opacity:.65;transform:translate3d(18px,0,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+  @keyframes flow-page-backward{from{opacity:.65;transform:translate3d(-18px,0,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+  @keyframes flow-icon-pop{0%{transform:scale(.88)}55%{transform:scale(1.14)}100%{transform:scale(1)}}
+}
+@media (max-width:760px) and (prefers-reduced-motion:reduce){
+  .live-navigator::before,.live-navigator button,.live-navigator button .nav-icon-wrap,.live-navigator .nav-label{transition:none!important}
+  #screen.flow-enter-forward,#screen.flow-enter-backward,.live-navigator button.flow-pop .nav-icon-wrap{animation:none!important}
+}
