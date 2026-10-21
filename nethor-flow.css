@@ -167,3 +167,17 @@
 @media(max-width:760px) and (prefers-reduced-transparency:reduce){
   .live-navigator{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 }
+
+/* V6: dock closer to the physical bottom in installed iOS/Android PWA.
+   Respect the device safe area, including landscape and home indicator. */
+@media(max-width:760px) and (display-mode:standalone){
+  .live-navigator{
+    bottom:calc(2px + env(safe-area-inset-bottom,0px))!important;
+    left:max(8px,env(safe-area-inset-left,0px))!important;
+    right:max(8px,env(safe-area-inset-right,0px))!important;
+  }
+  #app{--flow-dock-clearance:calc(96px + env(safe-area-inset-bottom,0px));}
+}
+@media(max-width:760px) and (display-mode:fullscreen){
+  .live-navigator{bottom:calc(2px + env(safe-area-inset-bottom,0px))!important}
+}
