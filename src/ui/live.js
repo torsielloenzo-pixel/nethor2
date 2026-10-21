@@ -28,7 +28,7 @@ let pendingInstall=null;
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();pendingInstall=event;});
 window.addEventListener('appinstalled',()=>{pendingInstall=null;ROOT.querySelector('#pwaHomeCard')?.remove();});
 function mobileInstallInstructions(){
-  if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)return 'Nethor est déjà ouvert en mode application.';
+  if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)return 'NETHOR est déjà ouvert en mode application.';
   if(/iPhone|iPad|iPod/i.test(navigator.userAgent))return 'Sur iPhone : ouvre https://nethor.fr/ dans Safari, touche Partager, puis « Sur l’écran d’accueil » et « Ajouter ».';
   if(/Android/i.test(navigator.userAgent))return 'Sur Android : dans Chrome, ouvre ⋮ puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».';
   return 'Sur nethor.fr, dans Chrome ou Edge, utilise le menu « Installer l’application » si cette option est disponible.';
@@ -36,11 +36,11 @@ function mobileInstallInstructions(){
 async function installPwa(){
   const note=ROOT.querySelector('#installInstructions');
   if(location.origin!=='https://nethor.fr'){
-    if(note){note.hidden=false;note.textContent='Pour installer la seule application Nethor, ouvre d’abord https://nethor.fr/ puis utilise ce bouton depuis l’accueil.';}
+    if(note){note.hidden=false;note.textContent='Pour installer la seule application NETHOR, ouvre d’abord https://nethor.fr/ puis utilise ce bouton depuis l’accueil.';}
     return;
   }
   if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true){
-    if(note){note.hidden=false;note.textContent='Nethor est déjà installé sur cet appareil.';}
+    if(note){note.hidden=false;note.textContent='NETHOR est déjà installé sur cet appareil.';}
     return;
   }
   if(pendingInstall){
@@ -111,7 +111,7 @@ const settingsDate=value=>{
 };
 const settingsDiagnostics=()=>{
  const lines=[
-  'Nethor 2 — informations de diagnostic',
+  'NETHOR 2 — informations de diagnostic',
   'Mode : '+(isInstalledPwa()?'PWA':'Navigateur'),
   'Format : '+(smallScreen()?'Mobile':'Ordinateur'),
   'Réseau (navigateur) : '+(navigator.onLine?'En ligne':'Hors ligne'),
@@ -144,12 +144,12 @@ function renderLogin(message=''){
   document.getElementById('firstLoginRecoveryPrompt')?.remove();
   recoveryPrompt.step='closed';
   ROOT.classList.remove('menu-open','staff-desktop-layout','personal-home-active','mobile-planning-active','mobile-sync-active','mobile-content-scroll');
-  document.title='Nethor · Connexion';
-  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand"><img class="nethor-login-logo" src="./assets/icon.svg" width="50" height="50" alt=""><span>NETHOR²<small>PLANNING · LE THOR</small></span></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant Nethor habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><button type="button" class="n2sec-forgot" data-action="forgot-password">Mot de passe oublié ?</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
+  document.title='NETHOR · Connexion';
+  ROOT.innerHTML='<div class="login-page"><section class="login-brandpanel"><div class="login-brand"><img class="nethor-login-logo" src="./assets/icon.svg" width="50" height="50" alt=""><span>NETHOR²<small>PLANNING · LE THOR</small></span></div><div><h1>Le planning, plus clair. L’équipe, mieux organisée.</h1><p>Votre espace de travail sécurisé pour consulter les horaires, contrôler les anomalies et gérer les importations autorisées.</p></div><footer>Application interne — accès réservé aux comptes habilités</footer></section><div class="login-main"><form class="login-card" id="loginForm" autocomplete="on"><div class="eyebrow">ESPACE PROFESSIONNEL</div><h2>Connexion</h2><p>Connectez-vous avec votre adresse e-mail ou votre identifiant NETHOR habituel.</p><label for="loginEmail">Identifiant ou adresse e-mail</label><input type="text" id="loginEmail" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" placeholder="Identifiant ou adresse e-mail"><label for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" required autocomplete="current-password"><div id="authMessage" class="form-error" role="alert" '+(message?'':'hidden')+'>'+escapeHtml(message)+'</div><button type="submit" class="btn primary" id="loginSubmit">Se connecter</button><button type="button" class="n2sec-forgot" data-action="forgot-password">Mot de passe oublié ?</button><div class="form-note">Aucun nouveau compte n’est créé ici. La désactivation et les autorisations sont vérifiées côté serveur.</div></form></div></div>';
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>Nethor</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à Nethor<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">Nethor</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>Nethor 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -349,9 +349,9 @@ function coverageCard(metrics){
 }
 function homePwaInstall(){
   if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)return '';
-  return '<section class="pwa-home-install" id="pwaHomeCard" aria-label="Installer Nethor sur le téléphone">'+
+  return '<section class="pwa-home-install" id="pwaHomeCard" aria-label="Installer NETHOR sur le téléphone">'+
     '<img class="pwa-home-logo" src="./assets/nethor-logo-192-v8.png" alt="" width="60" height="60">'+
-    '<div class="pwa-home-copy"><strong>Nethor</strong><span>Ajoute le planning à ton écran d’accueil.</span><small>nethor.fr · Une seule application</small></div>'+
+    '<div class="pwa-home-copy"><strong>NETHOR</strong><span>Ajoute le planning à ton écran d’accueil.</span><small>nethor.fr · Une seule application</small></div>'+
     '<button type="button" class="btn primary pwa-home-action" data-action="install-pwa">Installer</button>'+
     '<p class="pwa-home-help" id="installInstructions" hidden aria-live="polite"></p>'+
   '</section>';
@@ -806,7 +806,7 @@ function render(){
   ROOT.classList.toggle('mobile-content-scroll',smallScreen()&&
     !(state.page==='home'&&isMobileHome())&&
     !(state.page==='planning'&&isMobileHome())&&state.page!=='anomalies');
-  document.title='Nethor · '+(smallScreen()?MOBILE_PAGE_TITLES[state.page]:TITLES[state.page]);
+  document.title='NETHOR · '+(smallScreen()?MOBILE_PAGE_TITLES[state.page]:TITLES[state.page]);
   ROOT.querySelector('#breadPage').textContent=TITLES[state.page];
   ROOT.querySelector('#mobileCurrentPage').textContent=MOBILE_PAGE_TITLES[state.page]||TITLES[state.page];
   const anomaliesNav=ROOT.querySelector('[data-nav="anomalies"]');
@@ -1104,7 +1104,7 @@ ROOT.addEventListener('click',async event=>{
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
 
-  // La vue annuelle Nethor 1 est volontairement réservée au téléphone et à sa PWA.
+  // La vue annuelle NETHOR 1 est volontairement réservée au téléphone et à sa PWA.
   const yearDate=event.target.closest('[data-year-day]');
   if(yearDate&&state.page==='planning'&&state.view==='year'&&annualAllowed()){
     const day=yearDate.dataset.yearDay;

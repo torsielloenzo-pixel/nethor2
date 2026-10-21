@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const manifest=JSON.parse(read('manifest.webmanifest'));
 
-test('identité Nethor unique pour PWA, iPhone et bureau',()=>{
- assert.equal(manifest.name,'Nethor');assert.equal(manifest.short_name,'Nethor');
+test('identité NETHOR unique pour PWA, iPhone et bureau',()=>{
+ assert.equal(manifest.name,'NETHOR');assert.equal(manifest.short_name,'NETHOR');
  for(const field of ['id','scope','start_url'])assert.equal(manifest[field],'https://nethor.fr/');
  assert.equal(manifest.display,'standalone');
 });
@@ -19,7 +19,7 @@ test('un seul logo dans favicon, Safari, PWA et partage des liens',()=>{
  assert.match(html,/apple-touch-icon[^>]+nethor-logo-180-v8\.png/);
  assert.match(html,/favicon\.ico/);
  assert.match(html,/rel="icon" type="image\/svg\+xml" href="\.\/assets\/icon\.svg"/);
- assert.match(html,/apple-mobile-web-app-title" content="Nethor"/);
+ assert.match(html,/apple-mobile-web-app-title" content="NETHOR"/);
  assert.match(html,/og:image" content="https:\/\/nethor\.fr\/assets\/nethor-logo-512-v8\.png"/);
  assert.match(read('scripts/generate-pwa-icons.py'),/SOURCE = ROOT \/ "assets" \/ "icon\.svg"/);
 });
@@ -51,4 +51,9 @@ test('service worker ne cache que la coquille statique et les nouveaux logos',()
  const workflow=read('.github/workflows/preview-pages.yml');
  assert.match(workflow,/generate-pwa-icons\.py/);
  assert.match(workflow,/test -s _site\/favicon\.ico/);
+});
+
+test('métadonnées de la PWA : marque intégralement en majuscules',()=>{
+ assert.equal(manifest.description.startsWith('NETHOR'),true);
+ assert.match(read('index.html'),/<title>NETHOR · Connexion<\/title>/);
 });

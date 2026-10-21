@@ -89,7 +89,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
      const seen=formatSyncTimestamp(status?.lastSeenAt);
      return '<div class="n2sync-details">'+
       '<div class="n2sync-detail"><span>Dernière synchronisation</span><strong>'+escapeHtml(check.date)+'</strong><small>À '+escapeHtml(check.time)+'</small></div>'+
-      '<div class="n2sync-detail"><span>Poste d’installation</span><strong>'+escapeHtml(status?.deviceLabel||'Non renseigné')+'</strong><small>Enregistré dans Nethor</small></div>'+
+      '<div class="n2sync-detail"><span>Poste d’installation</span><strong>'+escapeHtml(status?.deviceLabel||'Non renseigné')+'</strong><small>Enregistré dans NETHOR</small></div>'+
       '<div class="n2sync-detail"><span>Dernier transfert de fichier</span><strong>'+escapeHtml(transfer.date)+'</strong><small>À '+escapeHtml(transfer.time)+'</small></div>'+
       '<div class="n2sync-detail"><span>Dernier contact</span><strong>'+escapeHtml(seen.date)+'</strong><small>À '+escapeHtml(seen.time)+'</small></div>'+
       '</div>';
@@ -103,7 +103,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
   '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>'+
   (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger la correction 2.1.8</button>':'');
  const guide=showInstall?
-  '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte Nethor autorisé.</p>':
+  '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte NETHOR autorisé.</p>':
   bound?'<p class="n2sync-footnote">Correctif Windows 2.1.8 disponible : réutilise la liaison existante et reconnaît les fichiers déjà envoyés. Les plannings sont publiés côté Supabase. L’état du poste dépend de son dernier contact (moins de 30 minutes).</p>':'';
  return '<section class="card n2sync-card" id="nethorSyncHomeCard" aria-labelledby="n2sync-title">'+
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+

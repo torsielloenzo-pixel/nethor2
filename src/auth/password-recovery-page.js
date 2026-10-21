@@ -16,7 +16,7 @@ let valid=false;
 function validRequestId(id){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);}
 async function init(){
  if(type!=='recovery'||tokenHash.length<20||tokenHash.length>2048){
-  notify('Lien de réinitialisation absent ou invalide. Demande un nouveau lien depuis Nethor.','error');return;
+  notify('Lien de réinitialisation absent ou invalide. Demande un nouveau lien depuis NETHOR.','error');return;
  }
  if(!window.supabase?.createClient){
   notify('Service d’authentification indisponible. Vérifie ta connexion.','error');return;
@@ -29,7 +29,7 @@ async function init(){
   if(error)throw error;
   valid=true;form.hidden=false;
   notify('Lien confirmé. Tu peux maintenant choisir un nouveau mot de passe.');
- }catch(_){notify('Ce lien est expiré ou déjà utilisé. Demande un nouveau lien depuis Nethor.','error');}
+ }catch(_){notify('Ce lien est expiré ou déjà utilisé. Demande un nouveau lien depuis NETHOR.','error');}
 }
 form.addEventListener('submit',async event=>{
  event.preventDefault();
@@ -43,7 +43,7 @@ form.addEventListener('submit',async event=>{
   const {error}=await client.auth.updateUser({password});
   if(error)throw error;
   input.value='';again.value='';form.hidden=true;valid=false;
-  notify('Mot de passe modifié. Tu peux désormais te reconnecter à Nethor.','success');
+  notify('Mot de passe modifié. Tu peux désormais te reconnecter à NETHOR.','success');
   // Le suivi de demande est distinct du succès du changement Supabase Auth.
   if(validRequestId(requestId)){
    try{

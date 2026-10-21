@@ -10,8 +10,8 @@ export function shouldOfferRecoveryPrompt({role,mobile,loaded,configured,error,d
 
 export function renderRecoveryPrompt({step='offer',busy=false,error='',mailStatus=''}={}){
   if(!['offer','form','success'].includes(step))return '';
-  const info='<div class="n2rp-info"><span aria-hidden="true">ⓘ</span><span>Cette adresse ne remplacera pas ton identifiant de connexion Nethor.</span></div>';
-  const title=step==='offer'?'Sécurise ton accès à Nethor':step==='form'?'Adresse de récupération':'Adresse associée';
+  const info='<div class="n2rp-info"><span aria-hidden="true">ⓘ</span><span>Cette adresse ne remplacera pas ton identifiant de connexion NETHOR.</span></div>';
+  const title=step==='offer'?'Sécurise ton accès à NETHOR':step==='form'?'Adresse de récupération':'Adresse associée';
   let body='';
   if(step==='offer'){
     body='<div class="n2rp-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></div>'+

@@ -1,8 +1,8 @@
 {
   "id": "https://nethor.fr/",
-  "name": "Nethor",
-  "short_name": "Nethor",
-  "description": "Nethor — espace de planning du personnel",
+  "name": "NETHOR",
+  "short_name": "NETHOR",
+  "description": "NETHOR — espace de planning du personnel",
   "start_url": "https://nethor.fr/",
   "scope": "https://nethor.fr/",
   "display": "standalone",

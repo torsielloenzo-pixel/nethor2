@@ -180,7 +180,7 @@ function settings(){
 }
 function render(){
   refresh();
-  document.title='Nethor 2 · '+PAGE_TITLES[state.page];
+  document.title='NETHOR 2 · '+PAGE_TITLES[state.page];
   document.getElementById('breadcrumb').textContent=PAGE_TITLES[state.page];
   document.querySelectorAll('[data-page]').forEach(el=>{
     const on=el.dataset.page===state.page;

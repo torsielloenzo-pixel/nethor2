@@ -1,4 +1,4 @@
-// Paramètres Nethor 2 : rendu HTML pur. Aucune donnée sensible stockée ici.
+// Paramètres NETHOR 2 : rendu HTML pur. Aucune donnée sensible stockée ici.
 const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[ch]));
 const icon=(name)=>{
  const paths={
@@ -37,7 +37,7 @@ export function renderSecuritySettings(account={},section='all'){
  const notice=account.message?'<div class="n2sec-notice" role="status" data-kind="'+esc(account.kind||'info')+'">'+esc(account.message)+'</div>':'';
  const email='<section class="card n2sec-card" aria-labelledby="n2sec-email-title">'+
      '<div class="card-head"><div><h2 class="card-title" id="n2sec-email-title">Adresse e-mail de récupération</h2>'+
-       '<p class="sub">Associe une adresse personnelle sans modifier ton identifiant Nethor.</p></div></div>'+
+       '<p class="sub">Associe une adresse personnelle sans modifier ton identifiant NETHOR.</p></div></div>'+
      '<div class="card-body"><div class="n2sec-state"><span class="n2sec-dot" data-linked="'+String(configured)+'"></span>'+esc(status)+'</div>'+
        '<p class="n2sec-help">Cette adresse permet de recevoir les liens de récupération. Elle ne remplace pas ton identifiant de connexion.</p>'+
        '<form id="recoveryEmailForm" class="n2sec-form" autocomplete="on">'+
@@ -95,7 +95,7 @@ export function renderSettingsPage(context={}){
     entry('application','Informations techniques','État de la connexion et de la PWA','monitor')+
     entry('diagnostic','Diagnostic et assistance','Copier un rapport sans données personnelles','lifesaver')+
     (syncMarkup?entry('sync','NethorSync','Administration du poste maître','sync'):''))+
-   '</div><div class="n2settings-bottom"><span>Les informations d’accès sont gérées par Nethor.</span>'+
+   '</div><div class="n2settings-bottom"><span>Les informations d’accès sont gérées par NETHOR.</span>'+
    '<button type="button" class="n2settings-signout" data-action="logout">Se déconnecter</button></div></div>';
  }
  const content=(()=>{
@@ -118,9 +118,9 @@ export function renderSettingsPage(context={}){
        '<span><strong>'+esc(title)+'</strong><small>'+esc(desc)+'</small></span><span class="n2settings-radio" aria-hidden="true"></span></button>').join('')+
     '</div><p class="n2settings-note">Cette préférence est enregistrée uniquement dans le navigateur ou la PWA utilisée.</p></section>';
   if(view==='notifications')return '<section class="n2settings-detail-card"><h3>Notifications</h3>'+
-    '<p class="n2settings-note">Aucun réglage de notifications individuelles n’est disponible dans Nethor 2 pour le moment. Aucune notification push n’est activée depuis cet écran.</p></section>';
-  if(view==='application'||view==='diagnostic')return '<section class="n2settings-detail-card"><h3>'+(view==='diagnostic'?'Informations de diagnostic':'État de Nethor')+'</h3>'+
-    fact('Application','Nethor 2')+fact('Mode',isPwa?'PWA installée':'Navigateur')+
+    '<p class="n2settings-note">Aucun réglage de notifications individuelles n’est disponible dans NETHOR 2 pour le moment. Aucune notification push n’est activée depuis cet écran.</p></section>';
+  if(view==='application'||view==='diagnostic')return '<section class="n2settings-detail-card"><h3>'+(view==='diagnostic'?'Informations de diagnostic':'État de NETHOR')+'</h3>'+
+    fact('Application','NETHOR 2')+fact('Mode',isPwa?'PWA installée':'Navigateur')+
     fact('Réseau (signalé par le navigateur)',isOnline?'En ligne':'Hors ligne')+
     fact('Service Worker',workerActive?'Application prise en charge':'Non actif sur cette page')+
     fact('Dernière vérification des accès',lastCheck)+
