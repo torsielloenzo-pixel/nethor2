@@ -20,13 +20,28 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  // BIFF8 conserve les couleurs des archives .xls, que SheetJS ne restitue pas toujours.
  // Sans une couleur exploitable, on conserve le refus explicite plutôt que de deviner.
  const legacy=/\.xls$/i.test(fileName)?legacyStyleReader(buffer):null;
+ const ambiguous:Array<Record<string,unknown>>=[];
  const verifiedColor=({sheetName,rowIndex,colIndex,cell,workbook}:{
-   sheetName:string;rowIndex:number;colIndex:number;cell:unknown;workbook:unknown
+   sheetName:string;rowIndex:number;colIndex:number;cell:any;workbook:unknown
  })=>{
    const biff=legacy?.color(sheetName,rowIndex,colIndex);
-   return biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
+   const resolved=biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
+   if(ambiguous.length<5&&(resolved===null||resolved===undefined||resolved==='w')
+     && cell?.v!==undefined&&cell.v!==null&&cell.v!==''&&cell.v!==0&&cell.v!==false){
+     const value=cell.v;
+     ambiguous.push({sheet:sheetName,row:rowIndex+1,column:colIndex+1,
+       valueKind:value===1?'one':typeof value,
+       sheetStyleKind:typeof cell.s,styleId:typeof cell.s==='number'?cell.s:null,
+       style:legacy?.inspect(sheetName,rowIndex,colIndex)||null});
+   }
+   return resolved;
  };
- const model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);
+ let model;
+ try{model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);}
+ catch(e){
+   if(legacy&&ambiguous.length)console.info('NethorSync BIFF ambiguous',JSON.stringify(ambiguous));
+   throw e;
+ }
  if(model.employees.length>200)throw new Error("Nombre de salariés supérieur à 200");
  // Si aucun créneau ne peut être déchiffré, le lecteur n'est pas suffisamment sûr.
  if((model.colorCounts.g+model.colorCounts.b)===0)
