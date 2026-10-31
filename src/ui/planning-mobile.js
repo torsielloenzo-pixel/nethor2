@@ -97,23 +97,25 @@ function freshnessLabel(value){
 function toolbar(weekStart,view,allowYear=false,meta={}){
  const online=meta.isOnline!==false;
  const disabled=meta.loading||!online?' disabled':'';
- return '<div class="n2pm-toolbar">'+
+ const start=new Date(weekStart+'T12:00:00Z');
+ const month=start.toLocaleDateString('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'});
+ const today=parisClock(new Date()).key;
+ const isCurrent=today>=weekStart&&today<=dateAt(weekStart,6);
+ return '<div class="n2pm-toolbar n2pm-toolbar-compact">'+
   '<div class="n2pm-segmented" aria-label="Mode du planning">'+
   '<button type="button" data-action="week-view" class="'+(view==='week'?'selected':'')+'" aria-pressed="'+(view==='week')+'">Semaine</button>'+
   '<button type="button" data-action="day-view" class="'+(view==='day'?'selected':'')+'" aria-pressed="'+(view==='day')+'">Jour</button>'+
-  (allowYear?'<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false" aria-label="Ouvrir la vue annuelle">Année</button>':'')+'</div>'+
+  (allowYear?'<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false">Année</button>':'')+'</div>'+
   '<div class="n2pm-pager">'+
   '<button type="button" data-action="prev" aria-label="Semaine précédente"'+disabled+'>‹</button>'+
-  '<span><strong>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</strong><small>Semaine du '+safe(dateLabel(weekStart))+'</small></span>'+
+  '<span><strong>'+safe(month.charAt(0).toUpperCase()+month.slice(1))+'</strong><small>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</small></span>'+
+  '<button type="button" class="n2pm-quick-today'+(isCurrent?' is-current':'')+'" data-action="today" aria-label="Revenir à aujourd’hui" title="Aujourd’hui"'+disabled+'>▣</button>'+
   '<button type="button" data-action="next" aria-label="Semaine suivante"'+disabled+'>›</button></div>'+
-  '<div class="n2pm-context" role="status">'+
-    '<button type="button" class="n2pm-today-btn" data-action="today"'+disabled+'>Aujourd’hui</button>'+
-    '<span class="n2pm-freshness">'+safe(freshnessLabel(meta.updatedAt))+'</span>'+
-    '<span class="n2pm-network" data-online="'+online+'">'+(online?'En ligne':'Hors ligne')+'</span>'+
-    (meta.updateReady?'<button type="button" class="n2pm-update-btn" data-action="pwa-update">Mettre à jour NETHOR</button>':'')+
-  '</div></div>';
+  ((!online||meta.updateReady)?'<div class="n2pm-context" role="status">'+
+   (!online?'<span class="n2pm-network" data-online="false">Hors ligne</span>':'')+
+   (meta.updateReady?'<button type="button" class="n2pm-update-btn" data-action="pwa-update">Mettre à jour NETHOR</button>':'')+
+  '</div>':'')+'</div>';
 }
-
 function summary(cells){
  return '<div class="n2pm-summary">'+cells.map(c=>'<div><span>'+safe(c[0])+'</span><strong>'+safe(c[1])+'</strong></div>').join('')+'</div>';
 }
