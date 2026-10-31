@@ -78,5 +78,5 @@ test('les pages mobiles gardent le défilement et les champs sans zoom iOS',()=>
  const workflow=read('.github/workflows/preview-pages.yml');
  const sw=read('sw.js'),server=read('scripts/dev-server.js');
  for(const item of [workflow,sw,server])assert.match(item,/mobile-zoom\.js/);
- assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\\d+'/);
+ assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });
