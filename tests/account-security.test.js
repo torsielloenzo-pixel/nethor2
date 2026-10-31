@@ -83,7 +83,7 @@ test('Préférence locale et rapport diagnostique sans données personnelles',()
  assert.match(live,/planningPreferenceKey/);
  assert.match(live,/settings-copy-diagnostic/);
  assert.match(live,/Copier le diagnostic|Diagnostic copié/);
- assert.match(file('sw.js'),/nethor-mobile-drawer-recovery-sync-v\d+/);
+ assert.match(file('sw.js'),/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });
 
 test('lien Resend : jeton vérifié par Supabase et supprimé de l’URL',()=>{

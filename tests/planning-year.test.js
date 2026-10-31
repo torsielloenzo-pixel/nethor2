@@ -84,5 +84,5 @@ test('intégration: état annuel, chargement, clic jour, responsive, PWA',()=>{
  assert.match(css,/position:sticky;top:-14px/);
  assert.match(css,/@media\(min-width:540px\) and \(max-width:760px\)/);
  for(const text of [sw,build,dev])assert.match(text,/planning-year\.js/);
- assert.match(sw,/nethor-mobile-drawer-recovery-sync-v[0-9]+/);
+ assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });
