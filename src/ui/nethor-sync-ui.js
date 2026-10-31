@@ -1,3 +1,4 @@
+import {readPlanningCloudAudit} from '../data/nethor-sync-cloud-audit.js';
 import {canManageSync,readSyncStatus,readSyncDiagnostics,readSyncUpdateHistory,requestManualSync,resetSyncDevice,syncHealth} from '../data/nethor-sync-control.js';
 const INSTALLER='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -67,6 +68,7 @@ export function createSyncController(client,root,profile){
  let status=null,error='',loading=false,notice='',watchTimer=null,requestStartedAt=0;
  let diagnostics=[],diagnosticsError='';
  let updates=[],updatesError='';
+ let cloudAudit=null,cloudAuditError='',cloudAuditLoading=false;
  const isInstalled=()=>status?.installed===true;
  function markup(){
   const state=syncHealth(status);
@@ -94,6 +96,7 @@ export function createSyncController(client,root,profile){
    '<p class="live-muted">Les versions Excel réellement modifiées et récentes sont publiées après vérification automatique ; les fichiers inconnus ou refusés ne remplacent jamais le planning.</p>'+
    (isInstalled()?'<button type="button" class="btn" data-action="sync-download">Télécharger la version corrigée 2.1.8</button>':'')+
    (admin&&isInstalled()?'<button type="button" class="btn" data-action="sync-reset-device">Révoquer / réinitialiser ce poste</button>':'')+
+   (admin?'<section class="sync-diagnostic-panel"><h3>Contrôle Supabase indépendant</h3><p class="live-muted">Audit à la demande des semaines enregistrées et de leur historique, sans contacter le PC. Une semaine absente du serveur nécessite son fichier Excel pour être importée : ce contrôle ne fabrique pas les données manquantes.</p><button type="button" class="btn" data-action="sync-cloud-audit"'+(cloudAuditLoading?' disabled':'')+'>'+(cloudAuditLoading?'Contrôle en cours…':'Lancer un contrôle Supabase seul')+'</button>'+(cloudAuditError?'<p class="sync-error">'+esc(cloudAuditError)+'</p>':'')+(cloudAudit?'<p><strong>'+esc(cloudAudit.total)+' semaines enregistrées</strong> · '+esc(cloudAudit.historyCount)+' entrées historiques · contrôle '+esc(time(cloudAudit.checkedAt))+'</p><p class="live-muted">Fenêtre contrôlée pour les absences : '+esc(cloudAudit.windowStart)+' au '+esc(cloudAudit.windowEnd)+'. Une absence peut être normale si le fichier n’a jamais été créé.</p>'+(cloudAudit.missing.length?'<details><summary>'+cloudAudit.missing.length+' semaines sans planning publié</summary><ul>'+cloudAudit.missing.map(d=>'<li>'+esc(d)+'</li>').join('')+'</ul></details>':'<p>Aucune semaine manquante dans cette fenêtre.</p>')+(cloudAudit.issues.length?'<details><summary>'+cloudAudit.issues.length+' incohérences à vérifier</summary><ul>'+cloudAudit.issues.slice(0,100).map(x=>'<li>'+esc(x.week)+' : '+esc(x.message)+'</li>').join('')+'</ul></details>':''):'')+'</section>':'')+
    '<section class="sync-diagnostic-panel"><h3>Mises à jour automatiques · Supabase</h3>'+
    '<p class="live-muted">Depuis NethorSync 2.1.7, Windows recherche une nouvelle version à l’ouverture de session Windows puis toutes les 4 h. Les versions sont autorisées par Supabase et vérifiées par empreinte SHA-256 avant installation. Aucun planning ni compte n’est réinitialisé.</p>'+
    (updatesError?'<p class="live-muted">Historique des mises à jour temporairement indisponible.</p>':
@@ -141,6 +144,14 @@ export function createSyncController(client,root,profile){
     window.open(INSTALLER,'_blank','noopener,noreferrer');
     notice='Version 2.1.8 : ouvrez NethorSync-Setup.exe sur Windows, en conservant le dossier suivi et la liaison du poste.';
     paint();return true;
+  }
+  if(name==='sync-cloud-audit'){
+    if(!admin||cloudAuditLoading)return true;
+    cloudAuditLoading=true;cloudAuditError='';paint();
+    try{cloudAudit=await readPlanningCloudAudit(client);notice='Contrôle Supabase terminé, sans demande Windows.';}
+    catch(e){cloudAuditError=String(e.message||e);}
+    finally{cloudAuditLoading=false;paint();}
+    return true;
   }
   if(name==='sync-state-refresh'){await refresh();return true;}
   if(name==='sync-request-manual'){
