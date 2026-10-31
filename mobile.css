@@ -1110,15 +1110,11 @@ html.nethor-zoom-locked select {
  #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-context{margin:0;padding:3px 0;min-height:0}
  #app.mobile-planning-active .n2pm-days{gap:3px}
  #app.mobile-planning-active .n2pm-day{min-height:44px;padding:4px 0;gap:2px;border-radius:9px}
- #app.mobile-planning-active .n2pm-day.selected{background:#315ab6;border-color:#315ab6;box-shadow:none}
+ #app.mobile-planning-active .n2pm-day.selected{background:#1556c1;border-color:#1556c1;box-shadow:none}
  #app.mobile-planning-active .n2pm-week-list{gap:7px}
  #app.mobile-planning-active .n2pm-week-card{padding:10px 8px;border-radius:13px;box-shadow:0 2px 9px #152d5608}
  #app.mobile-planning-active .n2pm-week-person{margin-bottom:7px}
  #app.mobile-planning-active .n2pm-slot{min-height:53px;border-radius:8px}
- #app.mobile-planning-active .n2pm-slot[data-color="g"],#app.mobile-planning-active .n2pm-shift[data-color="g"]{background:#dcebe5;color:#286b55}
- #app.mobile-planning-active .n2pm-slot[data-color="b"],#app.mobile-planning-active .n2pm-shift[data-color="b"]{background:#dfe8f8;color:#315c9c}
- #app.mobile-planning-active .n2pm-slot[data-color="red"],#app.mobile-planning-active .n2pm-slot[data-color="orange"],#app.mobile-planning-active .n2pm-day-off[data-state="red"],#app.mobile-planning-active .n2pm-day-off[data-state="orange"]{background:#f0eae5;color:#87715f}
- #app.mobile-planning-active .n2pm-slot[data-color="leave"],#app.mobile-planning-active .n2pm-day-off[data-state="leave"]{background:#e9e1f2;color:#715b90}
- #app.mobile-planning-active .n2pm-slot.selected{outline:2px solid #315ab6}
- #app.mobile-planning-active .n2pm-week-card.is-me,#app.mobile-planning-active .n2pm-day-card.is-me{border-color:#91b3eb}
+ #app.mobile-planning-active .n2pm-slot.selected{outline:2px solid #1556c1}
+ #app.mobile-planning-active .n2pm-week-card.is-me,#app.mobile-planning-active .n2pm-day-card.is-me{border-color:#91b8f3}
 }
