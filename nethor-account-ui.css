@@ -115,3 +115,39 @@
  #app .n2accounts-fact{flex-direction:column;gap:4px}
  #app .n2accounts-fact>strong{text-align:left}
 }
+
+
+/* Formulaires hérités : garde-fou de présentation pendant la transition PWA. */
+#app .n2accounts form:not(.n2accounts-form):not(.n2accounts-aliases) {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:15px;
+  align-items:end;
+  margin-top:18px;
+}
+#app .n2accounts form label{
+  display:grid;gap:7px;min-width:0;line-height:1.4;
+  color:#405570;font-size:12px;font-weight:730;
+}
+#app .n2accounts form input,
+#app .n2accounts form select,
+#app .n2accounts form textarea,
+#app .n2accounts > select,
+#app .n2accounts > label select{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+  font-family:inherit;
+  font-size:13px;
+  border:1px solid #dce4ef;
+  border-radius:10px;
+  color:#293e5a;
+  background:#fff;
+  padding:11px 12px;
+}
+#app .n2accounts form :is(input,select){min-height:43px}
+#app .n2accounts form textarea{width:100%;resize:vertical;min-height:105px}
+#app .n2accounts form button[type=submit]{justify-self:start;max-width:100%}
+@media(max-width:690px){
+ #app .n2accounts form:not(.n2accounts-form):not(.n2accounts-aliases){grid-template-columns:1fr}
+}
