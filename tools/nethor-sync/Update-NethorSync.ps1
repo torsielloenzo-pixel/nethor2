@@ -1,6 +1,6 @@
 #requires -Version 5.1
 <#
-NethorSync 2.1.8 - mise a jour pilotée depuis Supabase.
+NethorSync 2.1.9 - mise a jour pilotée depuis Supabase.
 Le controle distant ne peut modifier les fichiers Excel, le manifeste local,
 l'identite du poste, ni les jetons. Binaire epingle par SHA-256.
 #>
@@ -15,7 +15,7 @@ $versionFile=Join-Path $agentDir 'NethorSync-Version.txt'
 $configFile=Join-Path $agentDir 'config.json'
 $script:stage='startup'
 $script:targetVersion=$null
-$script:installedVersion='2.1.8'
+$script:installedVersion='2.1.9'
 $script:latestErrorCode=$null
 $mutex=$null
 $hasLock=$false
