@@ -88,7 +88,7 @@ const APP_VERSION='2.2-mobile-2026.10.31';
 const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
-const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list'};
+const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
 let syncChartPeriod=7;
 let booted=false;
 let swRegistration=null;
@@ -1457,6 +1457,14 @@ ROOT.addEventListener('change',event=>{
  if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);
 });
 ROOT.addEventListener('input',event=>{
+  if(event.target.id==='adminAccountSearch'&&state.profile?.role==='admin'){
+    accountAdmin.query=event.target.value;
+    const pos=event.target.selectionStart;
+    render();
+    const input=ROOT.querySelector('#adminAccountSearch');
+    input?.focus();if(Number.isInteger(pos))input?.setSelectionRange(pos,pos);
+    return;
+  }
   if(event.target.id!=='searchTeam')return;
   state.search=event.target.value;
   const position=event.target.selectionStart||0;
