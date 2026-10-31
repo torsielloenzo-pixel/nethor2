@@ -1129,8 +1129,8 @@ async function saveLink(name){
   if(!window.confirm('Associer '+name+' au compte '+(profile.display_name||'sélectionné')+' ?'))return;
   const gate=await checkSession();
   if(!gate||gate.gate.profile.role!=='admin')throw Error('Session administrateur non validée.');
-  const {data,error}=await client.from('profiles').update({planning_name:name}).eq('id',id).eq('account_enabled',true).select('id,planning_name').maybeSingle();
-  if(error||!data)throw Error(error?.message||'Association non confirmée.');
+  const {data,error}=await client.rpc('nethor2_admin_link_planning',{p_user_id:id,p_planning_name:name});
+  if(error||data?.success!==true)throw Error(error?.message||'Association non confirmée.');
   await loadProfiles();
   state.notice='Association enregistrée pour '+name;state.error='';
   render();
