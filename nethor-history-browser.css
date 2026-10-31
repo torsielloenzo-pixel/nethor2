@@ -1,0 +1,29 @@
+/* Historique des imports — consultation chronologique, desktop/PWA desktop. */
+#app .n2hist-browser{padding:0 20px 22px;min-width:0}
+#app .n2hist-browser-tools{display:grid;grid-template-columns:minmax(230px,2fr) repeat(3,minmax(120px,1fr));gap:12px;align-items:end;margin:0 0 18px}
+#app .n2hist-browser-tools label{min-width:0;display:grid;gap:7px}
+#app .n2hist-browser-tools label>span{font-size:11px;color:#60728c;font-weight:760}
+#app .n2hist-browser-tools :is(input,select){box-sizing:border-box;width:100%;min-height:43px;border:1px solid #dce5f0;border-radius:10px;background:#fff;padding:10px 12px;color:#2e4562;font-family:inherit;font-size:12px;outline-offset:2px}
+#app .n2hist-browser-tools :is(input,select):focus{border-color:#86a4c8;box-shadow:0 0 0 3px rgba(76,116,178,.09)}
+#app .n2hist-results{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid #e8eef5;padding:1px 0 16px;color:#8290a3;font-size:11px}
+#app .n2hist-results strong{color:#324966;font-weight:800}
+#app .n2hist-reset{border:0;background:transparent;cursor:pointer;font-size:11px;color:#41618c;font-weight:750}
+#app .n2hist-months{display:grid;gap:10px;padding:16px 0}
+#app .n2hist-month{background:#fff;border:1px solid #e4ebf4;border-radius:12px;overflow:hidden}
+#app .n2hist-month>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:56px;padding:14px 17px;background:#fafbfd}
+#app .n2hist-month>summary::-webkit-details-marker{display:none}
+#app .n2hist-month>summary:hover{background:#f4f7fb}
+#app .n2hist-month>summary:focus-visible{outline:2px solid #5b84be;outline-offset:-2px}
+#app .n2hist-month-icon{display:grid;place-items:center;flex:none;width:33px;height:33px;border-radius:9px;border:1px solid #e6edf5;background:#fff;color:#6b829f;font-size:15px}
+#app .n2hist-month>summary strong{font-size:13px;font-weight:790;color:#304762;text-transform:capitalize}
+#app .n2hist-month>summary small{font-size:11px;color:#8996a9}
+#app .n2hist-disclosure{margin-left:auto;color:#8c99ad;font-size:19px;transition:transform .15s}
+#app .n2hist-month[open] .n2hist-disclosure{transform:rotate(180deg)}
+#app .n2hist-month-list{display:grid;gap:0;padding:10px 14px 14px;border-top:1px solid #e9eef5;background:#fff}
+#app .n2hist-month-list .n2hist-entry{margin:8px 0;border:1px solid #edf1f5;border-radius:10px;box-shadow:none}
+#app .n2hist-no-results{padding:40px 20px;text-align:center;color:#75869b}
+#app .n2hist-no-results strong{font-size:14px;color:#304762}
+#app .n2hist-no-results p{font-size:12px}
+#app .n2hist-info{font-size:11px;line-height:1.55;color:#8b99ac;margin:6px 0 0}
+@media(max-width:1150px){#app .n2hist-browser-tools{grid-template-columns:repeat(3,minmax(0,1fr))}#app .n2hist-browser-tools .n2hist-search{grid-column:1/-1}}
+@media(max-width:760px){#app .n2hist-browser{padding:0 14px 18px}#app .n2hist-browser-tools{grid-template-columns:1fr 1fr}#app .n2hist-browser-tools .n2hist-search{grid-column:1/-1}#app .n2hist-month-list{padding:8px}}
