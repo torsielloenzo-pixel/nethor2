@@ -1094,3 +1094,31 @@ html.nethor-zoom-locked select {
  #app.mobile-planning-active .n2pm-segmented button{flex:1;min-width:0}
  #app.mobile-planning-active .n2pm-pager{width:100%}
 }
+
+/* NETHOR Mobile/PWA — navigation compacte et palette professionnelle. */
+@media(max-width:760px){
+ #app.mobile-planning-active .n2pm-toolbar.n2pm-toolbar-compact{display:flex;flex-direction:column;gap:8px;padding:9px 10px;background:#fff;border:1px solid #e1e8f2;border-radius:15px;box-shadow:0 3px 12px #152d5608}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-segmented{padding:3px;border-radius:10px;background:#eef2f8}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-segmented button{min-height:35px;padding:7px 8px;font-size:12px}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager{display:grid;grid-template-columns:36px minmax(0,1fr) 36px 36px;gap:5px;align-items:center;width:100%}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager>button{min-height:36px;height:36px;width:36px;padding:0;border-radius:10px;border:1px solid #e2e9f3;background:#f8faff;color:#315ab6;font-size:23px}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager>span{min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager strong{font-size:14px;font-weight:850;color:#15213e;line-height:1.2}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager small{font-size:10px;color:#73849b}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager .n2pm-quick-today{font-size:19px}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager .n2pm-quick-today.is-current{color:#315ab6;background:#e8effc}
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-context{margin:0;padding:3px 0;min-height:0}
+ #app.mobile-planning-active .n2pm-days{gap:3px}
+ #app.mobile-planning-active .n2pm-day{min-height:44px;padding:4px 0;gap:2px;border-radius:9px}
+ #app.mobile-planning-active .n2pm-day.selected{background:#315ab6;border-color:#315ab6;box-shadow:none}
+ #app.mobile-planning-active .n2pm-week-list{gap:7px}
+ #app.mobile-planning-active .n2pm-week-card{padding:10px 8px;border-radius:13px;box-shadow:0 2px 9px #152d5608}
+ #app.mobile-planning-active .n2pm-week-person{margin-bottom:7px}
+ #app.mobile-planning-active .n2pm-slot{min-height:53px;border-radius:8px}
+ #app.mobile-planning-active .n2pm-slot[data-color="g"],#app.mobile-planning-active .n2pm-shift[data-color="g"]{background:#dcebe5;color:#286b55}
+ #app.mobile-planning-active .n2pm-slot[data-color="b"],#app.mobile-planning-active .n2pm-shift[data-color="b"]{background:#dfe8f8;color:#315c9c}
+ #app.mobile-planning-active .n2pm-slot[data-color="red"],#app.mobile-planning-active .n2pm-slot[data-color="orange"],#app.mobile-planning-active .n2pm-day-off[data-state="red"],#app.mobile-planning-active .n2pm-day-off[data-state="orange"]{background:#f0eae5;color:#87715f}
+ #app.mobile-planning-active .n2pm-slot[data-color="leave"],#app.mobile-planning-active .n2pm-day-off[data-state="leave"]{background:#e9e1f2;color:#715b90}
+ #app.mobile-planning-active .n2pm-slot.selected{outline:2px solid #315ab6}
+ #app.mobile-planning-active .n2pm-week-card.is-me,#app.mobile-planning-active .n2pm-day-card.is-me{border-color:#91b3eb}
+}
