@@ -369,3 +369,132 @@
     margin-top:0;
   }
 }
+
+
+/* ===== Validation Desktop / PWA Desktop — 2026-10-31 ===== */
+@media (min-width:761px){
+  /* Entête stable : le contexte reste visible pendant les longs plannings. */
+  #app .topbar{position:sticky;top:0;z-index:18;box-shadow:0 1px 0 #e9edf5,0 8px 24px #17305408}
+
+  /* Barre latérale rétractable, préférence locale par compte. */
+  #app .brand{position:relative}
+  #app .n2-sidebar-toggle{
+    margin-left:auto;flex:0 0 28px;width:28px;height:28px;border:1px solid #385077;border-radius:9px;
+    background:#172b50;color:#c9d8f2;font-size:19px;line-height:1;display:grid;place-items:center;padding:0
+  }
+  #app .n2-sidebar-toggle:hover{background:#243d68;color:#fff}
+  #app.desktop-sidebar-collapsed .sidebar{flex-basis:78px;padding-inline:10px}
+  #app.desktop-sidebar-collapsed .brand{padding-inline:5px;justify-content:center;gap:0}
+  #app.desktop-sidebar-collapsed .nethor-sidebar-logo{width:39px;height:39px}
+  #app.desktop-sidebar-collapsed .nethor-sidebar-labels,
+  #app.desktop-sidebar-collapsed .nav-caption,
+  #app.desktop-sidebar-collapsed .side-info{display:none}
+  #app.desktop-sidebar-collapsed .brand .n2-sidebar-toggle{
+    position:absolute;right:-9px;top:7px;width:24px;height:24px;background:#fff;color:#2e4f7c;border-color:#d8e1ef;
+    box-shadow:0 3px 10px #0f224020
+  }
+  #app.desktop-sidebar-collapsed .nav-item{justify-content:center;padding-inline:0;gap:0;min-height:46px;font-size:0}
+  #app.desktop-sidebar-collapsed .nav-item .nav-icon-wrap{margin:0;width:25px}
+  #app.desktop-sidebar-collapsed .drawer-signout{font-size:0}
+
+  /* Navigation directe de semaine et date. */
+  #app .n2-week-toolbar{gap:12px}
+  #app .n2-week-direct{display:flex;align-items:center;gap:8px;margin-left:auto}
+  #app .n2-today-btn{min-height:34px;padding:7px 11px}
+  #app .n2-date-jump input{
+    min-height:34px;border:1px solid #dce3ef;border-radius:9px;background:#fff;color:#3d506e;
+    padding:6px 9px;font-size:11px
+  }
+
+  /* Recherche du planning : indépendante de la page Équipe. */
+  #app .n2-planning-search{
+    display:grid;grid-template-columns:auto minmax(220px,360px) auto;align-items:center;gap:10px;
+    padding:0 20px 16px
+  }
+  #app .n2-planning-search label{font-size:11px;font-weight:800;color:#536782}
+  #app .n2-planning-search input,
+  #app .n2collab-tools input{
+    width:100%;min-height:38px;border:1px solid #dce3ef;border-radius:10px;padding:9px 12px;
+    color:#263b5c;background:#fff
+  }
+  #app .n2-planning-search span,#app .n2collab-tools span{font-size:10px;color:#8898ad;white-space:nowrap}
+
+  /* Source et fraîcheur visibles sans transformer le planning en tableau de bord. */
+  #app .n2-planning-head{align-items:flex-start}
+  #app .n2-planning-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+  #app .n2-freshness{
+    display:inline-flex;align-items:center;min-height:27px;padding:5px 9px;border-radius:99px;
+    background:#eef7f2;color:#307b5f;font-size:10px;font-weight:800
+  }
+  #app .n2-freshness[data-online="false"]{background:#fff4e5;color:#9a6b29}
+  #app .n2-pwa-update-banner{
+    margin:0 20px 15px;padding:10px 12px;border:1px solid #bfd5f5;border-radius:11px;
+    background:#eef5ff;color:#315e9c;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px
+  }
+
+  /* Grand tableau : colonnes alignées, en-tête et collaborateur figés. */
+  #app .desktop-planning-table{
+    overflow:auto;overscroll-behavior-inline:contain;scrollbar-gutter:stable;
+    max-width:100%;border-top:1px solid #eef1f6
+  }
+  #app .desktop-planning-table .table{min-width:1080px;table-layout:fixed}
+  #app .desktop-planning-table .table thead th{
+    position:sticky;top:0;z-index:4;background:#fff;box-shadow:0 1px 0 #edf0f6
+  }
+  #app .desktop-planning-table .table th:first-child,
+  #app .desktop-planning-table .table td:first-child{
+    position:sticky;left:0;z-index:3;background:#fff;min-width:190px;width:190px;
+    box-shadow:1px 0 0 #edf0f6
+  }
+  #app .desktop-planning-table .table thead th:first-child{z-index:6}
+  #app .desktop-planning-table .table th:not(:first-child){text-align:center}
+  #app .desktop-planning-table .table td{height:68px}
+  #app .desktop-planning-table .table tbody tr:hover td{background:#fbfdff}
+  #app .desktop-planning-table .table tbody tr:hover td:first-child{background:#f8fbff}
+  #app .n2pday-data-error{
+    background:#fff1ef!important;color:#a8434a!important;border:1px solid #f0c7c8!important;font-weight:850
+  }
+
+  /* Fiche Collaborateurs : historique global et état du compte. */
+  #app .n2collab-panel{margin-bottom:18px}
+  #app .n2collab-tools{
+    display:grid;grid-template-columns:minmax(260px,420px) auto;align-items:center;gap:12px;
+    padding:0 22px 16px
+  }
+  #app .n2collab-list{display:grid;border-top:1px solid #eef1f6}
+  #app .n2collab-row{
+    display:grid;grid-template-columns:minmax(190px,1.15fr) minmax(390px,2fr) auto;
+    align-items:center;gap:18px;padding:14px 22px;border-bottom:1px solid #eef1f6
+  }
+  #app .n2collab-person{min-width:0}
+  #app .n2collab-person small{display:block;margin:5px 0 0 41px;color:#8a99ad;font-size:10px}
+  #app .n2collab-dates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  #app .n2collab-dates span{font-size:11px;color:#50637e;line-height:1.35}
+  #app .n2collab-dates b{display:block;color:#94a1b3;font-size:9px;text-transform:uppercase;letter-spacing:.45px;margin-bottom:4px}
+
+  /* Les grands zooms et écrans étroits gardent une zone de travail utilisable. */
+  @media (max-width:1180px){
+    #app .n2-week-direct{order:3;width:100%;margin-left:0}
+    #app .n2-planning-search{grid-template-columns:1fr auto}
+    #app .n2-planning-search label{grid-column:1/-1}
+    #app .n2collab-row{grid-template-columns:1fr auto}
+    #app .n2collab-dates{grid-column:1/-1}
+  }
+}
+
+/* Impression : planning uniquement, sans navigation ni contrôles interactifs. */
+@media print{
+  body{background:#fff!important}
+  #app .sidebar,#app .topbar,#app .live-bottom,#app .page-header,#app .live-summary,
+  #app .n2collab-panel,#app .n2-planning-search,#app .n2-pwa-update-banner,
+  #app .live-week-wrapper,#app .n2pday-legend,#app .n2-planning-meta{display:none!important}
+  #app .workspace,#app main,#app #screen{display:block!important;width:100%!important;max-width:none!important;padding:0!important;margin:0!important}
+  #app .live-week-card{border:0!important;box-shadow:none!important}
+  #app .live-week-card>.card-head{display:block!important;padding:0 0 12px!important}
+  #app .desktop-planning-table{overflow:visible!important}
+  #app .desktop-planning-table .table{min-width:0!important;width:100%!important;table-layout:fixed!important;font-size:8pt}
+  #app .desktop-planning-table .table th,#app .desktop-planning-table .table td{position:static!important;padding:5px!important;box-shadow:none!important}
+  #app .desktop-planning-table .table th:first-child,#app .desktop-planning-table .table td:first-child{width:17%!important;min-width:0!important}
+  #app .n2pday-chip{break-inside:avoid}
+  @page{size:landscape;margin:9mm}
+}
