@@ -1,0 +1,62 @@
+/* NETHOR — présentation neutre du planning et de l'administration (web/PWA). */
+@media(min-width:761px){
+  #app .live-week-card:not(.n2-desktop-planning-palette) .shift{
+    background:#f3f5f7;color:#344154;border:1px solid #e3e7ec;
+    border-radius:7px;box-shadow:none;font-weight:650;
+  }
+  #app .live-week-card:not(.n2-desktop-planning-palette) .shift i{color:#798493;font-weight:500}
+  #app .live-week-card:not(.n2-desktop-planning-palette) .off{color:#8a929e}
+  #app .live-week-card .desktop-planning-table td{vertical-align:middle}
+}
+#app .n2-person-account{display:inline-flex;align-items:center;gap:8px;min-width:0}
+#app .n2-link-menu{position:relative;display:inline-flex;vertical-align:middle}
+#app .n2-link-menu>summary{list-style:none;cursor:pointer;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #d9e2ed;border-radius:9px;background:#fff;color:#536783;transition:background .15s,border-color .15s;user-select:none}
+#app .n2-link-menu>summary::-webkit-details-marker{display:none}
+#app .n2-link-menu>summary:hover,#app .n2-link-menu[open]>summary{border-color:#b9cadc;background:#f3f6fa;color:#263c58}
+#app .n2-link-menu>summary:focus-visible{outline:2px solid #436fb4;outline-offset:3px}
+#app .n2-link-panel{position:absolute;z-index:60;top:calc(100% + 7px);left:0;width:min(290px,75vw);padding:15px;background:#fff;border:1px solid #e1e7ef;border-radius:14px;box-shadow:0 12px 36px rgba(28,49,79,.14);display:flex;flex-direction:column;gap:10px;text-align:left;font-size:12px;white-space:normal}
+#app .n2-link-panel>strong{color:#253c5b;font-size:13px}
+#app .n2-link-panel>p{color:#738197;margin:-5px 0 2px}
+#app .n2-link-panel label{display:grid;gap:6px;color:#5c6c82;font-size:11px;font-weight:700}
+#app .n2-link-panel select{width:100%;min-width:0;max-width:100%;background:#fff;border:1px solid #dce4ee;border-radius:9px;padding:10px;font-size:12px;color:#293f5c}
+#app .n2-link-panel .btn{margin:0;min-height:37px;font-size:11px}
+#app .n2-link-panel .n2-link-create{background:#f5f7fa;border:1px solid #e2e8f0;color:#3f5571}
+#app .desktop-planning-table{overflow:visible}
+#app .live-week-card .table-scroll{overflow-x:auto;overflow-y:visible}
+#app .n2accounts{width:100%;box-shadow:0 7px 24px rgba(32,59,104,.045)}
+#app .n2accounts-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+#app .n2accounts-header h3{margin:0;color:#243f65;font-size:15px}
+#app .n2accounts-header .n2settings-note{margin:5px 0 0}
+#app .n2accounts-refresh{margin:0;flex-shrink:0}
+#app .n2accounts-tabs{display:flex;flex-wrap:wrap;gap:5px;margin:22px 0 18px;padding:5px;background:#f2f5f9;border:1px solid #e7ecf4;border-radius:12px}
+#app .n2accounts-tab{flex:1;min-width:105px;padding:10px 13px;border:0;border-radius:9px;background:transparent;color:#65748a;font-weight:730;font-size:12px;cursor:pointer}
+#app .n2accounts-tab.is-active{background:#fff;color:#233c5d;box-shadow:0 1px 5px rgba(31,53,87,.1)}
+#app .n2accounts-list{border:1px solid #e7ecf4;border-radius:12px;overflow:hidden}
+#app .n2accounts-user{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff}
+#app .n2accounts-user+.n2accounts-user{border-top:1px solid #edf0f5}
+#app .n2accounts-avatar{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;border-radius:11px;background:#edf1f7;color:#476183;font-size:14px;font-weight:800}
+#app .n2accounts-user-info{display:grid;gap:3px;flex:1;min-width:0}
+#app .n2accounts-user-info strong{font-size:12px;font-weight:750;color:#253d5e}
+#app .n2accounts-user-info small{font-size:11px;color:#8492a7;overflow-wrap:anywhere}
+#app .n2accounts-edit{border:1px solid #e0e7f0;border-radius:9px;padding:8px 12px;background:#fff;color:#435d7d;font-size:11px;font-weight:700;cursor:pointer}
+#app .n2accounts-edit:hover{background:#f4f7fb}
+#app .n2accounts-form{margin-top:14px}
+#app .n2accounts-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+#app .n2accounts-field{display:grid;gap:7px;font-size:11px;font-weight:750;color:#405570;min-width:0}
+#app .n2accounts-field input,#app .n2accounts-field select,#app .n2accounts-field textarea{display:block;width:100%;min-width:0;border:1px solid #dce4ef;background:#fff;color:#293e5a;border-radius:10px;padding:11px 12px;font:inherit;font-size:13px;font-weight:500;outline-offset:2px}
+#app .n2accounts-field input,#app .n2accounts-field select{min-height:44px}
+#app .n2accounts-field textarea{resize:vertical;min-height:110px}
+#app .n2accounts-field :is(input,select,textarea):focus{border-color:#8aa8d2;box-shadow:0 0 0 3px rgba(63,107,172,.09)}
+#app .n2accounts-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:17px}
+#app .n2accounts-actions .btn{margin:0;min-height:41px}
+#app .n2accounts-aliases{margin-top:22px;border-top:1px solid #e8edf4;padding-top:21px}
+#app .n2accounts-aliases h3{margin:0 0 7px}
+#app .n2accounts-aliases .n2settings-note{margin:0 0 13px}
+#app .n2accounts-prompt{padding:24px 18px;background:#f8fafc;border:1px dashed #dce4ef;border-radius:12px;color:#74849a;text-align:center;font-size:12px}
+@media(max-width:760px){
+ #app .n2accounts{padding:16px}
+ #app .n2accounts-fields{grid-template-columns:1fr}
+ #app .n2accounts-header{gap:9px;flex-wrap:wrap}
+ #app .n2accounts-tab{min-width:0;font-size:11px;padding:10px 6px}
+ #app .n2-link-panel{left:auto;right:0}
+}
