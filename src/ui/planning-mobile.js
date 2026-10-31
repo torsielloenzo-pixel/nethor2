@@ -12,11 +12,15 @@ function parisClock(now){
  const p=key=>parts.find(x=>x.type===key)?.value||'';
  return {key:p('year')+'-'+p('month')+'-'+p('day'),minute:Number(p('hour'))*60+Number(p('minute'))};
 }
-function employeeIndex(model,profile){
- const key=norm(profile?.planning_name||profile?.display_name);
- if(!key)return -1;
- const all=(model?.employees||[]).map((e,i)=>norm(e?.name)===key?i:-1).filter(i=>i>=0);
- return all.length===1?all[0]:-1;
+// Plusieurs noms exacts du planning peuvent appartenir au même compte.
+// Aucune correspondance approximative : seuls les alias affectés sont reconnus.
+export function employeeIndices(model,profile){
+ if(!profile||!Array.isArray(model?.employees))return [];
+ const names=[profile.planning_name,...(Array.isArray(profile.planning_aliases)?profile.planning_aliases:[]),profile.display_name]
+   .map(norm).filter(Boolean);
+ const aliases=new Set(names);
+ if(!aliases.size)return [];
+ return model.employees.map((e,i)=>aliases.has(norm(e?.name))?i:-1).filter(i=>i>=0);
 }
 function buildShifts(cells,first,step){
  let begin=-1,color='',shifts=[];
@@ -45,8 +49,10 @@ export function planningMobileData(model,profiles,currentProfile,weekStart){
  if(!model||!Array.isArray(model.employees)||!model.days)return {dates,employees:[],mineIndex:-1,available:false};
  const minuteStart=Number(model.startTime??6)*60,step=Number(model.slotMinutes)||15;
  const active=(Array.isArray(profiles)?profiles:[]).filter(p=>p.account_enabled===false);
- const excluded=new Set(active.flatMap(p=>[p.planning_name,p.display_name].map(norm).filter(Boolean)));
- const mineIndex=employeeIndex(model,currentProfile);
+ const excluded=new Set(active.flatMap(p=>[p.planning_name,...(Array.isArray(p.planning_aliases)?p.planning_aliases:[]),p.display_name].map(norm).filter(Boolean)));
+ const mineIndices=employeeIndices(model,currentProfile);
+ const mineSet=new Set(mineIndices);
+ const mineIndex=mineIndices[0]??-1;
  const employees=model.employees.map((emp,i)=>{
   if(excluded.has(norm(emp.name)))return null;
   const records=dates.map(date=>{
@@ -58,10 +64,10 @@ export function planningMobileData(model,profiles,currentProfile,weekStart){
   });
   const total=records.reduce((sum,d)=>sum+d.total,0);
   const contract=emp.excelContractHours!=null&&Number.isFinite(Number(emp.excelContractHours))?Number(emp.excelContractHours):null;
-  return {index:i,name:String(emp.name||''),isMe:i===mineIndex,days:records,total,contract};
+  return {index:i,name:String(emp.name||''),isMe:mineSet.has(i),days:records,total,contract};
  }).filter(Boolean);
  employees.sort((a,b)=>Number(b.isMe)-Number(a.isMe));
- return {dates,employees,mineIndex,available:true};
+ return {dates,employees,mineIndex,mineIndices,available:true};
 }
 const person=emp=>{
  const initials=String(emp.name||'?').trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase();
@@ -157,7 +163,7 @@ function dayPerson(emp,row,state,personal){
 function dayView(data,selected,today,clock,filter,awayExpanded){
  const idx=Math.max(0,data.dates.indexOf(selected)),rows=data.employees.map(emp=>({emp,row:emp.days[idx]}));
  const working=rows.filter(x=>x.row.kind==='work');
- const mine=rows.find(x=>x.emp.isMe);
+ const mine=rows.filter(x=>x.emp.isMe);
  const team=working.filter(x=>!x.emp.isMe);
  const away=rows.filter(x=>x.row.kind!=='work'&&!x.emp.isMe);
  const isToday=selected===today;
@@ -172,7 +178,7 @@ function dayView(data,selected,today,clock,filter,awayExpanded){
  visible.sort((a,b)=>(rank[stateOf(a).key]??3)-(rank[stateOf(b).key]??3)||
   (a.row.shifts[0]?.start??0)-(b.row.shifts[0]?.start??0)||a.emp.name.localeCompare(b.emp.name,'fr'));
  let out=strip(data.dates,selected,today)+counts;
- if(mine)out+='<div class="n2pm-section-title">Mon planning</div>'+dayPerson(mine.emp,mine.row,stateOf(mine),true);
+ if(mine.length)out+='<div class="n2pm-section-title">Mon planning</div>'+mine.map(x=>dayPerson(x.emp,x.row,stateOf(x),true)).join('');
  else out+='<div class="n2pm-empty n2pm-unlinked">Aucun collaborateur n’est associé à ton compte sur ce planning.</div>';
  out+='<div class="n2pm-section-title"><span>Équipe du jour</span><small>'+team.length+' en poste</small></div>'+
   pills(options,filter,'day')+'<div class="n2pm-day-list">'+
