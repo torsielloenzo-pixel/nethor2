@@ -89,3 +89,23 @@ test('l\'interface échappe les noms provenant du planning',()=>{
  assert.doesNotMatch(html,/<img onerror/);
  assert.match(html,/&lt;img onerror=alert\(1\)&gt;/);
 });
+
+
+test('états réseau et fraîcheur : aujourd’hui, hors ligne et mise à jour PWA',()=>{
+ const model=make({Marie:{[week]:work('b')}});
+ const online=renderMobilePlanning({...options,model,updatedAt:new Date('2026-10-19T08:30:00Z').getTime(),isOnline:true});
+ assert.match(online,/data-action="today"/);
+ assert.match(online,/Mis à jour à/);
+ assert.match(online,/data-online="true">En ligne/);
+ assert.match(online,/>Après-midi</);
+
+ const offline=renderMobilePlanning({...options,model,isOnline:false});
+ assert.match(offline,/Mode hors ligne/);
+ assert.match(offline,/data-online="false">Hors ligne/);
+ assert.match(offline,/data-action="prev"[^>]*disabled/);
+ assert.match(offline,/data-action="next"[^>]*disabled/);
+
+ const update=renderMobilePlanning({...options,model,updateReady:true});
+ assert.match(update,/data-action="pwa-update"/);
+ assert.match(update,/Mettre à jour NETHOR/);
+});
