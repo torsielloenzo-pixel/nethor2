@@ -1027,7 +1027,7 @@ async function loadHistory(){
   state.loading=true;state.error='';render();
   try{
     const [manual,sync]=await Promise.allSettled([
-      getImportHistory(client,{limit:200}),readSyncFileChanges(client,{limit:200})
+      getImportHistory(client,{limit:500}),readSyncFileChanges(client,{limit:500})
     ]);
     if(manual.status==='rejected'&&sync.status==='rejected'){
       throw Error('Les deux historiques sont temporairement indisponibles.');
