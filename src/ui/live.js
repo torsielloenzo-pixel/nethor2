@@ -1313,7 +1313,17 @@ ROOT.addEventListener('click',async event=>{
   if(!b)return;
   const action=b.dataset.action;
   if(action==='admin-accounts-refresh'&&state.profile?.role==='admin'){await loadAdminAccounts();return;}
-  if(action==='admin-account-mode'&&state.profile?.role==='admin'){accountAdmin.mode=b.dataset.mode==='edit'?'edit':'create';accountAdmin.error='';accountAdmin.notice='';accountAdmin.selected='';render();return;}
+  if(action==='admin-account-edit'&&state.profile?.role==='admin'){
+    const id=b.dataset.accountId;
+    if(!accountAdmin.users.some(u=>u.id===id))return;
+    accountAdmin.mode='edit';accountAdmin.selected=id;accountAdmin.error='';accountAdmin.notice='';render();return;
+  }
+  if(action==='admin-account-mode'&&state.profile?.role==='admin'){
+    const next=['list','create','edit'].includes(b.dataset.mode)?b.dataset.mode:'list';
+    accountAdmin.mode=next;accountAdmin.error='';accountAdmin.notice='';
+    if(next!=='edit')accountAdmin.selected='';
+    render();return;
+  }
   if(state.page==='settings'){
    if(action==='settings-open'){
     const allowed=['profile','permissions','password','email','sessions','planning','notifications','application','diagnostic','sync','accounts'];
