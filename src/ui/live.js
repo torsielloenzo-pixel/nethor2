@@ -360,18 +360,22 @@ const annualAllowed=()=>smallScreen()||desktopAnnualAllowed();
 function weekNav(){
   return '<div class="live-week-wrapper"><div class="live-paging"><button class="icon-btn" data-action="prev" aria-label="Semaine précédente">‹</button><strong>'+shortDate(state.week)+' – '+shortDate(plusDays(state.week,6))+'</strong><button class="icon-btn" data-action="next" aria-label="Semaine suivante">›</button></div><div class="segmented"><button data-action="week-view" class="'+(state.view==='week'?'selected':'')+'">Semaine</button><button data-action="day-view" class="'+(state.view==='day'?'selected':'')+'">Jour</button>'+(desktopAnnualAllowed()?'<button data-action="year-view">Année</button>':'')+'</div></div>';
 }
+function accountLinkControl(name){
+ const accounts=state.profiles.filter(a=>a.account_enabled===true);
+ const opts='<option value="">Sélectionner un compte</option>'+accounts.map(a=>'<option value="'+escapeHtml(a.id)+'">'+escapeHtml(a.display_name||'Utilisateur')+'</option>').join('');
+ return '<details class="n2-link-menu"><summary aria-label="Associer un compte à '+escapeHtml(name)+'" title="Associer un compte">'+'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="3.5"/><path d="M3 20v-2a7 7 0 0 1 12-4.9M19 14v7m-3.5-3.5h7"/></svg>'+'</summary><div class="n2-link-panel"><strong>Associer un compte</strong><p>'+escapeHtml(name)+'</p><label>Compte existant<select data-link-select="'+escapeHtml(name)+'" aria-label="Compte à associer à '+escapeHtml(name)+'">'+opts+'</select></label><button type="button" class="btn primary" data-link-save="'+escapeHtml(name)+'">Lier ce compte</button><button type="button" class="btn n2-link-create" data-account-create-for="'+escapeHtml(name)+'">Créer un compte</button></div></details>';
+}
 function personWithAccountLink(p){
  const identity=person(p.name);
  if(smallScreen()||state.profile?.role!=='admin'||p.profile)return identity;
- const accounts=state.profiles.filter(a=>a.account_enabled===true);
- const opts='<option value="">Choisir un compte existant</option>'+accounts.map(a=>'<option value="'+escapeHtml(a.id)+'">'+escapeHtml(a.display_name||'Utilisateur')+'</option>').join('');
- return identity+'<details class="live-link-person"><summary class="btn" aria-label="Ajouter ou lier un compte pour '+escapeHtml(p.name)+'" title="Associer un compte">👤＋</summary><div class="live-controls"><label>Compte existant<select class="btn" data-link-select="'+escapeHtml(p.name)+'" aria-label="Compte existant pour '+escapeHtml(p.name)+'">'+opts+'</select></label><button type="button" class="btn" data-link-save="'+escapeHtml(p.name)+'">Lier ce compte</button><button type="button" class="btn" data-account-create-for="'+escapeHtml(p.name)+'">+ Créer un compte</button></div></details>';
+ return '<span class="n2-person-account">'+identity+accountLinkControl(p.name)+'</span>';
 }
 function planningCard(metrics){
   let content='';
   const dates=datesFor(state.week);
   // La palette est réservée à la consultation sur la page Planning Desktop/PWA.
-  const desktopColors=!smallScreen()&&(state.page==='planning'||state.page==='home');
+  // Vue neutre identique dans Vue d’ensemble et Planning, sans palette Excel.
+  const desktopColors=false;
   const first=Number(state.weekData?.model?.startTime??6)*60;
   const step=Number(state.weekData?.model?.slotMinutes)||15;
   const planningDay=day=>desktopColors?renderDesktopPlanningDay(day.cells,first,step):shift(day.ranges);
@@ -718,8 +722,7 @@ function pageTeam(metrics){
     const details='<div>'+person(p.name)+'<p class="live-small">'+hours(p.total)+' · '+(p.contract===null?'Contrat non renseigné':'Contrat : '+hours(p.contract))+'</p></div>';
     let right='<span class="chip '+(p.profile?'':'warn')+'">'+(p.profile?'Profil associé':'Association à contrôler')+'</span>';
     if(state.profile.role==='admin'){
-      const opts='<option value="">Choisir un compte</option>'+accounts.map(a=>'<option value="'+escapeHtml(a.id)+'" '+(a.id===p.profile?.id?'selected':'')+'>'+escapeHtml(a.display_name||'Utilisateur')+'</option>').join('');
-      right=p.profile?'<span class="chip">Profil associé</span>': '<details class="live-link-person"><summary class="btn" aria-label="Ajouter un compte à '+escapeHtml(p.name)+'">♙ + <span class="sr-only">Associer un compte</span></summary><div class="live-controls"><label>Compte existant<select class="btn" aria-label="Compte à associer à '+escapeHtml(p.name)+'" data-link-select="'+escapeHtml(p.name)+'">'+opts+'</select></label><button type="button" class="btn" data-link-save="'+escapeHtml(p.name)+'">Lier ce compte</button><button type="button" class="btn" data-account-create-for="'+escapeHtml(p.name)+'">+ Créer un compte</button></div></details>';
+      right=p.profile?'<span class="chip">Profil associé</span>':accountLinkControl(p.name);
     }
     return '<div class="live-person">'+details+right+'</div>';
   }).join('');
