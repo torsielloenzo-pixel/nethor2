@@ -84,7 +84,7 @@ const button=(text,action,primary=false)=>'<button type="button" class="btn '+(p
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
 const APP_VERSION='2.2-mobile-2026.10.31';
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',desktopPlanningSearch:'',desktopSidebarCollapsed:false,lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
 let syncChartPeriod=7;
@@ -96,7 +96,7 @@ let weekRequestId=0;
 let personalRequestId=0;
 let annualRequestId=0;
 let collaboratorsRequestId=0;
-const collaboratorHistory={loaded:false,loading:false,items:[],error:'',open:false};
+const collaboratorHistory={loaded:false,loading:false,items:[],error:'',open:false,search:''};
 let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
 // Préférence de planning locale, cloisonnée par compte et par navigateur.
 const planningPreferenceKey=id=>'nethor2-planning-start-v1:'+id;
@@ -111,6 +111,9 @@ function savePlanningPreference(id,value){
  catch(_){return false;}
 }
 // Mémorise uniquement la semaine consultée, jamais les données RH du planning.
+const desktopSidebarKey=id=>'nethor2-desktop-sidebar-v1:'+id;
+function readDesktopSidebar(id){try{return localStorage.getItem(desktopSidebarKey(id))==='1';}catch(_){return false;}}
+function saveDesktopSidebar(id,value){try{localStorage.setItem(desktopSidebarKey(id),value?'1':'0');return true;}catch(_){return false;}}
 const planningWeekKey=id=>'nethor2-planning-week-v1:'+id;
 function readPlanningWeek(id){
  try{
@@ -169,8 +172,11 @@ function renderLogin(message=''){
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag" id="connectionStatus" data-online="true">● EN LIGNE</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
+  ROOT.classList.toggle('desktop-sidebar-collapsed',!smallScreen()&&state.desktopSidebarCollapsed);
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span><button type="button" class="n2-sidebar-toggle" data-action="sidebar-toggle" aria-label="Réduire la barre latérale" title="Réduire la barre latérale">‹</button></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag" id="connectionStatus" data-online="true">● EN LIGNE</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
+  ROOT.classList.toggle('desktop-sidebar-collapsed',!smallScreen()&&state.desktopSidebarCollapsed);
+  const sidebarToggle=ROOT.querySelector('.n2-sidebar-toggle');if(sidebarToggle){sidebarToggle.textContent=state.desktopSidebarCollapsed?'›':'‹';sidebarToggle.setAttribute('aria-label',state.desktopSidebarCollapsed?'Déployer la barre latérale':'Réduire la barre latérale');}
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
     if(el.dataset.nav==='history'&&state.profile.role!=='admin')el.hidden=true;
@@ -213,6 +219,7 @@ async function startAuthorized(access){
   state.settingsPanel='home';state.settingsFeedback='';
   state.networkOnline=navigator.onLine;
   state.planningPreference=readPlanningPreference(state.user.id);
+  state.desktopSidebarCollapsed=!smallScreen()&&readDesktopSidebar(state.user.id);
   if(smallScreen()){
     const rememberedWeek=readPlanningWeek(state.user.id);
     if(rememberedWeek){state.week=rememberedWeek;state.day=datesFor(rememberedWeek).includes(dateInParis())?dateInParis():rememberedWeek;}
@@ -327,7 +334,7 @@ async function loadCollaboratorHistory(){
  const request=++collaboratorsRequestId;
  collaboratorHistory.loading=true;collaboratorHistory.error='';render();
  try{
-  const first=new Map();
+  const history=new Map();
   for(let from=0;from<100000;from+=500){
    const {data,error}=await client.from('planning_weeks').select('week_start,data').order('week_start',{ascending:true}).range(from,from+499);
    if(error)throw error;
@@ -336,13 +343,19 @@ async function loadCollaboratorHistory(){
     for(const employee of row.data?.employees||[]){
      const name=String(employee?.name||'').trim();const key=normalizeName(name);
      if(!key)continue;
-     if(!first.has(key))first.set(key,{name,date:row.week_start});
+     const current=history.get(key)||{name,first:row.week_start,last:row.week_start,weekSet:new Set()};
+      current.last=row.week_start;
+      current.weekSet.add(row.week_start);
+     history.set(key,current);
     }
    }
    if(!data||data.length<500)break;
    if(from>=99500)throw Error('Historique trop volumineux pour être affiché intégralement.');
   }
-  collaboratorHistory.items=[...first.values()].sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name,'fr'));
+  collaboratorHistory.items=[...history.entries()].map(([key,item])=>{
+   const profile=state.profiles.find(p=>normalizeName(p.planning_name||p.display_name)===key);
+   return {name:item.name,first:item.first,last:item.last,weeks:item.weekSet.size,profileId:profile?.id||null,accountEnabled:profile?.account_enabled??null,displayName:profile?.display_name||''};
+  }).sort((a,b)=>a.first.localeCompare(b.first)||a.name.localeCompare(b.name,'fr'));
   collaboratorHistory.loaded=true;
  }catch(_){collaboratorHistory.error='Lecture de l’historique indisponible. Réessayer ultérieurement.';}
  finally{if(request===collaboratorsRequestId){collaboratorHistory.loading=false;render();}}
@@ -356,26 +369,38 @@ function summary(metrics){
 const desktopAnnualAllowed=()=>!smallScreen()&&['admin','responsable','employe'].includes(state.profile?.role);
 const annualAllowed=()=>smallScreen()||desktopAnnualAllowed();
 function weekNav(){
-  return '<div class="live-week-wrapper"><div class="live-paging"><button class="icon-btn" data-action="prev" aria-label="Semaine précédente">‹</button><strong>'+shortDate(state.week)+' – '+shortDate(plusDays(state.week,6))+'</strong><button class="icon-btn" data-action="next" aria-label="Semaine suivante">›</button></div><div class="segmented"><button data-action="week-view" class="'+(state.view==='week'?'selected':'')+'">Semaine</button><button data-action="day-view" class="'+(state.view==='day'?'selected':'')+'">Jour</button>'+(desktopAnnualAllowed()?'<button data-action="year-view">Année</button>':'')+'</div></div>';
+  const desktop=!smallScreen();
+  const today=dateInParis();
+  const currentWeek=mondayOf(today)===state.week;
+  return '<div class="live-week-wrapper n2-week-toolbar"><div class="live-paging"><button class="icon-btn" data-action="prev" aria-label="Semaine précédente" title="Alt + ←">‹</button><strong>'+shortDate(state.week)+' – '+shortDate(plusDays(state.week,6))+'</strong><button class="icon-btn" data-action="next" aria-label="Semaine suivante" title="Alt + →">›</button></div>'+
+   (desktop?'<div class="n2-week-direct"><button type="button" class="btn n2-today-btn" data-action="today"'+(currentWeek?' disabled':'')+'>Aujourd’hui</button><label class="n2-date-jump"><span class="sr-only">Aller à une date</span><input type="date" id="desktopPlanningDate" value="'+escapeHtml(state.day||state.week)+'" aria-label="Aller à une date"></label></div>':'')+
+   '<div class="segmented"><button data-action="week-view" class="'+(state.view==='week'?'selected':'')+'">Semaine</button><button data-action="day-view" class="'+(state.view==='day'?'selected':'')+'">Jour</button>'+(desktopAnnualAllowed()?'<button data-action="year-view" class="'+(state.view==='year'?'selected':'')+'">Année</button>':'')+'</div></div>';
 }
 function planningCard(metrics){
   let content='';
   const dates=datesFor(state.week);
+  const desktop=!smallScreen();
+  const query=desktop&&state.page==='planning'?normalizeName(state.desktopPlanningSearch):'';
+  const people=query?metrics.people.filter(p=>normalizeName(p.name).includes(query)):metrics.people;
+  const freshness=state.planningLoadedAt?new Date(state.planningLoadedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Non vérifié';
+  const planningDay=day=>{
+    if(day?.issues?.some(issue=>issue.code==='INVALID_ROW'))return '<div class="n2pday-chip n2pday-status n2pday-data-error" data-tone="unknown">Donnée incomplète</div>';
+    return desktopColors?renderDesktopPlanningDay(day.cells,first,step):shift(day.ranges);
+  };
   // La palette est réservée à la consultation sur la page Planning Desktop/PWA.
   const desktopColors=state.page==='planning'&&!smallScreen();
   const first=Number(state.weekData?.model?.startTime??6)*60;
   const step=Number(state.weekData?.model?.slotMinutes)||15;
-  const planningDay=day=>desktopColors?renderDesktopPlanningDay(day.cells,first,step):shift(day.ranges);
   if(!state.weekData)content='<div class="live-empty"><strong>Aucun planning publié pour cette semaine</strong>Utilise les flèches pour choisir une semaine existante.</div>';
   else if(state.view==='week'){
-    content='<div class="desktop-planning-table table-scroll"><table class="table"><thead><tr><th>Collaborateur</th>'+dates.map((d,i)=>'<th>'+DAYS[i]+'<br>'+shortDate(d)+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+metrics.people.map(p=>'<tr><td>'+person(p.name)+'</td>'+p.days.map(day=>'<td>'+planningDay(day)+'</td>').join('')+'<td class="live-hours">'+hours(p.total)+'</td></tr>').join('')+'</tbody></table></div>'+
-    '<div class="mobile-week-list">'+(metrics.people.length?metrics.people.map(p=>'<article class="mobile-week-person"><header><div>'+person(p.name)+'<small>'+p.days.filter(d=>d.hours>0).length+' jour(s) planifié(s)</small></div><span class="mobile-hours">'+hours(p.total)+'</span></header><div class="mobile-week-days">'+p.days.map((d,i)=>'<button type="button" class="mobile-week-day" data-day="'+dates[i]+'"><span class="mobile-week-date"><b>'+DAYS[i]+'</b><small>'+shortDate(d.date)+'</small></span><span class="mobile-week-shift">'+shift(d.ranges)+'</span><span class="mobile-week-duration">'+(d.hours?hours(d.hours):'')+'</span></button>').join('')+'</div></article>').join(''):'<div class="live-empty">Aucun collaborateur planifié.</div>')+'</div>';
+    content='<div class="desktop-planning-table table-scroll"><table class="table"><thead><tr><th>Collaborateur</th>'+dates.map((d,i)=>'<th>'+DAYS[i]+'<br>'+shortDate(d)+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+people.map(p=>'<tr><td>'+person(p.name)+'</td>'+p.days.map(day=>'<td>'+planningDay(day)+'</td>').join('')+'<td class="live-hours">'+hours(p.total)+'</td></tr>').join('')+'</tbody></table></div>'+
+    '<div class="mobile-week-list">'+(metrics.people.length?people.map(p=>'<article class="mobile-week-person"><header><div>'+person(p.name)+'<small>'+p.days.filter(d=>d.hours>0).length+' jour(s) planifié(s)</small></div><span class="mobile-hours">'+hours(p.total)+'</span></header><div class="mobile-week-days">'+p.days.map((d,i)=>'<button type="button" class="mobile-week-day" data-day="'+dates[i]+'"><span class="mobile-week-date"><b>'+DAYS[i]+'</b><small>'+shortDate(d.date)+'</small></span><span class="mobile-week-shift">'+shift(d.ranges)+'</span><span class="mobile-week-duration">'+(d.hours?hours(d.hours):'')+'</span></button>').join('')+'</div></article>').join(''):'<div class="live-empty">Aucun collaborateur planifié.</div>')+'</div>';
   }else{
     if(!dates.includes(state.day))state.day=state.week;
     const di=dates.indexOf(state.day);
-    content='<div class="live-day-nav">'+dates.map((d,i)=>'<button data-day="'+d+'" class="'+(d===state.day?'active':'')+'">'+DAYS[i]+'<br>'+shortDate(d)+'</button>').join('')+'</div><div class="live-day-grid">'+metrics.people.map(p=>'<div class="live-day-item">'+person(p.name)+planningDay(p.days[di])+(desktopColors&&!p.days[di].hours?'':'<div class="sub">'+hours(p.days[di].hours)+' travaillées</div>')+'</div>').join('')+'</div>';
+    content='<div class="live-day-nav">'+dates.map((d,i)=>'<button data-day="'+d+'" class="'+(d===state.day?'active':'')+'">'+DAYS[i]+'<br>'+shortDate(d)+'</button>').join('')+'</div><div class="live-day-grid">'+people.map(p=>'<div class="live-day-item">'+person(p.name)+planningDay(p.days[di])+(desktopColors&&!p.days[di].hours?'':'<div class="sub">'+hours(p.days[di].hours)+' travaillées</div>')+'</div>').join('')+'</div>';
   }
-  return '<section class="card live-week-card'+(desktopColors?' n2-desktop-planning-palette':'')+'"><div class="card-head"><div><h2 class="card-title">Planning de l’équipe</h2><p class="sub">'+(state.weekData?escapeHtml(state.weekData.sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div><button type="button" class="text-link" data-action="refresh">Actualiser ↻</button></div>'+weekNav()+(desktopColors&&state.weekData?renderDesktopPlanningLegend():'')+content+'</section>';
+  return '<section class="card live-week-card'+(desktopColors?' n2-desktop-planning-palette':'')+'"><div class="card-head n2-planning-head"><div><h2 class="card-title">Planning de l’équipe</h2><p class="sub">'+(state.weekData?escapeHtml(state.weekData.sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div><div class="n2-planning-meta"><span class="n2-freshness" data-online="'+state.networkOnline+'">Vérifié à '+escapeHtml(freshness)+'</span><button type="button" class="text-link" data-action="refresh">Actualiser ↻</button></div></div>'+weekNav()+(desktop&&state.page==='planning'?'<div class="n2-planning-search"><label for="desktopPlanningSearch">Rechercher un collaborateur</label><input id="desktopPlanningSearch" type="search" value="'+escapeHtml(state.desktopPlanningSearch)+'" placeholder="Nom du collaborateur" autocomplete="off"><span>'+people.length+' / '+metrics.people.length+' affiché(s)</span></div>':'')+(state.pwaUpdateReady&&desktop?'<div class="n2-pwa-update-banner"><span>Une version plus récente de NETHOR est prête.</span><button type="button" class="btn" data-action="pwa-update">Mettre à jour</button></div>':'')+(desktopColors&&state.weekData?renderDesktopPlanningLegend():'')+(query&&!people.length?'<div class="live-empty"><strong>Aucun collaborateur trouvé</strong>Modifie la recherche pour réafficher le planning.</div>':content)+'</section>';
 }
 const issueLabels={SHORT_SHIFT:['Créneau très court','Plage de travail de 30 minutes ou moins'],LONG_BREAK:['Longue coupure','Interruption d’au moins 2 heures'],LONG_DAY:['Journée longue','Plus de 10 heures planifiées sur une journée'],CONTRACT_DIFFERENCE:['Différence heures contrat','Écart informatif entre heures planifiées et volume contractuel'],LOW_COVERAGE:['Couverture limitée','Une seule personne planifiée pendant une période prolongée'],INVALID_ROW:['Données incohérentes','Le tableau ne correspond pas à la structure attendue']};
 function issueRows(issues,limit=Infinity){
@@ -600,9 +625,15 @@ async function loadAnnualWeeks(force=false){
 function collaboratorPanel(){
  if(!adminPlanningDesktop()||!collaboratorHistory.open)return '';
  const c=collaboratorHistory;
- const content=c.loading?'<p>Recherche des premières apparitions…</p>':c.error?'<p role="alert">'+escapeHtml(c.error)+'</p><button class="btn" data-action="collaborators-retry">Réessayer</button>':!c.items.length?'<p>Aucun collaborateur trouvé dans les plannings publiés.</p>':
- '<div class="n2collab-list">'+c.items.map(item=>'<div class="n2collab-row"><strong>'+escapeHtml(item.name)+'</strong><span>Première semaine publiée : '+escapeHtml(shortDate(item.date))+' '+escapeHtml(item.date.slice(0,4))+'</span></div>').join('')+'</div>';
- return '<section class="card n2collab-panel" aria-label="Historique des collaborateurs"><div class="card-head"><div><h2 class="card-title">Collaborateurs</h2><p class="sub">Première apparition dans les plannings publiés disponibles, pas nécessairement date d’embauche.</p></div><button type="button" class="btn" data-action="collaborators-toggle">Fermer ✕</button></div>'+content+'</section>';
+ const query=normalizeName(c.search);
+ const items=query?c.items.filter(item=>normalizeName(item.name+' '+item.displayName).includes(query)):c.items;
+ const rows=items.map(item=>{
+   const account=item.profileId?(item.accountEnabled===false?'<span class="chip warn">Compte désactivé</span>':'<span class="chip">Compte actif</span>'):'<span class="chip info">Sans compte associé</span>';
+   return '<article class="n2collab-row"><div class="n2collab-person">'+person(item.name)+'<small>'+(item.displayName&&normalizeName(item.displayName)!==normalizeName(item.name)?'Compte : '+escapeHtml(item.displayName):'Nom lu dans les plannings')+'</small></div><div class="n2collab-dates"><span><b>Première apparition</b>'+escapeHtml(longDate(item.first))+'</span><span><b>Dernière apparition</b>'+escapeHtml(longDate(item.last))+'</span><span><b>Semaines disponibles</b>'+item.weeks+'</span></div>'+account+'</article>';
+ }).join('');
+ const content=c.loading?'<div class="live-empty">Recherche de l’historique des collaborateurs…</div>':c.error?'<div class="live-error">'+escapeHtml(c.error)+'</div><button class="btn" data-action="collaborators-retry">Réessayer</button>':!c.items.length?'<div class="live-empty">Aucun collaborateur trouvé dans les plannings publiés.</div>':
+ '<div class="n2collab-tools"><input id="collaboratorHistorySearch" type="search" value="'+escapeHtml(c.search)+'" placeholder="Rechercher dans tout l’historique" autocomplete="off"><span>'+items.length+' / '+c.items.length+'</span></div><div class="n2collab-list">'+(rows||'<div class="live-empty">Aucun résultat.</div>')+'</div>';
+ return '<section class="card n2collab-panel" aria-label="Historique des collaborateurs"><div class="card-head"><div><h2 class="card-title">Collaborateurs</h2><p class="sub">Apparitions dans les plannings publiés. Une absence de semaine publiée reste distincte d’un repos réel.</p></div><button type="button" class="btn" data-action="collaborators-toggle">Fermer ✕</button></div>'+content+'</section>';
 }
 function pagePlanning(metrics){
   if(annualAllowed()&&state.view==='year'){
@@ -616,7 +647,8 @@ function pagePlanning(metrics){
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error,
     updatedAt:state.planningLoadedAt,isOnline:state.networkOnline,updateReady:state.pwaUpdateReady
   });
-  return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+collaboratorPanel()+planningCard(metrics);
+  const actions=(state.access==='manage'?button('Importer Excel','go-import',true):'')+(!smallScreen()?button('Imprimer','print-planning'):'');
+   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',actions)+summary(metrics)+collaboratorPanel()+planningCard(metrics);
 }
 
 async function loadMobileSyncStatus(force=false){
@@ -1313,6 +1345,14 @@ ROOT.addEventListener('click',async event=>{
     if(help){help.hidden=false;help.textContent='L’installateur NethorSync-Setup.exe (version corrigée 2.1.5) est téléchargé depuis GitHub Releases. Ouvre-le sur ce PC Windows puis sélectionne le dossier de tes plannings.';}
     return;
   }
+  if(action==='sidebar-toggle'&&!smallScreen()){
+    state.desktopSidebarCollapsed=!state.desktopSidebarCollapsed;
+    if(state.user?.id)saveDesktopSidebar(state.user.id,state.desktopSidebarCollapsed);
+    ROOT.classList.toggle('desktop-sidebar-collapsed',state.desktopSidebarCollapsed);
+    const toggle=ROOT.querySelector('.n2-sidebar-toggle');if(toggle){toggle.textContent=state.desktopSidebarCollapsed?'›':'‹';toggle.setAttribute('aria-label',state.desktopSidebarCollapsed?'Déployer la barre latérale':'Réduire la barre latérale');}
+    return;
+  }
+  if(action==='print-planning'&&!smallScreen()){window.print();return;}
   if(action==='forgot-password')await requestRecoveryEmail(ROOT.querySelector('#loginEmail')?.value,true);
   else if(action==='request-password-email'){
     if(!state.accountSecurity.configured){accountNotice('Associe d’abord une adresse e-mail de récupération.','error');return;}
@@ -1347,13 +1387,22 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='history-refresh')await loadHistory();
   else if(action.startsWith('sync-')&&syncController)await syncController.action(action);
 });
-ROOT.addEventListener('change',event=>{if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);});
+ROOT.addEventListener('change',event=>{
+  if(event.target.id==='excelFile'){void selectFile(event.target.files?.[0]);return;}
+  if(event.target.id==='desktopPlanningDate'&&!smallScreen()){
+    const value=event.target.value;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(value)){state.day=value;state.week=mondayOf(value);state.view='week';void loadWeek();}
+  }
+});
 ROOT.addEventListener('input',event=>{
-  if(event.target.id!=='searchTeam')return;
-  state.search=event.target.value;
+  const id=event.target.id;
+  if(!['searchTeam','desktopPlanningSearch','collaboratorHistorySearch'].includes(id))return;
   const position=event.target.selectionStart||0;
+  if(id==='searchTeam')state.search=event.target.value;
+  else if(id==='desktopPlanningSearch')state.desktopPlanningSearch=event.target.value;
+  else collaboratorHistory.search=event.target.value;
   render();
-  const el=ROOT.querySelector('#searchTeam');el?.focus();el?.setSelectionRange(position,position);
+  const el=ROOT.querySelector('#'+id);el?.focus();el?.setSelectionRange(position,position);
 });
 ROOT.addEventListener('dragover',event=>{if(event.target.closest('#importDrop'))event.preventDefault();});
 ROOT.addEventListener('drop',event=>{if(event.target.closest('#importDrop')){event.preventDefault();void selectFile(event.dataTransfer?.files?.[0]);}});
@@ -1391,7 +1440,16 @@ window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
   if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
 });
 document.addEventListener('keydown',event=>{
- if(!document.getElementById('firstLoginRecoveryPrompt')){if(event.key==='Escape')closeMobileMenu();return;}
+ if(!document.getElementById('firstLoginRecoveryPrompt')){
+  if(event.key==='Escape'){closeMobileMenu();return;}
+  const target=event.target;
+  const typing=target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable;
+  if(!typing&&!smallScreen()&&state.user&&state.page==='planning'&&event.altKey&&(event.key==='ArrowLeft'||event.key==='ArrowRight')&&!weekLoadBusy){
+    event.preventDefault();
+    state.week=plusDays(state.week,event.key==='ArrowLeft'?-7:7);state.day=state.week;void loadWeek();
+  }
+  return;
+ }
  if(event.key==='Escape'){event.preventDefault();closeFirstLoginRecovery(true);return;}
  if(event.key==='Tab'){
   const buttons=[...document.querySelectorAll('#firstLoginRecoveryPrompt button:not(:disabled),#firstLoginRecoveryPrompt input:not(:disabled)')];

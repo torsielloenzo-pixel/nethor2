@@ -50,6 +50,22 @@
 </head>
 <body>
 <div id="app" role="main"><div class="startup"><span class="start-logo" aria-hidden="true"><img src="./assets/icon.svg" width="52" height="52" alt=""></span><strong>NETHOR</strong><p>Ouverture sécurisée de votre espace planning…</p><div class="nethor-mobile-loader" role="status" aria-label="Chargement de NETHOR"><div class="nethor-loader-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div></div></div>
+<script>
+(function(){
+  var done=false;
+  function showStartupFailure(){
+    if(done)return;
+    var app=document.getElementById('app');
+    if(!app||!app.querySelector(':scope > .startup'))return;
+    done=true;
+    app.innerHTML='<section role="alert" style="min-height:100dvh;box-sizing:border-box;display:grid;place-content:center;gap:12px;padding:28px;text-align:center;background:#f5f7fc;color:#20385d"><img src="./assets/icon.svg" width="58" height="58" alt="" style="margin:auto"><h1 style="margin:4px 0 0;font-size:22px">NETHOR ne s’est pas chargé correctement</h1><p style="max-width:460px;margin:0 auto;line-height:1.55;color:#667b98">L’interface n’a pas terminé son démarrage. Vérifie la connexion puis relance l’application.</p><button type="button" onclick="location.reload()" style="min-height:44px;border:0;border-radius:11px;background:#174f9d;color:#fff;font-weight:800;padding:0 18px;margin:4px auto 0">Réessayer</button></section>';
+  }
+  window.setTimeout(showStartupFailure,12000);
+  window.addEventListener('error',function(event){
+    if(event && event.target && (event.target.tagName==='SCRIPT'||event.target.tagName==='LINK'))showStartupFailure();
+  },true);
+})();
+</script>
 <noscript>L'application NETHOR nécessite JavaScript.</noscript>
 </body>
 </html>
