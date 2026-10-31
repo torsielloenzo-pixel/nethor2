@@ -60,8 +60,10 @@ export function historyDisplayTime(row){
 export function historyMonthKey(row){
  const stamp=historyDisplayTime(row);
  if(!stamp)return 'unknown';
- return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit'})
-  .format(new Date(stamp)).replace(/(\d{4})-(\d{2})/,'$1-$2');
+ const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit'})
+  .formatToParts(new Date(stamp));
+ const get=type=>parts.find(part=>part.type===type)?.value||'';
+ return get('year')+'-'+get('month');
 }
 export function filterHistory(entries=[],{query='',source='all',year='all',sort='newest'}={}){
  const search=String(query||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr');
@@ -71,7 +73,7 @@ export function filterHistory(entries=[],{query='',source='all',year='all',sort=
   if(year!=='all'&&!month.startsWith(String(year)+'-'))return false;
   if(!search)return true;
   const text=[row.file_name,row.fileName,row.previousFileName,row.imported_by_name,row.week_start,
-    row.kind,row.source,row.storage_path,row.occurredAt,row.modifiedAt,row.previousModifiedAt,formatHistoryDate(row.occurredAt)]
+    row.kind,row.source,row.storage_path,row.occurredAt,row.modifiedAt,row.previousModifiedAt,formatHistoryDate(row.occurredAt),row.week_start&&row.week_start.slice(8,10)+'/'+row.week_start.slice(5,7)+'/'+row.week_start.slice(0,4)]
     .map(v=>String(v??'')).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr');
   return text.includes(search);
  };
