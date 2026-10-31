@@ -27,6 +27,7 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
    return biff ?? resolveExcelColor({sheetName,rowIndex,colIndex,cell,workbook});
  };
  const model=parsePlanningWorkbook(workbook,XLSX,verifiedColor);
+ if(model.weekStart<"2025-01-01")throw new Error("Planning antérieur au 01/01/2025 non pris en charge");
  if(model.employees.length>200)throw new Error("Nombre de salariés supérieur à 200");
  // Si aucun créneau ne peut être déchiffré, le lecteur n'est pas suffisamment sûr.
  if((model.colorCounts.g+model.colorCounts.b)===0)
