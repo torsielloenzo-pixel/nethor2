@@ -62,6 +62,22 @@ Le système sait qu'une journée a été révisée mais ne conserve pas encore s
 - `tests/planning-year.test.js` : test de cache PWA décorrélé d'un ancien nom de cache.
 - `supabase/migrations/20261031_nethor_sync_latest_version_validation.sql` : correctif de détection/reprise de la dernière version.
 
+## Validation Desktop / PWA Desktop — amélioration du 31/10
+
+La branche de validation ajoute désormais, sans modifier les droits métier :
+
+- barre latérale rétractable avec préférence locale par compte ;
+- en-tête Desktop fixe pendant le défilement ;
+- navigation semaine précédente/suivante, bouton Aujourd'hui, sélection directe d'une date et raccourcis Alt + ← / Alt + → ;
+- recherche d'un collaborateur directement dans le planning Desktop ;
+- tableau avec en-tête et colonne Collaborateur figés, défilement horizontal contrôlé ;
+- état de fraîcheur du planning et bannière lorsqu'une mise à jour PWA est disponible ;
+- impression paysage dédiée au planning ;
+- panneau Administrateur « Collaborateurs » enrichi : première apparition, dernière apparition, nombre de semaines publiées et état du compte ;
+- affichage « Donnée incomplète » distinct de « Repos » lorsqu'une ligne de planning est invalide.
+
+Ces améliorations restent sur la PR de validation. Les tests réels navigateur/PWA et les bloqueurs NethorSync conservent leur statut avant fusion.
+
 ## Conditions avant fusion
 
 1. Tous les tests Node du dépôt doivent être verts.
