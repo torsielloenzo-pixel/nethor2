@@ -994,6 +994,12 @@ function go(page){
   const previousPage=state.page;
   state.page=page;state.notice='';state.error='';
   if(page!=='home')dashboardOpen=null;
+  const dashboardToday=page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())?dateInParis():null;
+  const dashboardWeekChanged=Boolean(dashboardToday)&&state.week!==mondayOf(dashboardToday);
+  if(dashboardWeekChanged){
+    state.week=mondayOf(dashboardToday);state.day=dashboardToday;state.weekData=null;
+    dashboardOpen=null;
+  }
   if(page==='settings'&&previousPage!==page){state.settingsPanel='home';state.settingsFeedback='';}
   if(page==='planning'&&previousPage!==page){
    state.view=state.planningPreference==='year'&&!annualAllowed()?'week':state.planningPreference;
@@ -1004,6 +1010,7 @@ function go(page){
   }
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
+  if(dashboardWeekChanged)void loadWeek();
   if(page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
   if(page==='import'&&!smallScreen())void loadImportSyncStatus();
   if(page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&!state.nethorSync.loading)void loadNethorSyncStatus();
@@ -1474,6 +1481,11 @@ ROOT.addEventListener('toggle',event=>{
  const top=below+height>window.innerHeight-12&&rect.top>height+10?rect.top-height-7:Math.min(below,window.innerHeight-height-12);
  panel.style.left=left+'px';panel.style.top=Math.max(8,top)+'px';
 },true);
+ROOT.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&state.page==='home'&&dashboardOpen){
+  dashboardOpen=null;render();
+ }
+});
 ROOT.addEventListener('change',event=>{
  if(event.target.id==='adminAccountTarget'&&state.profile?.role==='admin'){accountAdmin.selected=event.target.value;render();return;}
  if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);
