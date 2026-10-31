@@ -89,8 +89,8 @@ function freshnessLabel(value){
  return 'Mis à jour à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 }
 function toolbar(weekStart,view,allowYear=false,meta={}){
- const disabled=meta.loading?' disabled':'';
  const online=meta.isOnline!==false;
+ const disabled=meta.loading||!online?' disabled':'';
  return '<div class="n2pm-toolbar">'+
   '<div class="n2pm-segmented" aria-label="Mode du planning">'+
   '<button type="button" data-action="week-view" class="'+(view==='week'?'selected':'')+'" aria-pressed="'+(view==='week')+'">Semaine</button>'+
