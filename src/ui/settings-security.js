@@ -70,13 +70,13 @@ export function renderSecuritySettings(account={},section='all'){
 export function renderSettingsPage(context={}){
  const {view='home',account={},displayName='—',identifier='',role='—',access='—',lastSignIn='—',
   preferredView='week',allowYear=false,isPwa=false,isOnline=true,workerActive=false,
-  appVersion='NETHOR 2',lastPlanningCheck='—',updateReady=false,lastCheck='—',syncMarkup='',feedback=''}=context;
+  appVersion='NETHOR 2',lastPlanningCheck='—',updateReady=false,lastCheck='—',syncMarkup='',adminAccountsMarkup='',feedback=''}=context;
  const recoveryStatus=account.loading?'Vérification…':account.error?'État indisponible':account.configured?'Associée':'Non associée';
  const headings={
   profile:'Informations personnelles',permissions:'Rôle et autorisations',
   password:'Mot de passe',email:'Adresse e-mail de récupération',sessions:'Connexions et appareils',
   planning:'Affichage du planning',notifications:'Notifications',application:'Informations sur l’application',
-  diagnostic:'Diagnostic',sync:'NethorSync · Administration'
+  diagnostic:'Diagnostic',sync:'NethorSync · Administration',accounts:'Gestion des comptes'
  };
  const message=feedback?'<div class="n2settings-feedback" role="status">'+esc(feedback)+'</div>':'';
  if(view==='home'){
@@ -94,7 +94,8 @@ export function renderSettingsPage(context={}){
    group('Application et assistance','info',
     entry('application','Informations techniques','État de la connexion et de la PWA','monitor')+
     entry('diagnostic','Diagnostic et assistance','Copier un rapport sans données personnelles','lifesaver')+
-    (syncMarkup?entry('sync','NethorSync','Administration du poste maître','sync'):''))+
+    (syncMarkup?entry('sync','NethorSync','Administration du poste maître','sync'):'')+
+    (adminAccountsMarkup?entry('accounts','Comptes utilisateurs','Créer, modifier et associer des comptes','user'):''))+
    '</div><div class="n2settings-bottom"><span>Les informations d’accès sont gérées par NETHOR.</span>'+
    '<button type="button" class="n2settings-signout" data-action="logout">Se déconnecter</button></div></div>';
  }
@@ -129,6 +130,7 @@ export function renderSettingsPage(context={}){
     '<button type="button" class="btn primary" data-action="settings-copy-diagnostic">Copier le diagnostic</button>':
     '<p class="n2settings-note">Le statut « En ligne » ne garantit pas que les serveurs Supabase sont accessibles. Les mises à jour sont gérées par le navigateur et le service worker.</p>')+
     '</section>';
+  if(view==='accounts')return adminAccountsMarkup||'<p>Gestion des comptes indisponible.</p>';
   if(view==='sync')return syncMarkup||'<p class="n2settings-note">Aucun paramètre NethorSync disponible pour ce compte.</p>';
   return '<p class="n2settings-note">Cette rubrique est indisponible.</p>';
  })();
