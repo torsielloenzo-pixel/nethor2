@@ -20,34 +20,43 @@ export function mondayFor(day) {
 function norm(value) {
   return String(value??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').toLowerCase();
 }
+export function personalEmployeeIndices(model,profile) {
+ if(!Array.isArray(model?.employees)||!profile)return [];
+ const names=[...(Array.isArray(profile.planning_aliases)?profile.planning_aliases:[]),profile.planning_name,profile.display_name]
+   .map(norm).filter(Boolean);
+ const allowed=new Set(names);
+ // Les alias sont affectés explicitement par l'administrateur; jamais de correspondance approximative.
+ return model.employees.map((e,i)=>allowed.has(norm(e.name))?i:-1).filter(i=>i>=0);
+}
 export function personalEmployeeIndex(model,profile) {
-  if(!Array.isArray(model?.employees)||!profile)return -1;
-  // Privilégier l'association explicite, sans rapprochement approximatif.
-  const name=norm(profile.planning_name||profile.display_name);
-  if(!name)return -1;
-  const matches=model.employees.map((e,i)=>norm(e.name)===name?i:-1).filter(i=>i>=0);
-  return matches.length===1?matches[0]:-1;
+ const indices=personalEmployeeIndices(model,profile);
+ return indices.length===1?indices[0]:-1;
 }
 export function personalDay(model,profile,date) {
-  if(!model?.days?.[date])return {date,kind:'unknown',hours:0,ranges:[]};
-  const idx=personalEmployeeIndex(model,profile);
-  if(idx<0)return {date,kind:'unlinked',hours:0,ranges:[]};
-  const cells=model.days[date]?.cells?.[idx];
-  if(!Array.isArray(cells)||cells.length===0)return {date,kind:'unknown',hours:0,ranges:[]};
-  const step=Number(model.slotMinutes)||15,start=Number(model.startTime??6)*60;
-  const ranges=[];let begin=null;
-  for(let i=0;i<=cells.length;i++){
-    const working=i<cells.length&&(cells[i]==='g'||cells[i]==='b');
-    if(working&&begin===null)begin=i;
-    if(!working&&begin!==null){ranges.push({start:start+begin*step,end:start+i*step});begin=null;}
-  }
-  if(ranges.length){
-    const mins=ranges.reduce((total,r)=>total+r.end-r.start,0);
-    return {date,kind:'work',hours:mins/60,ranges};
-  }
-  if(cells.some(c=>c==='y'))return {date,kind:'leave',hours:0,ranges:[]};
-  if(cells.every(c=>!c||c==='r'||c==='o'))return {date,kind:'rest',hours:0,ranges:[]};
+ if(!model?.days?.[date])return {date,kind:'unknown',hours:0,ranges:[]};
+ const indices=personalEmployeeIndices(model,profile);
+ if(!indices.length)return {date,kind:'unlinked',hours:0,ranges:[]};
+ const rows=indices.map(i=>model.days[date]?.cells?.[i]).filter(Array.isArray);
+ if(rows.length!==indices.length||!rows.length||!rows[0].length||rows.some(r=>r.length!==rows[0].length))
   return {date,kind:'unknown',hours:0,ranges:[]};
+ const cells=rows[0].map((_,i)=>{
+  const values=rows.map(r=>r[i]);
+  return values.some(c=>c==='g'||c==='b')?'g':values.some(c=>c==='y')?'y':values.some(c=>c==='r'||c==='o')?'r':'';
+ });
+ const step=Number(model.slotMinutes)||15,start=Number(model.startTime??6)*60;
+ const ranges=[];let begin=null;
+ for(let i=0;i<=cells.length;i++){
+  const working=i<cells.length&&cells[i]==='g';
+  if(working&&begin===null)begin=i;
+  if(!working&&begin!==null){ranges.push({start:start+begin*step,end:start+i*step});begin=null;}
+ }
+ if(ranges.length){
+  const mins=ranges.reduce((total,r)=>total+r.end-r.start,0);
+  return {date,kind:'work',hours:mins/60,ranges};
+ }
+ if(cells.some(c=>c==='y'))return {date,kind:'leave',hours:0,ranges:[]};
+ if(cells.every(c=>!c||c==='r'||c==='o'))return {date,kind:'rest',hours:0,ranges:[]};
+ return {date,kind:'unknown',hours:0,ranges:[]};
 }
 function weekModelByDate(weeks,date) {
   const key=mondayFor(date);
