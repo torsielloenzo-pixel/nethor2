@@ -1438,6 +1438,20 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='history-refresh')await loadHistory();
   else if(action.startsWith('sync-')&&syncController)await syncController.action(action);
 });
+// Le menu d'association reste visible au-dessus du tableau défilant.
+ROOT.addEventListener('toggle',event=>{
+ const detail=event.target;
+ if(!detail.matches?.('.n2-link-menu')||!detail.open)return;
+ ROOT.querySelectorAll('.n2-link-menu[open]').forEach(other=>{if(other!==detail)other.open=false;});
+ const panel=detail.querySelector('.n2-link-panel'),trigger=detail.querySelector('summary');
+ if(!panel||!trigger)return;
+ const rect=trigger.getBoundingClientRect();
+ const width=panel.offsetWidth,height=panel.offsetHeight;
+ const left=Math.max(8,Math.min(rect.left,window.innerWidth-width-12));
+ const below=rect.bottom+7;
+ const top=below+height>window.innerHeight-12&&rect.top>height+10?rect.top-height-7:Math.min(below,window.innerHeight-height-12);
+ panel.style.left=left+'px';panel.style.top=Math.max(8,top)+'px';
+},true);
 ROOT.addEventListener('change',event=>{
  if(event.target.id==='adminAccountTarget'&&state.profile?.role==='admin'){accountAdmin.selected=event.target.value;render();return;}
  if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);
