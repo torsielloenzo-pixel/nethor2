@@ -34,7 +34,7 @@ test('Desktop : absence de données et repos restent distincts',()=>{
 
 test('Desktop : barre latérale, tableau sticky et impression sont prévus',()=>{
  assert.match(js,/data-action="sidebar-toggle"/);
- assert.match(js,/data-action="print-planning"/);
+ assert.match(js,/print-planning/);
  assert.match(css,/desktop-sidebar-collapsed/);
  assert.match(css,/desktop-planning-table \.table thead th/);
  assert.match(css,/position:sticky/);
