@@ -7,7 +7,7 @@ import {renderSettingsPage} from './settings-security.js';
 import {renderAccountAdmin} from './account-admin.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {installMobileZoomLock} from './mobile-zoom.js';
-import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek,getPublishedWeeksForYear} from '../data/planning-repository.js';
+import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek,getPublishedWeeksForYear,MIN_PLANNING_DATE,MIN_PLANNING_YEAR} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
@@ -117,11 +117,11 @@ const planningWeekKey=id=>'nethor2-planning-week-v1:'+id;
 function readPlanningWeek(id){
  try{
   const value=localStorage.getItem(planningWeekKey(id))||'';
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)&&mondayOf(value)===value?value:null;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)&&value>=MIN_PLANNING_DATE&&mondayOf(value)===value?value:null;
  }catch(_){return null;}
 }
 function savePlanningWeek(id,value){
- try{if(id&&/^\d{4}-\d{2}-\d{2}$/.test(value))localStorage.setItem(planningWeekKey(id),value);}catch(_){/* préférence non critique */}
+ try{if(id&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&value>=MIN_PLANNING_DATE)localStorage.setItem(planningWeekKey(id),value);}catch(_){/* préférence non critique */}
 }
 const isInstalledPwa=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const settingsDate=value=>{
@@ -331,7 +331,7 @@ async function loadCollaboratorHistory(){
  try{
   const first=new Map();
   for(let from=0;from<100000;from+=500){
-   const {data,error}=await client.from('planning_weeks').select('week_start,data').order('week_start',{ascending:true}).range(from,from+499);
+   const {data,error}=await client.from('planning_weeks').select('week_start,data').gte('week_start',MIN_PLANNING_DATE).order('week_start',{ascending:true}).range(from,from+499);
    if(error)throw error;
    if(request!==collaboratorsRequestId)return;
    for(const row of data||[]){
@@ -1267,9 +1267,11 @@ ROOT.addEventListener('click',async event=>{
   const yearDate=event.target.closest('[data-year-day]');
   if(yearDate&&state.page==='planning'&&state.view==='year'&&annualAllowed()){
     const day=yearDate.dataset.yearDay;
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||day<MIN_PLANNING_DATE)return;
+    const targetWeek=mondayFor(day);
+    if(targetWeek<MIN_PLANNING_DATE)return;
     state.day=day;
-    state.week=mondayFor(day);
+    state.week=targetWeek;
     state.view='week';
     state.mobilePlanning.dayFilter='all';
     await loadWeek();
@@ -1369,7 +1371,7 @@ ROOT.addEventListener('click',async event=>{
     const targetYear=action==='year-current'
       ?Number(dateInParis().slice(0,4))
       :state.mobilePlanning.year+(action==='year-prev'?-1:1);
-    if(targetYear<1900||targetYear>2100)return;
+    if(targetYear<MIN_PLANNING_YEAR||targetYear>9999)return;
     state.mobilePlanning.year=targetYear;
     state.mobilePlanning.annual={year:null,weeks:[],loading:false,loaded:false,error:''};
     render();
@@ -1427,7 +1429,9 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='prev'||action==='next'){
     if(weekLoadBusy)return;
     const dayIndex=datesFor(state.week).indexOf(state.day);
-    state.week=plusDays(state.week,action==='prev'?-7:7);
+    const targetWeek=plusDays(state.week,action==='prev'?-7:7);
+    if(targetWeek<MIN_PLANNING_DATE)return;
+    state.week=targetWeek;
     state.day=isMobileHome()&&dayIndex>=0?plusDays(state.week,dayIndex):state.week;
     await loadWeek();
   }

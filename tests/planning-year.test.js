@@ -27,7 +27,7 @@ test('année bissextile : 29 février, et calcul des semaines traversant le nouv
  assert.deepEqual(yearQueryBounds(2026),{start:'2025-12-29',end:'2026-12-28'});
  assert.deepEqual(yearQueryBounds(2027),{start:'2026-12-28',end:'2027-12-27'});
  assert.equal(publishedWeeksOfMonth(2028,1,['2028-02-28']),1);
- await assert.rejects(getPublishedWeeksForYear({},2101),/Année invalide/);
+ await assert.rejects(getPublishedWeeksForYear({},10000),/Année invalide/);
 });
 test('cases de disponibilité inspirées de Nethor 1 et clic possible sur tous les jours',()=>{
  const html=renderPlanningYear({year:2026,weeks:['2025-12-29','2026-10-19'],today:'2026-10-19',selectedDay:'2026-10-20'});
@@ -75,7 +75,7 @@ test('intégration: état annuel, chargement, clic jour, responsive, PWA',()=>{
  for(const term of ['loadAnnualWeeks','getPublishedWeeksForYear','renderPlanningYear',
   "state.view==='year'","data-year-day","data-action","year-close","year-next"])
   assert.ok(js.includes(term),term);
- assert.match(js,/state\.week=mondayFor\(day\)/);
+ assert.match(js,/const targetWeek=mondayFor\(day\)/);
  assert.match(js,/state\.view='week'/);
  assert.match(js,/if\(annualAllowed\(\)\&\&state\.view==='year'\)/);
  assert.match(js,/allowYear:annualAllowed\(\)/);
@@ -84,5 +84,5 @@ test('intégration: état annuel, chargement, clic jour, responsive, PWA',()=>{
  assert.match(css,/position:sticky;top:-14px/);
  assert.match(css,/@media\(min-width:540px\) and \(max-width:760px\)/);
  for(const text of [sw,build,dev])assert.match(text,/planning-year\.js/);
- assert.match(sw,/nethor-mobile-drawer-recovery-sync-v[0-9]+/);
+ assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });

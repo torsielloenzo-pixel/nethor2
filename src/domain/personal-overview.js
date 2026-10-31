@@ -22,9 +22,11 @@ function norm(value) {
 }
 export function personalEmployeeIndices(model,profile) {
  if(!Array.isArray(model?.employees)||!profile)return [];
- const names=[...(Array.isArray(profile.planning_aliases)?profile.planning_aliases:[]),profile.planning_name,profile.display_name]
+ const explicit=[...(Array.isArray(profile.planning_aliases)?profile.planning_aliases:[]),profile.planning_name]
    .map(norm).filter(Boolean);
- const allowed=new Set(names);
+ // Le nom d'affichage n'est qu'un secours pour les anciens profils sans liaison explicite.
+ // Dès qu'un planning_name/alias existe, il ne doit jamais élargir automatiquement la liaison.
+ const allowed=new Set(explicit.length?explicit:[norm(profile.display_name)].filter(Boolean));
  // Les alias sont affectés explicitement par l'administrateur; jamais de correspondance approximative.
  return model.employees.map((e,i)=>allowed.has(norm(e.name))?i:-1).filter(i=>i>=0);
 }

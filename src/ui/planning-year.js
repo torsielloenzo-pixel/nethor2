@@ -1,14 +1,16 @@
 // Calendrier annuel Nethor 2 : repris de la vue Année de Nethor 1.
 // Les marqueurs désignent les SEMAINES publiées, jamais une présence individuelle.
 import {mondayFor,dateInParis} from '../domain/personal-overview.js';
+import {MIN_PLANNING_DATE,MIN_PLANNING_YEAR} from '../data/planning-repository.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dateKey=(year,month,day)=>year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
 const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const DAYS=['L','M','M','J','V','S','D'];
 
 export function yearQueryBounds(year){
- if(!Number.isInteger(year)||year<1900||year>2100)throw new RangeError('Année invalide');
- return {start:mondayFor(dateKey(year,0,1)),end:mondayFor(dateKey(year,11,31))};
+ if(!Number.isInteger(year)||year<MIN_PLANNING_YEAR||year>9999)throw new RangeError('Année invalide');
+ const rawStart=mondayFor(dateKey(year,0,1));
+ return {start:rawStart<MIN_PLANNING_DATE?MIN_PLANNING_DATE:rawStart,end:mondayFor(dateKey(year,11,31))};
 }
 export function publishedWeeksOfMonth(year,month,weekStarts){
  const first=new Date(Date.UTC(year,month,1,12));
@@ -19,14 +21,14 @@ export function publishedWeeksOfMonth(year,month,weekStarts){
  return [...weeks].filter(x=>published.has(x)).length;
 }
 export function renderPlanningYear({year,weeks=[],loading=false,error='',today=dateInParis(),selectedDay=''}){
- if(!Number.isInteger(year)||year<1900||year>2100)return '';
+ if(!Number.isInteger(year)||year<MIN_PLANNING_YEAR||year>9999)return '';
  const published=new Set(Array.isArray(weeks)?weeks:[]);
  const count=published.size;
  const header='<div class="n2py-head"><div><span>CALENDRIER ANNUEL</span><h2>Vue annuelle</h2><p>'+
   (loading?'Recherche des plannings publiés…':error?esc(error):count+' semaine'+(count>1?'s':'')+' publiée'+(count>1?'s':'')+' sur cette période')+
   '</p></div><button type="button" data-action="year-close" aria-label="Revenir à la semaine">✕</button></div>';
  const toolbar='<div class="n2py-controls" aria-label="Changer d’année">'+
-  '<button type="button" data-action="year-prev" aria-label="Année précédente">‹</button>'+
+  '<button type="button" data-action="year-prev" aria-label="Année précédente"'+(year<=MIN_PLANNING_YEAR?' disabled':'')+'>‹</button>'+
   '<button type="button" data-action="year-current" class="n2py-current" aria-label="Revenir à cette année">'+year+'</button>'+
   '<button type="button" data-action="year-next" aria-label="Année suivante">›</button></div>';
  let grid='';
