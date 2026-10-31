@@ -1,10 +1,13 @@
 // Nethor 2 - accès minimal aux semaines.
 // Le client Supabase doit utiliser une session utilisateur et rester soumis à la RLS.
+export const MIN_PLANNING_DATE='2025-01-01';
+export const MIN_PLANNING_YEAR=2025;
 function checkWeekKey(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) throw new TypeError('Date de semaine invalide');
   const date = new Date(value + 'T12:00:00Z');
   if (Number.isNaN(+date) || date.toISOString().slice(0,10) !== value || date.getUTCDay() !== 1)
     throw new TypeError('Le début de semaine doit être un lundi valide');
+  if(value<MIN_PLANNING_DATE)throw new RangeError('Les plannings antérieurs au 01/01/2025 ne sont plus pris en charge');
   return value;
 }
 export async function getPlanningWeek(client, weekStart) {
@@ -20,6 +23,7 @@ export async function getImportHistory(client,{limit=100}={}) {
   if(!Number.isInteger(limit)||limit<1||limit>500) throw new RangeError('Limite invalide');
   const {data,error}=await client.from('planning_import_history')
     .select('id,week_start,file_name,storage_path,imported_at,imported_by_name,file_size,mime_type')
+    .gte('week_start',MIN_PLANNING_DATE)
     .order('imported_at',{ascending:false}).limit(limit);
   if(error) throw error;
   return data||[];
@@ -49,13 +53,13 @@ export async function verifyPublishedWeek(client,weekStart,expectedRevision) {
  * Ne récupère ni noms, ni horaires des collaborateurs.
  */
 export async function getPublishedWeeksForYear(client,year){
- if(!Number.isInteger(year)||year<1900||year>2100)throw new RangeError('Année invalide');
+ if(!Number.isInteger(year)||year<MIN_PLANNING_YEAR||year>9999)throw new RangeError('Année invalide');
  const monday=date=>{
   const d=new Date(date+'T12:00:00Z');
   const wd=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-wd);
   return d.toISOString().slice(0,10);
  };
- const start=monday(year+'-01-01'),end=monday(year+'-12-31');
+ const rawStart=monday(year+'-01-01'),start=rawStart<MIN_PLANNING_DATE?MIN_PLANNING_DATE:rawStart,end=monday(year+'-12-31');
  const {data,error}=await client.from('planning_weeks')
   .select('week_start').gte('week_start',start).lte('week_start',end)
   .order('week_start',{ascending:true});
