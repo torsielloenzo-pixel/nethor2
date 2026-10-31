@@ -354,7 +354,7 @@ async function loadCollaboratorHistory(){
   }
   collaboratorHistory.items=[...history.entries()].map(([key,item])=>{
    const profile=state.profiles.find(p=>normalizeName(p.planning_name||p.display_name)===key);
-   return {...item,profileId:profile?.id||null,accountEnabled:profile?.account_enabled??null,displayName:profile?.display_name||''};
+   return {name:item.name,first:item.first,last:item.last,weeks:item.weekSet.size,profileId:profile?.id||null,accountEnabled:profile?.account_enabled??null,displayName:profile?.display_name||''};
   }).sort((a,b)=>a.first.localeCompare(b.first)||a.name.localeCompare(b.name,'fr'));
   collaboratorHistory.loaded=true;
  }catch(_){collaboratorHistory.error='Lecture de l’historique indisponible. Réessayer ultérieurement.';}
