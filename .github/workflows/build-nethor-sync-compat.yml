@@ -1,6 +1,6 @@
-name: NethorSync - Installateur compatible 2.1.8
+name: NethorSync - Installateur compatible 2.1.9
 
-# Un seul déploiement volontaire du correctif compatible 2.1.8.
+# Canal compatible pour déployer NethorSync 2.1.9 sur les postes 2.1.x.
 # Conserve la base Windows 2.1.1, sans écoute permanente.
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
       - 'tools/nethor-sync/Update-NethorSync.ps1'
       - 'tools/nethor-sync/NethorSyncRunner.vbs'
       - 'tools/nethor-sync/Register-NethorSyncTasks-217.ps1'
-      - 'tools/nethor-sync/NethorSync2-218.iss'
+      - 'tools/nethor-sync/NethorSync2-219.iss'
       - 'tools/nethor-sync/NethorSync-Version.txt'
 
 permissions:
@@ -60,18 +60,18 @@ jobs:
             $content = Get-Content -LiteralPath $target -Raw
             if ($content -match '\$ConfigPath\s*=\s*\(Join-Path') { throw "Ancien chemin de paramètre détecté : $name" }
           }
-          # Composants 2.1.8, sans importer le listener permanent 2.2.0.
+          # Composants 2.1.9, sans importer le listener permanent 2.2.0.
           $addons=@{
             'Update-NethorSync.ps1'='Update-NethorSync.ps1'
             'NethorSync-Version.txt'='NethorSync-Version.txt'
             'NethorSyncRunner.vbs'='NethorSyncRunner.vbs'
             'Register-NethorSyncTasks-217.ps1'='Register-NethorSyncTasks.ps1'
-            'NethorSync2-218.iss'='NethorSync2.iss'
+            'NethorSync2-219.iss'='NethorSync2.iss'
           }
           foreach($entry in $addons.GetEnumerator()) {
             Copy-Item -LiteralPath (Join-Path 'bugfix/tools/nethor-sync' $entry.Key) -Destination (Join-Path 'tools/nethor-sync' $entry.Value) -Force
           }
-          if ((Get-Content 'tools/nethor-sync/NethorSync-Version.txt' -Raw).Trim() -ne '2.1.8') { throw 'Marqueur version invalide' }
+          if ((Get-Content 'tools/nethor-sync/NethorSync-Version.txt' -Raw).Trim() -ne '2.1.9') { throw 'Marqueur version invalide' }
           $updateSource=Get-Content -LiteralPath 'tools/nethor-sync/Update-NethorSync.ps1' -Raw
           if ($updateSource -notmatch 'hash_mismatch' -or $updateSource -notmatch 'nethor_sync_update_manifest' -or
               $updateSource -notmatch 'rolled_back') { throw 'Updater incomplet' }
@@ -91,8 +91,8 @@ jobs:
           }
           $issPath='tools/nethor-sync/NethorSync2.iss'
           $iss=Get-Content -LiteralPath $issPath -Raw
-          # Source Inno 2.1.8 deja preparee depuis le depot
-          if ($iss -notmatch '#define AppVersion "2\.1\.8"') { throw 'Version du correctif invalide' }
+          # Source Inno 2.1.9 preparee depuis le depot
+          if ($iss -notmatch '#define AppVersion "2\.1\.9"') { throw 'Version du correctif invalide' }
           if ($iss -notmatch 'IsAutoUpdate' -or $iss -notmatch 'Update-NethorSync.ps1') { throw 'Mise a jour silencieuse indisponible' }
           Set-Content -LiteralPath $issPath -Value $iss -Encoding UTF8
           # Le poste peut provenir de la 2.2.0 : retirer son ancienne tâche
@@ -106,7 +106,7 @@ jobs:
           $tasks=$tasks.Replace('try { $null = $folder.GetTask($legacy); $folder.DeleteTask($legacy,0) }',
             'try { $old=$folder.GetTask($legacy); foreach ($instance in @($old.GetInstances(0))) { $instance.Stop() }; $folder.DeleteTask($legacy,0) }')
           Set-Content -LiteralPath $tasksPath -Value $tasks -Encoding UTF8
-          Write-Host 'Version Windows compatible 2.1.8, sans agent permanent.'
+          Write-Host 'Version Windows compatible 2.1.9, sans agent permanent.'
       - name: Tester le demarrage reel du scanner et les sous-dossiers
         shell: powershell
         run: |
@@ -117,7 +117,7 @@ jobs:
           New-Item -ItemType Directory -Path $agent,$plans -Force | Out-Null
           try {
             Copy-Item -LiteralPath 'tools/nethor-sync/NethorSync.ps1' -Destination $agent
-            [IO.File]::WriteAllBytes((Join-Path $plans 'planning.xls'),[byte[]](1,2,3,4))
+            [IO.File]::WriteAllBytes((Join-Path $plans 'PLANNING 05.10.26 SEMAINE A.xls'),[byte[]](1,2,3,4))
             @{rootPath=(Join-Path $probe 'Planning');statePath=$state;uploadEnabled=$false;maxFileMB=10} |
               ConvertTo-Json | Set-Content -LiteralPath (Join-Path $agent 'config.json') -Encoding UTF8
             $result=& powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $agent 'NethorSync.ps1') -DryRun 2>&1 | Out-String
@@ -253,7 +253,7 @@ jobs:
           }
           if ($script:capture -notmatch 'Août' -or $script:capture -notmatch 'ÉTÉ') {throw 'Unicode corrompu'}
           $realVersion=(Get-SyncClientVersion 'tools/nethor-sync')
-          if ($realVersion -ne '2.1.8') { throw ('Version reelle incorrecte: '+$realVersion) }
+          if ($realVersion -ne '2.1.9') { throw ('Version reelle incorrecte: '+$realVersion) }
           Write-Host 'JSON UTF-8 explicite, accents, chemin et numero de version valides.'
       - name: Tester la validation de mise a jour via Supabase
         shell: powershell
@@ -291,7 +291,7 @@ jobs:
           & $compiler 'tools\nethor-sync\NethorSync2.iss'
           if ($LASTEXITCODE -ne 0) {throw 'Compilation échouée'}
           $original='build\installer\NethorSync2-Setup.exe'
-          $result='build\installer\NethorSync2-Setup-Compatibility-218.exe'
+          $result='build\installer\NethorSync2-Setup-Compatibility-219.exe'
           if (-not (Test-Path $original)) {throw 'Exécutable absent'}
           Copy-Item $original $result -Force
           $publicName='build\installer\NethorSync-Setup.exe'
@@ -303,14 +303,14 @@ jobs:
       - name: Test présence du fichier EXE
         shell: pwsh
         run: |
-          $file=Get-Item 'build\installer\NethorSync2-Setup-Compatibility-218.exe'
+          $file=Get-Item 'build\installer\NethorSync2-Setup-Compatibility-219.exe'
           if ($file.Length -lt 100000) { throw 'Taille de fichier incohérente' }
       - name: Joindre l exécutable à GitHub Actions
         uses: actions/upload-artifact@v4
         with:
-          name: NethorSync2-Compatibility-218
+          name: NethorSync2-Compatibility-219
           path: |
-            build/installer/NethorSync2-Setup-Compatibility-218.exe
+            build/installer/NethorSync2-Setup-Compatibility-219.exe
             build/installer/NethorSync-Setup.exe
           if-no-files-found: error
           retention-days: 30
@@ -321,10 +321,10 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           $tag='nethor-sync2-latest'
-          $exe='build/installer/NethorSync2-Setup-Compatibility-218.exe'
+          $exe='build/installer/NethorSync2-Setup-Compatibility-219.exe'
           $public='build/installer/NethorSync-Setup.exe'
           gh release view $tag --repo $env:GH_REPO --json tagName
           if ($LASTEXITCODE -ne 0) {throw 'Release NethorSync existante introuvable'}
           gh release upload $tag $exe $public --repo $env:GH_REPO --clobber
           if ($LASTEXITCODE -ne 0) {throw 'Impossible de publier le téléchargement NethorSync'}
-          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync2-Setup-Compatibility-218.exe" or .name=="NethorSync-Setup.exe") | .name'
+          gh release view $tag --repo $env:GH_REPO --json assets --jq '.assets[] | select(.name=="NethorSync2-Setup-Compatibility-219.exe" or .name=="NethorSync-Setup.exe") | .name'
