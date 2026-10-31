@@ -17,7 +17,7 @@ import {renderPlanningYear} from './planning-year.js';
 import {renderDesktopPlanningDay,renderDesktopPlanningLegend} from './planning-desktop-colors.js';
 import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics,readSyncHistoricalSummary} from '../data/nethor-sync-control.js';
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
-import {mergeImportHistory,renderImportHistory} from './import-history.js';
+import {mergeImportHistory,renderHistoryBrowser} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
 import {createSyncController} from './nethor-sync-ui.js';
@@ -92,6 +92,7 @@ let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
 let syncChartPeriod=7;
 let dashboardOpen=null;
+const historyBrowser={query:'',source:'all',year:'all',sort:'newest',openMonths:[],expandedAll:false};
 let booted=false;
 let swRegistration=null;
 let swReloading=false;
@@ -941,7 +942,7 @@ function pageHistory(){
   return renderPageHeader('TRAÇABILITÉ','Historique des imports','Imports manuels et transferts NethorSync · versions et remplacements.',button('Actualiser','history-refresh'))+
     '<section class="card n2hist-card"><div class="card-head"><div><h2 class="card-title">Historique des fichiers</h2>'+
     '<p class="sub">Les plannings récents remplacés peuvent être publiés automatiquement après une analyse complète. Une version refusée reste archivée sans modifier les horaires.</p></div></div>'+
-    '<div class="n2hist-list">'+renderImportHistory(state.history)+'</div></section>';
+    '<div class="n2hist-browser">'+renderHistoryBrowser(state.history,historyBrowser)+'</div></section>';
 }
 function render(){
   const screen=ROOT.querySelector('#screen');
@@ -1464,9 +1465,18 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='week-view'||action==='day-view'){state.view=action==='week-view'?'week':'day';render();}
   else if(action==='clear-import'){state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.importError='';render();}
   else if(action==='publish')await publish();
+  else if(action==='history-filter-reset'&&state.page==='history'){
+    Object.assign(historyBrowser,{query:'',source:'all',year:'all',sort:'newest',openMonths:[],expandedAll:false});render();
+  }
   else if(action==='history-refresh')await loadHistory();
   else if(action.startsWith('sync-')&&syncController)await syncController.action(action);
 });
+ROOT.addEventListener('toggle',event=>{
+ const details=event.target;
+ if(state.page!=='history'||!details.matches?.('[data-history-month]'))return;
+ const key=details.dataset.historyMonth;
+ historyBrowser.openMonths=details.open?[...new Set([...historyBrowser.openMonths,key])]:historyBrowser.openMonths.filter(x=>x!==key);
+},true);
 // Le menu d'association reste visible au-dessus du tableau défilant.
 ROOT.addEventListener('toggle',event=>{
  const detail=event.target;
@@ -1487,10 +1497,19 @@ ROOT.addEventListener('keydown',event=>{
  }
 });
 ROOT.addEventListener('change',event=>{
+ if(state.page==='history'&&state.profile?.role==='admin'&&['historySource','historyYear','historySort'].includes(event.target.id)){
+  const field={historySource:'source',historyYear:'year',historySort:'sort'}[event.target.id];
+  historyBrowser[field]=event.target.value;historyBrowser.openMonths=[];render();return;
+ }
  if(event.target.id==='adminAccountTarget'&&state.profile?.role==='admin'){accountAdmin.selected=event.target.value;render();return;}
  if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);
 });
 ROOT.addEventListener('input',event=>{
+  if(event.target.id==='historySearch'&&state.page==='history'&&state.profile?.role==='admin'){
+   historyBrowser.query=event.target.value;historyBrowser.openMonths=[];
+   const caret=event.target.selectionStart;render();const input=ROOT.querySelector('#historySearch');input?.focus();
+   if(Number.isInteger(caret))input?.setSelectionRange(caret,caret);return;
+  }
   if(event.target.id==='adminAccountSearch'&&state.profile?.role==='admin'){
     accountAdmin.query=event.target.value;
     const pos=event.target.selectionStart;
