@@ -47,6 +47,10 @@ export function parsePlanningWorkbook(workbook, XLSX, resolveColor) {
     const [sheetName,ws]=sheets[di];
     const cells=[];
     for(const emp of employees){
+      const sheetEmployee=String(ws['B'+emp.excelRow]?.v??'').trim();
+      if(norm(sheetEmployee)!==norm(emp.name)){
+        throw new Error('Collaborateur décalé : '+sheetName+' ligne '+emp.excelRow+' attendu « '+emp.name+' », trouvé « '+(sheetEmployee||'vide')+' »');
+      }
       const row=[];
       for(let si=0;si<58;si++){
         const col=si+2;
