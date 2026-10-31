@@ -14,7 +14,7 @@
 #app .n2-link-menu>summary::-webkit-details-marker{display:none}
 #app .n2-link-menu>summary:hover,#app .n2-link-menu[open]>summary{border-color:#b9cadc;background:#f3f6fa;color:#263c58}
 #app .n2-link-menu>summary:focus-visible{outline:2px solid #436fb4;outline-offset:3px}
-#app .n2-link-panel{position:absolute;z-index:60;top:calc(100% + 7px);left:0;width:min(290px,75vw);padding:15px;background:#fff;border:1px solid #e1e7ef;border-radius:14px;box-shadow:0 12px 36px rgba(28,49,79,.14);display:flex;flex-direction:column;gap:10px;text-align:left;font-size:12px;white-space:normal}
+#app .n2-link-panel{position:fixed;z-index:100;top:0;left:0;width:min(290px,75vw);padding:15px;background:#fff;border:1px solid #e1e7ef;border-radius:14px;box-shadow:0 12px 36px rgba(28,49,79,.14);display:flex;flex-direction:column;gap:10px;text-align:left;font-size:12px;white-space:normal}
 #app .n2-link-panel>strong{color:#253c5b;font-size:13px}
 #app .n2-link-panel>p{color:#738197;margin:-5px 0 2px}
 #app .n2-link-panel label{display:grid;gap:6px;color:#5c6c82;font-size:11px;font-weight:700}
@@ -58,5 +58,5 @@
  #app .n2accounts-fields{grid-template-columns:1fr}
  #app .n2accounts-header{gap:9px;flex-wrap:wrap}
  #app .n2accounts-tab{min-width:0;font-size:11px;padding:10px 6px}
- #app .n2-link-panel{left:auto;right:0}
+ #app .n2-link-panel{right:auto}
 }
