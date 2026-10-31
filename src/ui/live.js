@@ -343,9 +343,9 @@ async function loadCollaboratorHistory(){
     for(const employee of row.data?.employees||[]){
      const name=String(employee?.name||'').trim();const key=normalizeName(name);
      if(!key)continue;
-     const current=history.get(key)||{name,first:row.week_start,last:row.week_start,weeks:0};
-     current.last=row.week_start;
-     current.weeks+=1;
+     const current=history.get(key)||{name,first:row.week_start,last:row.week_start,weekSet:new Set()};
+      current.last=row.week_start;
+      current.weekSet.add(row.week_start);
      history.set(key,current);
     }
    }
