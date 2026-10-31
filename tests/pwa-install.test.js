@@ -40,11 +40,14 @@ test('logo homogène dans connexion, entêtes, menu et installation',()=>{
 
 test('service worker ne cache que la coquille statique et les nouveaux logos',()=>{
  const sw=read('sw.js');
- assert.match(sw,/nethor-mobile-drawer-recovery-(?:sync-)?v\d+/);
+ assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
  assert.ok(sw.includes('src/ui/planning-mobile.js'));
  assert.ok(sw.includes('src/ui/layout-role.js'));
  assert.ok(sw.includes('src/ui/recovery-prompt.js'));
+ assert.ok(sw.includes('src/ui/account-admin.js'));
  assert.ok(sw.includes('staff-desktop.css'));
+ assert.match(sw,/const CORE=\[/);
+ assert.match(sw,/Promise\.allSettled\(OPTIONAL/);
  for(const file of ['nethor-logo-180-v8.png','nethor-logo-192-v8.png','nethor-logo-512-v8.png','favicon.ico'])
    assert.ok(sw.includes(file));
  assert.doesNotMatch(sw,/supabase\.co/);
