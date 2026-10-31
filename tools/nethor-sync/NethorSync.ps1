@@ -36,6 +36,20 @@ function Get-BasePath([string]$Path) {
   if ([IO.Path]::IsPathRooted($Path)) { return [IO.Path]::GetFullPath($Path) }
   return [IO.Path]::GetFullPath((Join-Path $PSScriptRoot $Path))
 }
+function Get-PlanningFileDateHint([string]$RelativePath) {
+  $text = [string]$RelativePath
+  foreach ($match in [regex]::Matches($text,'(?<!\d)(?<d>0?[1-9]|[12]\d|3[01])[.\-_](?<m>0?[1-9]|1[0-2])[.\-_](?<y>\d{2}|\d{4})(?!\d)')) {
+    $year = [int]$match.Groups['y'].Value
+    if ($year -lt 100) { $year += 2000 }
+    try { return [datetime]::new($year,[int]$match.Groups['m'].Value,[int]$match.Groups['d'].Value) } catch { }
+  }
+  foreach ($match in [regex]::Matches($text,'(?<!\d)(?<y>20\d{2})[.\-_](?<m>0?[1-9]|1[0-2])[.\-_](?<d>0?[1-9]|[12]\d|3[01])(?!\d)')) {
+    try { return [datetime]::new([int]$match.Groups['y'].Value,[int]$match.Groups['m'].Value,[int]$match.Groups['d'].Value) } catch { }
+  }
+  $yearMatch=[regex]::Match($text,'(?<!\d)(?<y>20\d{2})(?!\d)')
+  if ($yearMatch.Success) { return [datetime]::new([int]$yearMatch.Groups['y'].Value,1,1) }
+  return $null
+}
 function Get-SecretText([string]$Encrypted) {
   $secure = ConvertTo-SecureString -String $Encrypted
   $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
@@ -329,9 +343,20 @@ if ($networkEnabled) {
     exit 0
   }
 }
-$files = @(Get-ChildItem -LiteralPath $root -File -Recurse -ErrorAction Stop |
+$minimumPlanningDate=[datetime]::new(2025,1,1)
+$allFiles = @(Get-ChildItem -LiteralPath $root -File -Recurse -ErrorAction Stop |
   Where-Object { $_.Extension.ToLowerInvariant() -in @(".xls", ".xlsx", ".xlsm") -and -not $_.Name.StartsWith("~$") -and -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) } |
   Sort-Object FullName)
+$files=@()
+$ignoredBefore2025=0
+$ignoredUndated=0
+foreach ($candidate in $allFiles) {
+  $candidateRelative=$candidate.FullName.Substring($root.TrimEnd("\").Length).TrimStart("\")
+  $planningDate=Get-PlanningFileDateHint $candidateRelative
+  if ($null -eq $planningDate) { $ignoredUndated++; continue }
+  if ($planningDate.Date -lt $minimumPlanningDate) { $ignoredBefore2025++; continue }
+  $files += $candidate
+}
 foreach ($file in $files) {
   $script:syncStage='file_scan'
   $relative = $file.FullName.Substring($root.TrimEnd("\").Length).TrimStart("\")
@@ -387,6 +412,10 @@ $report = [ordered]@{
   root = $root
   simulated = (-not $networkEnabled)
   scanned = $files.Count
+  discoveredExcel = $allFiles.Count
+  ignoredBefore2025 = $ignoredBefore2025
+  ignoredUndated = $ignoredUndated
+  minimumPlanningDate = "2025-01-01"
   entries = $entries
   errors = $errors
 }
@@ -463,7 +492,7 @@ Save-JsonAtomic $reportPath $report
 if (-not $DryRun) {
   Save-JsonAtomic $manifestPath ([ordered]@{ version = 1; files = $entries; uploadedHashes = @($uploaded.Keys | Sort-Object) })
 }
-Write-Host ("Nethor Sync 2 - {0} fichier(s), {1} erreur(s), mode {2}" -f $files.Count,$errors.Count, $(if ($networkEnabled) { "envoi" } else { "simulation" }))
+Write-Host ("Nethor Sync 2 - {0} fichier(s) eligibles (depuis 2025), {1} ignore(s) avant 2025, {2} sans date, {3} erreur(s), mode {4}" -f $files.Count,$ignoredBefore2025,$ignoredUndated,$errors.Count, $(if ($networkEnabled) { "envoi" } else { "simulation" }))
 Write-Host "Rapport: $reportPath"
 if ($errors.Count -gt 0) { exit 1 }
 } catch {
