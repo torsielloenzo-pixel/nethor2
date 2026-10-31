@@ -103,7 +103,7 @@ export function renderHistoryBrowser(entries=[],preferences={}){
   '<label><span>Classement</span><select id="historySort">'+option('newest','Plus récents',sort)+option('oldest','Plus anciens',sort)+'</select></label></div>';
  const searching=Boolean(String(query).trim()||source!=='all'||year!=='all');
  const blocks=[...months.entries()].map(([key,rows],i)=>{
-  const expanded=expandedAll||openMonths.includes(key)||searching&&i===0||!searching&&i===0;
+  const expanded=expandedAll||openMonths.includes(key)||(searching&&i===0);
   return '<details class="n2hist-month" data-history-month="'+esc(key)+'"'+(expanded?' open':'')+'><summary><span class="n2hist-month-icon" aria-hidden="true">▦</span><strong>'+esc(monthLabel(key))+'</strong><small>'+rows.length+' opération'+(rows.length>1?'s':'')+'</small><span class="n2hist-disclosure" aria-hidden="true">⌄</span></summary>'+
     '<div class="n2hist-month-list">'+renderImportHistory(rows)+'</div></details>';
  }).join('');
