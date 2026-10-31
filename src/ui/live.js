@@ -4,6 +4,7 @@ import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
 import {renderSettingsPage} from './settings-security.js';
+import {renderOverviewDashboard} from './overview-dashboard.js';
 import {renderAccountAdmin} from './account-admin.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {installMobileZoomLock} from './mobile-zoom.js';
@@ -90,6 +91,7 @@ let client;
 let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
 let syncChartPeriod=7;
+let dashboardOpen=null;
 let booted=false;
 let swRegistration=null;
 let swReloading=false;
@@ -583,11 +585,12 @@ function pageHome(metrics){
     const top=renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',',
       'Le planning de la semaine et l’état de synchronisation NethorSync.',
       state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true));
-    // Vue d'ensemble Admin / Point de vente : planning complet d'abord,
-    // NethorSync et son historique en pleine largeur ensuite, sans KPIs en double.
-    return top+personal+
-      '<div class="n2sync-home-content">'+planningCard(metrics)+
-      renderSyncOverviewCard(state.nethorSync,Date.now(),syncChartPeriod)+'</div>';
+    // Vue d'ensemble : tableau de bord à cartes, planning détaillé uniquement sur clic.
+    return renderPageHeader('NETTO LE THOR','Vue d’ensemble',
+      'Équipe, horaires du jour et synchronisation des plannings.',
+      state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+
+      renderOverviewDashboard({people:metrics.people,week:state.week,today:dateInParis(),
+        sync:state.nethorSync,open:dashboardOpen,syncPeriod:syncChartPeriod,hasPlanning:!!state.weekData});
   }
   return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
@@ -990,6 +993,7 @@ function go(page){
   if(!(page in TITLES)||!canNavigate(page,state.profile,smallScreen()))return;
   const previousPage=state.page;
   state.page=page;state.notice='';state.error='';
+  if(page!=='home')dashboardOpen=null;
   if(page==='settings'&&previousPage!==page){state.settingsPanel='home';state.settingsFeedback='';}
   if(page==='planning'&&previousPage!==page){
    state.view=state.planningPreference==='year'&&!annualAllowed()?'week':state.planningPreference;
@@ -1260,6 +1264,20 @@ ROOT.addEventListener('submit',async event=>{
   }catch(err){showMessage(String(err.message||err));if(submit){submit.disabled=false;submit.textContent='Se connecter';}}
 });
 ROOT.addEventListener('click',async event=>{
+  if(event.target.closest('[data-dashboard-backdrop]')===event.target){
+    dashboardOpen=null;render();return;
+  }
+  const dash=event.target.closest('[data-action^="dashboard-"]');
+  if(dash&&state.page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())){
+    const action=dash.dataset.action;
+    if(action==='dashboard-person'){dashboardOpen={type:'person',index:Number(dash.dataset.dashboardPerson)};render();return;}
+    if(action==='dashboard-sync'){dashboardOpen={type:'sync'};render();return;}
+    if(action==='dashboard-close'){dashboardOpen=null;render();return;}
+    if(action==='dashboard-open-planning'){dashboardOpen=null;go('planning');return;}
+    if(action==='dashboard-sync-settings'){
+      dashboardOpen=null;go('settings');state.settingsPanel='sync';render();return;
+    }
+  }
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
 
