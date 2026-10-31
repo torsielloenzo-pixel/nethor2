@@ -71,10 +71,11 @@ function statusLabel(kind){
  return ({leave:'Congé',red:'Repos',orange:'Repos',unavailable:'Indisponible',empty:'Sans horaire',unknown:'Non renseigné'})[kind]||'';
 }
 function statusKind(kind){return kind==='red'||kind==='orange'?'rest':kind;}
+function shiftLabel(color){return color==='g'?'Matin':color==='b'?'Après-midi':'Créneau';}
 function colorShifts(shifts,compact=false){
  return shifts.map(s=>'<span class="n2pm-shift" data-color="'+s.color+'">'+
   '<strong>'+minute(s.start)+' – '+minute(s.end)+'</strong>'+
-  (compact?'':'<small>'+duration((s.end-s.start)/60)+'</small>')+
+  (compact?'':'<small>'+safe(shiftLabel(s.color))+' · '+duration((s.end-s.start)/60)+'</small>')+
  '</span>').join('');
 }
 function strip(dates,selected,today){
@@ -82,16 +83,29 @@ function strip(dates,selected,today){
    '<button type="button" class="n2pm-day'+(date===selected?' selected':'')+(date===today?' today':'')+'" data-mobile-planning-day="'+date+'" aria-pressed="'+(date===selected)+'" aria-label="'+safe(SHORT[i]+' '+dateLabel(date))+'">'+
    '<span>'+SHORT[i]+'</span><strong>'+Number(date.slice(-2))+'</strong></button>').join('')+'</div>';
 }
-function toolbar(weekStart,view,allowYear=false){
+function freshnessLabel(value){
+ const d=new Date(value||0);
+ if(!Number.isFinite(d.getTime())||!value)return 'Planning non vérifié sur cet appareil';
+ return 'Mis à jour à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+}
+function toolbar(weekStart,view,allowYear=false,meta={}){
+ const disabled=meta.loading?' disabled':'';
+ const online=meta.isOnline!==false;
  return '<div class="n2pm-toolbar">'+
   '<div class="n2pm-segmented" aria-label="Mode du planning">'+
   '<button type="button" data-action="week-view" class="'+(view==='week'?'selected':'')+'" aria-pressed="'+(view==='week')+'">Semaine</button>'+
   '<button type="button" data-action="day-view" class="'+(view==='day'?'selected':'')+'" aria-pressed="'+(view==='day')+'">Jour</button>'+
   (allowYear?'<button type="button" data-action="year-view" class="n2pm-year-btn" aria-pressed="false" aria-label="Ouvrir la vue annuelle">Année</button>':'')+'</div>'+
   '<div class="n2pm-pager">'+
-  '<button type="button" data-action="prev" aria-label="Semaine précédente">‹</button>'+
+  '<button type="button" data-action="prev" aria-label="Semaine précédente"'+disabled+'>‹</button>'+
   '<span><strong>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</strong><small>Semaine du '+safe(dateLabel(weekStart))+'</small></span>'+
-  '<button type="button" data-action="next" aria-label="Semaine suivante">›</button></div></div>';
+  '<button type="button" data-action="next" aria-label="Semaine suivante"'+disabled+'>›</button></div>'+
+  '<div class="n2pm-context" role="status">'+
+    '<button type="button" class="n2pm-today-btn" data-action="today"'+disabled+'>Aujourd’hui</button>'+
+    '<span class="n2pm-freshness">'+safe(freshnessLabel(meta.updatedAt))+'</span>'+
+    '<span class="n2pm-network" data-online="'+online+'">'+(online?'En ligne':'Hors ligne')+'</span>'+
+    (meta.updateReady?'<button type="button" class="n2pm-update-btn" data-action="pwa-update">Mettre à jour NETHOR</button>':'')+
+  '</div></div>';
 }
 
 function summary(cells){
@@ -110,7 +124,7 @@ function weekCard(emp,chosen){
  const slots=emp.days.map((d,i)=>{
   const flag=d.kind==='work'?(d.shifts[0]?.color||'g'):d.kind;
   return '<button type="button" class="n2pm-slot'+(d.date===chosen?' selected':'')+'" data-color="'+flag+'" data-mobile-planning-open="'+d.date+'" aria-label="'+safe(SHORT[i]+' '+dateLabel(d.date)+': '+(d.shifts.length?d.shifts.map(s=>minute(s.start)+'-'+minute(s.end)).join(', '):statusLabel(d.kind)))+'">'+
-  (d.shifts.length?d.shifts.map(s=>'<span class="n2pm-mini-shift" data-color="'+s.color+'"><strong>'+minute(s.start)+'</strong><strong>'+minute(s.end)+'</strong></span>').join(''):
+  (d.shifts.length?d.shifts.map(s=>'<span class="n2pm-mini-shift" data-color="'+s.color+'"><small>'+safe(shiftLabel(s.color))+'</small><strong>'+minute(s.start)+'</strong><strong>'+minute(s.end)+'</strong></span>').join(''):
    '<span class="n2pm-slot-off">'+safe(statusLabel(d.kind))+'</span>')+'</button>';
  }).join('');
  return '<article class="n2pm-week-card'+(emp.isMe?' is-me':'')+'">'+header+'<div class="n2pm-slots">'+slots+'</div></article>';
@@ -168,17 +182,20 @@ function dayView(data,selected,today,clock,filter,awayExpanded){
  if(isToday)out+='<p class="n2pm-footnote">Les statuts reflètent les horaires prévus, pas une présence confirmée.</p>';
  return out;
 }
-export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,currentProfile,filter='all',awayExpanded=false,allowYear=false,loading=false,error='',now=new Date()}){
+export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,currentProfile,filter='all',awayExpanded=false,allowYear=false,loading=false,error='',updatedAt=0,isOnline=true,updateReady=false,now=new Date()}){
  const result=planningMobileData(model,profiles,currentProfile,weekStart);
  const selected=result.dates.includes(selectedDay)?selectedDay:result.dates[0];
  const clock=parisClock(now);
  let content='';
- if(loading&&!model)content='<div class="n2pm-empty">Chargement du planning…</div>';
+ if(loading&&!model)content='<div class="n2pm-empty n2pm-loading" role="status"><strong>Chargement du planning…</strong><p>Vérification de la dernière version publiée.</p></div>';
  else if(!result.available)content='<div class="n2pm-empty"><strong>Aucun planning publié pour cette semaine.</strong><p>Choisis une autre semaine avec les flèches.</p></div>';
  else if(view==='day')content=dayView(result,selected,clock.key,clock.minute,filter,awayExpanded);
  else content=weekView(result,selected,clock.key);
+ const offline=isOnline?'':'<div class="n2pm-offline" role="status"><strong>Mode hors ligne</strong><span>Seules les données déjà chargées dans cette session peuvent rester visibles. Elles peuvent ne plus être à jour.</span></div>';
+ const syncing=loading&&model?'<div class="n2pm-syncing" role="status">Actualisation de la dernière version…</div>':'';
  return '<section class="n2pm" aria-label="Planning mobile de l’équipe">'+
-  toolbar(weekStart,view,allowYear)+
+  toolbar(weekStart,view,allowYear,{updatedAt,isOnline,updateReady,loading})+
+  offline+syncing+
   (error?'<p class="n2pm-error" role="alert">'+safe(error)+'</p>':'')+
   content+'</section>';
 }
