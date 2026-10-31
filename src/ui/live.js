@@ -238,18 +238,18 @@ async function startAuthorized(access){
   if(state.page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen()))void loadNethorSyncStatus();
 }
 async function loadProfiles(){
-  const {data,error}=await client.from('profiles').select('id,display_name,planning_name,contract_hours,account_enabled,role').order('display_name',{ascending:true});
+  const {data,error}=await client.from('profiles').select('id,display_name,planning_name,planning_aliases,contract_hours,account_enabled,role').order('display_name',{ascending:true});
   if(error){state.profiles=[];console.warn('Liste des profils restreinte par les autorisations.');return;}
   state.profiles=Array.isArray(data)?data:[];
   const own=state.profiles.find(profile=>profile.id===state.user?.id);
-  if(own)state.profile={...state.profile,planning_name:own.planning_name,contract_hours:own.contract_hours};
+  if(own)state.profile={...state.profile,planning_name:own.planning_name,planning_aliases:own.planning_aliases,contract_hours:own.contract_hours};
 }
 function visibleModel(){
   const source=state.weekData?.model;
   if(!source||!Array.isArray(source.employees)||!source.days)return null;
   const disabled=new Set();
   for(const p of state.profiles){
-    if(p.account_enabled===false){if(p.planning_name)disabled.add(normalizeName(p.planning_name));if(p.display_name)disabled.add(normalizeName(p.display_name));}
+    if(p.account_enabled===false){if(p.planning_name)disabled.add(normalizeName(p.planning_name));for(const name of p.planning_aliases||[])disabled.add(normalizeName(name));if(p.display_name)disabled.add(normalizeName(p.display_name));}
   }
   const keep=source.employees.map((e,i)=>({e,i})).filter(x=>!disabled.has(normalizeName(x.e.name)));
   if(keep.length===source.employees.length)return source;
@@ -264,7 +264,7 @@ function analyze(model){
   const start=Number(model.startTime??6)*60;
   for(let i=0;i<model.employees.length;i++){
     const employee=model.employees[i];
-    const profile=state.profiles.find(p=>normalizeName(p.planning_name||p.display_name)===normalizeName(employee.name));
+    const profile=state.profiles.find(p=>[p.planning_name,p.display_name,...(p.planning_aliases||[])].some(n=>normalizeName(n)===normalizeName(employee.name)));
     const days=dates.map(date=>{
       const cells=model.days[date]?.cells?.[i];
       if(!Array.isArray(cells)||cells.length!==slots)return {date,hours:0,ranges:[],issues:[{code:'INVALID_ROW',severity:'error'}]};
@@ -571,8 +571,8 @@ async function loadImportSyncStatus(force=false){
 
 function pageHome(metrics){
   if(isMobileHome())return mobileOverviewPage();
-  const me=state.profile.planning_name||state.profile.display_name;
-  const mine=metrics.people.find(p=>normalizeName(p.name)===normalizeName(me));
+  const names=[state.profile.planning_name,state.profile.display_name,...(state.profile.planning_aliases||[])].map(normalizeName);
+  const mine=metrics.people.find(p=>names.includes(normalizeName(p.name)));
   let personal='';
   if(mine)personal='<div class="live-message ok">Mon planning cette semaine : <strong>'+hours(mine.total)+'</strong> · '+escapeHtml(mine.name)+'</div>';
   if(isSyncOverviewRole(state.profile?.role,!smallScreen())){
@@ -657,7 +657,7 @@ async function loadAdminAccounts(){
  try{
   const result=await invokeAccountFunction('admin-manage-user',{action:'list'});
   if(!Array.isArray(result.users))throw Error('Liste des comptes indisponible.');
-  accountAdmin.users=result.users;
+  accountAdmin.users=result.users.map(user=>({...user,planning_aliases:state.profiles.find(p=>p.id===user.id)?.planning_aliases||[]}));
  }catch(e){accountAdmin.error=String(e.message||e);}
  finally{accountAdmin.loading=false;if(state.page==='settings'&&state.settingsPanel==='accounts')render();}
 }
@@ -668,6 +668,20 @@ function openAccountsFor(planningName){
  state.page='settings';state.settingsPanel='accounts';
  state.settingsFeedback='';render();
  void loadAdminAccounts();
+}
+async function saveAdminAliases(form){
+ if(state.profile?.role!=='admin'||!accountAdmin.selected)return;
+ const raw=String(new FormData(form).get('aliases')||'');
+ const names=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ accountAdmin.error='';accountAdmin.notice='';
+ try{
+  const {data,error}=await client.rpc('nethor2_admin_set_planning_aliases',{p_user_id:accountAdmin.selected,p_names:names});
+  if(error||data?.success!==true)throw Error(error?.message||'Enregistrement des alias non confirmé.');
+  await loadProfiles();
+  accountAdmin.users=accountAdmin.users.map(u=>u.id===accountAdmin.selected?{...u,planning_aliases:data.planning_aliases}:u);
+  accountAdmin.notice='Alias du planning enregistrés.';
+ }catch(e){accountAdmin.error=String(e.message||e);}
+ render();
 }
 async function submitAdminAccount(form){
  if(state.profile?.role!=='admin')return;
@@ -1124,12 +1138,13 @@ async function saveLink(name){
   if(!id)throw Error('Sélectionne un compte.');
   const profile=state.profiles.find(p=>p.id===id&&p.account_enabled===true);
   if(!profile)throw Error('Compte désactivé ou introuvable.');
-  const duplicate=state.profiles.some(p=>p.id!==id&&p.account_enabled===true&&normalizeName(p.planning_name)===normalizeName(name));
+  const duplicate=state.profiles.some(p=>p.id!==id&&p.account_enabled===true&&[p.planning_name,...(p.planning_aliases||[])].some(v=>normalizeName(v)===normalizeName(name)));
   if(duplicate)throw Error('Ce nom est déjà associé à un autre compte actif.');
   if(!window.confirm('Associer '+name+' au compte '+(profile.display_name||'sélectionné')+' ?'))return;
   const gate=await checkSession();
   if(!gate||gate.gate.profile.role!=='admin')throw Error('Session administrateur non validée.');
-  const {data,error}=await client.rpc('nethor2_admin_link_planning',{p_user_id:id,p_planning_name:name});
+  const aliases=[...(profile.planning_aliases||[]),name].filter((v,i,all)=>v&&all.findIndex(x=>normalizeName(x)===normalizeName(v))===i);
+  const {data,error}=await client.rpc('nethor2_admin_set_planning_aliases',{p_user_id:id,p_names:aliases});
   if(error||data?.success!==true)throw Error(error?.message||'Association non confirmée.');
   await loadProfiles();
   state.notice='Association enregistrée pour '+name;state.error='';
@@ -1217,6 +1232,7 @@ document.addEventListener('click',event=>{
 });
 
 ROOT.addEventListener('submit',async event=>{
+  if(event.target.id==='adminAliasesForm'){event.preventDefault();await saveAdminAliases(event.target);return;}
   if(event.target.id==='adminAccountForm'){event.preventDefault();await submitAdminAccount(event.target);return;}
   if(event.target.id==='recoveryEmailForm'){
     event.preventDefault();await saveRecoveryEmail(event.target);return;
