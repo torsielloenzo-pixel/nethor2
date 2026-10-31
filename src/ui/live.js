@@ -1101,6 +1101,7 @@ async function refreshPublishedWeekQuietly(){
  try{
   const updated=await getPlanningWeek(client,requestedWeek);
   if(state.user?.id!==requestedUser||state.week!==requestedWeek)return;
+  state.planningLoadedAt=Date.now();
   if((state.weekData?.revision||null)!==(updated?.revision||null)){
     state.weekData=updated;
     render();
