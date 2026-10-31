@@ -83,11 +83,16 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const APP_VERSION='2.2-mobile-2026.10.31';
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
 let syncChartPeriod=7;
 let booted=false;
+let swRegistration=null;
+let swReloading=false;
+let weekLoadBusy=false;
+let weekRequestId=0;
 let personalRequestId=0;
 let annualRequestId=0;
 let collaboratorsRequestId=0;
@@ -105,6 +110,17 @@ function savePlanningPreference(id,value){
  try{localStorage.setItem(planningPreferenceKey(id),value);return true;}
  catch(_){return false;}
 }
+// Mémorise uniquement la semaine consultée, jamais les données RH du planning.
+const planningWeekKey=id=>'nethor2-planning-week-v1:'+id;
+function readPlanningWeek(id){
+ try{
+  const value=localStorage.getItem(planningWeekKey(id))||'';
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)&&mondayOf(value)===value?value:null;
+ }catch(_){return null;}
+}
+function savePlanningWeek(id,value){
+ try{if(id&&/^\d{4}-\d{2}-\d{2}$/.test(value))localStorage.setItem(planningWeekKey(id),value);}catch(_){/* préférence non critique */}
+}
 const isInstalledPwa=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const settingsDate=value=>{
  const date=new Date(value||'');
@@ -113,10 +129,13 @@ const settingsDate=value=>{
 const settingsDiagnostics=()=>{
  const lines=[
   'NETHOR 2 — informations de diagnostic',
+  'Version interface : '+APP_VERSION,
   'Mode : '+(isInstalledPwa()?'PWA':'Navigateur'),
   'Format : '+(smallScreen()?'Mobile':'Ordinateur'),
   'Réseau (navigateur) : '+(navigator.onLine?'En ligne':'Hors ligne'),
   'Service Worker : '+(navigator.serviceWorker?.controller?'Actif':'Inactif'),
+  'Mise à jour PWA : '+(state.pwaUpdateReady?'Disponible':'À jour'),
+  'Dernier planning chargé : '+settingsDate(state.planningLoadedAt),
   'Dernière vérification d’accès : '+settingsDate(state.lastCheck)
  ];
  return lines.join('\n');
@@ -150,7 +169,7 @@ function renderLogin(message=''){
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag">● CONNECTÉ</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag" id="connectionStatus" data-online="true">● EN LIGNE</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -177,6 +196,7 @@ async function signOut(){
   state.mobileSync={loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
   state.settingsPanel='home';state.settingsFeedback='';state.planningPreference='week';
+  state.planningLoadedAt=0;state.pwaUpdateReady=false;state.networkOnline=navigator.onLine;
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
   syncController?.dispose();
@@ -191,7 +211,12 @@ async function startAuthorized(access){
   state.user=access.gate.user;
   state.profile=access.gate.profile;
   state.settingsPanel='home';state.settingsFeedback='';
+  state.networkOnline=navigator.onLine;
   state.planningPreference=readPlanningPreference(state.user.id);
+  if(smallScreen()){
+    const rememberedWeek=readPlanningWeek(state.user.id);
+    if(rememberedWeek){state.week=rememberedWeek;state.day=datesFor(rememberedWeek).includes(dateInParis())?dateInParis():rememberedWeek;}
+  }
   recoveryPrompt={step:'closed',dismissed:recoveryDismissed(state.user.id),saving:false,error:'',mailStatus:''};
   state.nethorSync={loaded:false,loading:false,status:null,error:''};
   state.importSync={loaded:false,loading:false,status:null,error:'',checkedAt:0};
@@ -267,12 +292,27 @@ function analyze(model){
   return {people,issues,coverage};
 }
 async function loadWeek(){
+  if(weekLoadBusy)return;
+  const requestedWeek=state.week;
+  const request=++weekRequestId;
+  const previous=state.weekData;
+  weekLoadBusy=true;
   state.loading=true;state.error='';render();
   try{
-    const result=await getPlanningWeek(client,state.week);
+    const result=await getPlanningWeek(client,requestedWeek);
+    if(request!==weekRequestId||state.week!==requestedWeek)return;
     state.weekData=result;
-  }catch(err){state.weekData=null;state.error='Lecture du planning impossible : '+String(err.message||err);}
-  finally{state.loading=false;render();}
+    state.planningLoadedAt=Date.now();
+    if(smallScreen()&&state.user?.id)savePlanningWeek(state.user.id,requestedWeek);
+  }catch(err){
+    if(request!==weekRequestId)return;
+    const sameWeek=previous?.model?.weekStart===requestedWeek;
+    state.weekData=sameWeek?previous:null;
+    state.error='Lecture du planning impossible : '+String(err.message||err)+(navigator.onLine?'':' · Appareil hors ligne.');
+  }
+  finally{
+    if(request===weekRequestId){weekLoadBusy=false;state.loading=false;render();}
+  }
 }
 function renderPageHeader(category,title,description,actions=''){
   return '<div class="page-header"><div><p class="eyebrow">'+escapeHtml(category)+'</p><h1>'+escapeHtml(title)+'</h1><p>'+escapeHtml(description)+'</p></div>'+(actions?'<div class="actions">'+actions+'</div>':'')+'</div>';
@@ -447,6 +487,9 @@ function mobileOverviewPage(){
   const totalHours=knownDays.reduce((sum,row)=>sum+(Number(row.hours)||0),0);
   const summaryHours=!ready?'…':snapshot.weeksError?'—':hours(totalHours);
   const dataCaption=linked?'Selon les plannings accessibles':'Compte non associé au planning';
+  const homeFreshAt=Math.max(Number(state.planningLoadedAt)||0,Number(state.personal.loadedAt)||0);
+  const homeFreshness=homeFreshAt?'Vérifié à '+new Date(homeFreshAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Planning non vérifié';
+  const homeNetwork=state.networkOnline?'En ligne':'Hors ligne · données déjà chargées seulement';
   return '<div class="n2h-home n2h-dashboard" aria-label="Mon accueil personnel">'+
     '<header class="n2h-greeting"><div><span class="n2h-overline">MON ESPACE · NETTO LE THOR</span><h1>Bonjour'+(name?' '+escapeHtml(name):'')+'</h1><p>'+escapeHtml(dayWord)+'</p></div>'+homePwaInstall()+'</header>'+
     '<section class="n2h-today" aria-label="Mes horaires aujourd’hui">'+
@@ -473,7 +516,7 @@ function mobileOverviewPage(){
         '<strong class="n2h-meta-value">'+escapeHtml(restLabel)+'</strong><small>'+escapeHtml(restDetail)+'</small>'+
       '</section>'+
     '</div>'+
-    '<section class="n2h-activity" aria-label="Informations de planning"><div class="n2h-activity-head">'+navIcon('history')+'<h2>Informations de planning</h2></div><p>'+escapeHtml(!ready?'Chargement des informations…':snapshot.weeksError?'Certaines données de planning sont temporairement indisponibles.':dataCaption+'. Consulte le planning pour les détails et les mises à jour.')+'</p></section>'+
+    '<section class="n2h-activity" aria-label="Informations de planning"><div class="n2h-activity-head">'+navIcon('history')+'<h2>Informations de planning</h2></div><p>'+escapeHtml(!ready?'Chargement des informations…':snapshot.weeksError?'Certaines données de planning sont temporairement indisponibles.':dataCaption+'. Consulte le planning pour les détails et les mises à jour.')+'</p><div class="n2h-app-state"><span data-online="'+state.networkOnline+'">'+escapeHtml(homeNetwork)+'</span><span>'+escapeHtml(homeFreshness)+'</span></div>'+(state.pwaUpdateReady?'<button type="button" class="n2h-update" data-action="pwa-update">Mettre à jour NETHOR</button>':'')+'</section>'+
     '</div>';
 }
 
@@ -568,9 +611,10 @@ function pagePlanning(metrics){
   }
   if(isMobileHome())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
-    model:state.loading?null:visibleModel(),profiles:state.profiles,
+    model:visibleModel(),profiles:state.profiles,
     currentProfile:state.profile,allowYear:annualAllowed(),filter:state.mobilePlanning.dayFilter,
-    awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error
+    awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error,
+    updatedAt:state.planningLoadedAt,isOnline:state.networkOnline,updateReady:state.pwaUpdateReady
   });
   return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+collaboratorPanel()+planningCard(metrics);
 }
@@ -796,8 +840,9 @@ function pageSettings(){
    role:listRole(state.profile?.role),access:state.access,
    lastSignIn:settingsDate(state.user?.last_sign_in_at),
    preferredView:state.planningPreference,allowYear:annualAllowed(),
-   isPwa:isInstalledPwa(),isOnline:navigator.onLine,
+   isPwa:isInstalledPwa(),isOnline:state.networkOnline,
    workerActive:Boolean(navigator.serviceWorker?.controller),
+   appVersion:APP_VERSION,lastPlanningCheck:settingsDate(state.planningLoadedAt),updateReady:state.pwaUpdateReady,
    lastCheck:settingsDate(state.lastCheck),
    syncMarkup,feedback:state.settingsFeedback
   });
@@ -851,6 +896,11 @@ function render(){
   }
   const syncTab=ROOT.querySelector('.live-navigator [data-page="anomalies"] .nav-label');
   if(syncTab)syncTab.textContent=smallScreen()?'NethorSync':'Alertes';
+  const connectionStatus=ROOT.querySelector('#connectionStatus');
+  if(connectionStatus){
+    connectionStatus.dataset.online=String(state.networkOnline);
+    connectionStatus.textContent=state.networkOnline?'● EN LIGNE':'● HORS LIGNE';
+  }
   ROOT.querySelectorAll('[data-page]').forEach(el=>{
     el.classList.toggle('active',el.dataset.page===state.page);
     if(el.dataset.page===state.page)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
@@ -1051,6 +1101,7 @@ async function refreshPublishedWeekQuietly(){
  try{
   const updated=await getPlanningWeek(client,requestedWeek);
   if(state.user?.id!==requestedUser||state.week!==requestedWeek)return;
+  state.planningLoadedAt=Date.now();
   if((state.weekData?.revision||null)!==(updated?.revision||null)){
     state.weekData=updated;
     render();
@@ -1270,16 +1321,26 @@ ROOT.addEventListener('click',async event=>{
     await requestRecoveryEmail(data.user.email);
   }
   else if(action==='logout')await signOut();
+  else if(action==='pwa-update'){
+    const waiting=swRegistration?.waiting;
+    if(waiting)waiting.postMessage({type:'SKIP_WAITING'});
+    else{state.pwaUpdateReady=false;render();}
+  }
   else if(action==='install-pwa')await installPwa();
   else if(action==='go-import')go('import');
   else if(action==='go-planning')go('planning');
+  else if(action==='today'){
+    if(weekLoadBusy)return;
+    const today=dateInParis();state.week=mondayOf(today);state.day=today;state.mobilePlanning.dayFilter='all';await loadWeek();
+  }
   else if(action==='prev'||action==='next'){
+    if(weekLoadBusy)return;
     const dayIndex=datesFor(state.week).indexOf(state.day);
     state.week=plusDays(state.week,action==='prev'?-7:7);
     state.day=isMobileHome()&&dayIndex>=0?plusDays(state.week,dayIndex):state.week;
     await loadWeek();
   }
-  else if(action==='refresh')await loadWeek();
+  else if(action==='refresh'){if(!weekLoadBusy)await loadWeek();}
   else if(action==='week-view'||action==='day-view'){state.view=action==='week-view'?'week':'day';render();}
   else if(action==='clear-import'){state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.importError='';render();}
   else if(action==='publish')await publish();
@@ -1306,6 +1367,17 @@ ROOT.addEventListener('click',event=>{
     menuButton.setAttribute('aria-expanded',String(shown));
   }else if(event.target.closest('#sidebarBackdrop'))closeMobileMenu();
 });
+function handleNetworkChange(){
+ state.networkOnline=navigator.onLine;
+ if(!state.user)return;
+ render();
+ if(state.networkOnline){
+  void refreshPublishedWeekQuietly();
+  if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
+ }
+}
+window.addEventListener('online',handleNetworkChange);
+window.addEventListener('offline',handleNetworkChange);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void verifyResume();});
 window.addEventListener('focus',()=>void verifyResume());
 window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
@@ -1329,14 +1401,38 @@ document.addEventListener('keydown',event=>{
   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
  }
 });
+async function registerPwaWorker(){
+ if(!('serviceWorker' in navigator)||location.protocol!=='https:')return;
+ try{
+  swRegistration=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+  const markUpdate=()=>{
+   if(!navigator.serviceWorker.controller||!swRegistration?.waiting)return;
+   state.pwaUpdateReady=true;
+   if(state.user)render();
+  };
+  markUpdate();
+  swRegistration.addEventListener('updatefound',()=>{
+   const worker=swRegistration?.installing;
+   if(!worker)return;
+   worker.addEventListener('statechange',()=>{
+    if(worker.state==='installed'&&navigator.serviceWorker.controller)markUpdate();
+   });
+  });
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+   if(swReloading)return;
+   swReloading=true;
+   location.reload();
+  });
+ }catch(err){console.warn('Service Worker indisponible',err);}
+}
 async function boot(){
   if(booted)return;booted=true;
+  void registerPwaWorker();
   try{
     if(!window.supabase?.createClient)throw Error('La bibliothèque de connexion est inaccessible. Vérifiez votre réseau.');
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{storageKey:'nethor2-auth-v1',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     const access=await checkSession();
     if(access)await startAuthorized(access);else renderLogin();
   }catch(err){renderLogin('Connexion indisponible : '+String(err.message||err));}
-  if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>void boot(),{once:true});else void boot();

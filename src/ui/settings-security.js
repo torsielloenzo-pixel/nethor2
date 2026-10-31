@@ -70,7 +70,7 @@ export function renderSecuritySettings(account={},section='all'){
 export function renderSettingsPage(context={}){
  const {view='home',account={},displayName='—',identifier='',role='—',access='—',lastSignIn='—',
   preferredView='week',allowYear=false,isPwa=false,isOnline=true,workerActive=false,
-  lastCheck='—',syncMarkup='',feedback=''}=context;
+  appVersion='NETHOR 2',lastPlanningCheck='—',updateReady=false,lastCheck='—',syncMarkup='',feedback=''}=context;
  const recoveryStatus=account.loading?'Vérification…':account.error?'État indisponible':account.configured?'Associée':'Non associée';
  const headings={
   profile:'Informations personnelles',permissions:'Rôle et autorisations',
@@ -120,10 +120,11 @@ export function renderSettingsPage(context={}){
   if(view==='notifications')return '<section class="n2settings-detail-card"><h3>Notifications</h3>'+
     '<p class="n2settings-note">Aucun réglage de notifications individuelles n’est disponible dans NETHOR 2 pour le moment. Aucune notification push n’est activée depuis cet écran.</p></section>';
   if(view==='application'||view==='diagnostic')return '<section class="n2settings-detail-card"><h3>'+(view==='diagnostic'?'Informations de diagnostic':'État de NETHOR')+'</h3>'+
-    fact('Application','NETHOR 2')+fact('Mode',isPwa?'PWA installée':'Navigateur')+
+    fact('Application','NETHOR 2')+fact('Version de l’interface',appVersion)+fact('Mode',isPwa?'PWA installée':'Navigateur')+
     fact('Réseau (signalé par le navigateur)',isOnline?'En ligne':'Hors ligne')+
     fact('Service Worker',workerActive?'Application prise en charge':'Non actif sur cette page')+
-    fact('Dernière vérification des accès',lastCheck)+
+    fact('Mise à jour PWA',updateReady?'Disponible':'À jour')+
+    fact('Dernier planning chargé',lastPlanningCheck)+fact('Dernière vérification des accès',lastCheck)+
     (view==='diagnostic'?'<p class="n2settings-note">Le rapport ne contient ni mot de passe, ni adresse e-mail, ni identifiant de compte, ni jeton de connexion.</p>'+
     '<button type="button" class="btn primary" data-action="settings-copy-diagnostic">Copier le diagnostic</button>':
     '<p class="n2settings-note">Le statut « En ligne » ne garantit pas que les serveurs Supabase sont accessibles. Les mises à jour sont gérées par le navigateur et le service worker.</p>')+
