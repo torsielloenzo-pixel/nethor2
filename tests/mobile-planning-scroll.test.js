@@ -36,7 +36,7 @@ test('les filtres et le panneau de repos préservent le défilement du planning'
  assert.equal((handlers.match(/ROOT\.querySelector\('#screen'\)\?\.scrollTop/g)||[]).length,2);
  assert.equal((handlers.match(/scroller\.scrollTop=y/g)||[]).length,2);
  assert.doesNotMatch(handlers,/window\.scrollY|window\.scrollTo/);
- assert.match(js,/if\(state\.page==='planning'&&smallScreen\(\)&&planningScroller\)planningScroller\.scrollTop=0;/);
+ assert.match(js,/if\(smallScreen\(\)&&mobileScroller\)mobileScroller\.scrollTop=0;/);
 });
 
 test('les autres pages et le desktop ne reçoivent pas le blocage de défilement',()=>{
