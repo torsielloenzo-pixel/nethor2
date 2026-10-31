@@ -60,3 +60,58 @@
  #app .n2accounts-tab{min-width:0;font-size:11px;padding:10px 6px}
  #app .n2-link-panel{right:auto}
 }
+
+/* Administration des comptes — fiches et activité, desktop/PWA desktop. */
+#app .n2accounts-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 20px}
+#app .n2accounts-summary>div{display:grid;gap:8px;background:#f7f9fc;border:1px solid #e7edf5;border-radius:13px;padding:15px 16px;min-width:0}
+#app .n2accounts-summary span{font-size:11px;line-height:1.5;color:#79889d;font-weight:650}
+#app .n2accounts-summary strong{color:#233b5b;font-size:22px;line-height:1.15;font-weight:800;font-variant-numeric:tabular-nums}
+#app .n2accounts-search{display:grid;gap:7px;margin:3px 0 13px;color:#465a75;font-size:11px;font-weight:750}
+#app .n2accounts-search input{min-height:43px;width:100%;border:1px solid #dae4f0;border-radius:10px;background:#fff;color:#2b3c54;padding:10px 13px;font-size:13px;outline-offset:2px}
+#app .n2accounts-search input:focus{border-color:#8daacb;box-shadow:0 0 0 3px rgba(66,105,158,.1)}
+#app .n2accounts-results{color:#7b889d;font-size:11px;margin:0 0 11px}
+#app .n2accounts-list{display:grid;gap:0}
+#app .n2accounts-list .n2accounts-user{align-items:flex-start;gap:14px;padding:16px}
+#app .n2accounts-user .n2accounts-avatar{width:42px;height:42px;font-size:15px}
+#app .n2accounts-name-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#app .n2accounts-name-row>strong{font-size:13px}
+#app .n2accounts-user-meta{display:flex;gap:7px 15px;flex-wrap:wrap;margin-top:9px;color:#738298;font-size:11px}
+#app .n2accounts-user-meta b{color:#3e536f;font-weight:650}
+#app .n2accounts-status{display:inline-flex;align-items:center;gap:6px;border:1px solid #e3e8ef;background:#f5f7fa;color:#63758b;border-radius:99px;font-size:10px;font-weight:750;padding:4px 9px;white-space:nowrap}
+#app .n2accounts-status:before{content:"";width:6px;height:6px;border-radius:50%;background:#a0aabb}
+#app .n2accounts-status[data-status="on"]{color:#356d56;border-color:#dcece4;background:#f0f8f4}
+#app .n2accounts-status[data-status="on"]:before{background:#4d9c78}
+#app .n2accounts-status[data-status="off"]{color:#8e6060;border-color:#efdede;background:#fcf6f6}
+#app .n2accounts-status[data-status="off"]:before{background:#c28484}
+#app .n2accounts-alias-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+#app .n2accounts-alias{display:inline-flex;padding:4px 8px;border-radius:7px;background:#edf1f6;color:#50627c;font-size:10px;font-weight:700}
+#app .n2accounts-missing{color:#9a8790;font-style:italic;font-size:11px;margin-top:6px}
+#app .n2accounts-empty{margin:0;padding:24px;text-align:center;color:#8391a4;font-size:12px}
+#app .n2accounts-profile{padding:20px;margin:18px 0;border:1px solid #e3eaf3;background:#fbfcfe;border-radius:14px}
+#app .n2accounts-profile-heading{display:flex;align-items:center;gap:12px;margin:0 0 17px}
+#app .n2accounts-profile-heading .n2accounts-avatar{width:46px;height:46px}
+#app .n2accounts-profile-heading h3{margin:0 0 7px;color:#213a5b;font-size:16px}
+#app .n2accounts-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}
+#app .n2accounts-fact{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:11px 0;border-top:1px solid #e9eef5;min-width:0}
+#app .n2accounts-fact>span{color:#7a899c;font-size:11px;flex:0 0 45%}
+#app .n2accounts-fact>strong{color:#314860;font-size:11px;font-weight:740;text-align:right;overflow-wrap:anywhere;min-width:0}
+#app .n2accounts-alias-summary{border-top:1px solid #e4ebf4;padding-top:16px;margin-top:8px}
+#app .n2accounts-alias-summary>strong{font-size:12px;color:#364d6b}
+#app .n2accounts-alias-summary .n2settings-note{margin:9px 0 0;font-size:11px}
+#app .n2accounts-disclaimer{margin:14px 0 0;font-size:11px;line-height:1.6;color:#8290a3}
+#app .n2accounts-form-heading{margin:10px 0 18px}
+#app .n2accounts-form-heading h3{margin:0;font-size:14px;color:#2c4260}
+#app .n2accounts-form-heading .n2settings-note{margin:5px 0 0}
+@media(max-width:850px){
+ #app .n2accounts-info-grid{grid-template-columns:1fr}
+ #app .n2accounts-summary{gap:8px}
+ #app .n2accounts-list .n2accounts-user{flex-wrap:wrap}
+ #app .n2accounts-list .n2accounts-edit{margin-left:56px}
+}
+@media(max-width:520px){
+ #app .n2accounts-summary{grid-template-columns:1fr}
+ #app .n2accounts-summary>div{display:flex;justify-content:space-between;align-items:center}
+ #app .n2accounts-info-grid{grid-template-columns:1fr}
+ #app .n2accounts-fact{flex-direction:column;gap:4px}
+ #app .n2accounts-fact>strong{text-align:left}
+}
