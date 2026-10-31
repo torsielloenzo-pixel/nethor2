@@ -840,8 +840,9 @@ function pageSettings(){
    role:listRole(state.profile?.role),access:state.access,
    lastSignIn:settingsDate(state.user?.last_sign_in_at),
    preferredView:state.planningPreference,allowYear:annualAllowed(),
-   isPwa:isInstalledPwa(),isOnline:navigator.onLine,
+   isPwa:isInstalledPwa(),isOnline:state.networkOnline,
    workerActive:Boolean(navigator.serviceWorker?.controller),
+   appVersion:APP_VERSION,lastPlanningCheck:settingsDate(state.planningLoadedAt),updateReady:state.pwaUpdateReady,
    lastCheck:settingsDate(state.lastCheck),
    syncMarkup,feedback:state.settingsFeedback
   });
