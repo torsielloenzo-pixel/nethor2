@@ -32,6 +32,7 @@ export function parsePlanningWorkbook(workbook, XLSX, resolveColor) {
   });
   const first=sheets[0][1];
   const monday=checkedDate(first?.B2?.v,XLSX);
+  if(iso(monday)<'2025-01-01') throw new Error('Planning antérieur au 01/01/2025 non pris en charge');
   const range=first['!ref'] ? XLSX.utils.decode_range(first['!ref']) : null;
   if (!range) throw new Error('Plage Excel LUNDI introuvable');
   const employees=[];
