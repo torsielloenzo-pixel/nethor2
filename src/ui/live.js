@@ -4,6 +4,7 @@ import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
 import {renderSettingsPage} from './settings-security.js';
+import {renderAccountAdmin} from './account-admin.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {installMobileZoomLock} from './mobile-zoom.js';
 import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek,getPublishedWeeksForYear} from '../data/planning-repository.js';
@@ -87,6 +88,7 @@ const APP_VERSION='2.2-mobile-2026.10.31';
 const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
 let client;
 let syncController=null;
+const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list'};
 let syncChartPeriod=7;
 let booted=false;
 let swRegistration=null;
@@ -362,7 +364,7 @@ function planningCard(metrics){
   let content='';
   const dates=datesFor(state.week);
   // La palette est réservée à la consultation sur la page Planning Desktop/PWA.
-  const desktopColors=state.page==='planning'&&!smallScreen();
+  const desktopColors=!smallScreen()&&(state.page==='planning'||state.page==='home');
   const first=Number(state.weekData?.model?.startTime??6)*60;
   const step=Number(state.weekData?.model?.slotMinutes)||15;
   const planningDay=day=>desktopColors?renderDesktopPlanningDay(day.cells,first,step):shift(day.ranges);
@@ -616,7 +618,7 @@ function pagePlanning(metrics){
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error,
     updatedAt:state.planningLoadedAt,isOnline:state.networkOnline,updateReady:state.pwaUpdateReady
   });
-  return renderPageHeader('PLANNING','Planning du personnel','Horaires publiés et contrôlés selon tes autorisations.',state.access==='manage'?button('Importer Excel','go-import',true):'')+summary(metrics)+collaboratorPanel()+planningCard(metrics);
+  return renderPageHeader('PLANNING','Planning du personnel','La même présentation que dans Vue d’ensemble.',state.access==='manage'?button('Importer Excel','go-import',true):'')+collaboratorPanel()+planningCard(metrics);
 }
 
 async function loadMobileSyncStatus(force=false){
@@ -641,6 +643,51 @@ function pageAnomalies(metrics){
   if(smallScreen())return renderMobileSyncSummary(state.mobileSync);
   return renderPageHeader('ANALYSE','Points à vérifier','Contrôles indicatifs : créneaux, pauses, journées longues et heures contractuelles.')+summary(metrics)+alertsCard(metrics,false)+'<p class="live-muted" style="margin-top:17px">Une anomalie de planning n’équivaut pas nécessairement à une infraction. Les règles métier doivent être vérifiées.</p>';
 }
+async function loadAdminAccounts(){
+ if(state.profile?.role!=='admin'||accountAdmin.loading)return;
+ accountAdmin.loading=true;accountAdmin.error='';
+ if(state.page==='settings'&&state.settingsPanel==='accounts')render();
+ try{
+  const result=await invokeAccountFunction('admin-manage-user',{action:'list'});
+  if(!Array.isArray(result.users))throw Error('Liste des comptes indisponible.');
+  accountAdmin.users=result.users;
+ }catch(e){accountAdmin.error=String(e.message||e);}
+ finally{accountAdmin.loading=false;if(state.page==='settings'&&state.settingsPanel==='accounts')render();}
+}
+function openAccountsFor(planningName){
+ if(state.profile?.role!=='admin')return;
+ accountAdmin.planningName=planningName||'';
+ accountAdmin.mode='create';accountAdmin.selected='';
+ state.page='settings';state.settingsPanel='accounts';
+ state.settingsFeedback='';render();
+ void loadAdminAccounts();
+}
+async function submitAdminAccount(form){
+ if(state.profile?.role!=='admin')return;
+ const fields=new FormData(form);
+ const mode=String(fields.get('mode')||'create');
+ const selected=accountAdmin.selected;
+ if(mode==='edit'&&!selected){accountAdmin.error='Sélectionne le compte à modifier.';render();return;}
+ const username=String(fields.get('username')||'').trim().toLowerCase();
+ const body={action:mode==='edit'?'update':'create',display_name:String(fields.get('display_name')||'').trim(),
+  username,role:String(fields.get('role')||'employe'),planning_name:String(fields.get('planning_name')||'').trim(),
+  password:String(fields.get('password')||'')};
+ if(mode==='edit'){
+  const current=accountAdmin.users.find(u=>u.id===selected);
+  if(!current){accountAdmin.error='Compte sélectionné introuvable.';render();return;}
+  Object.assign(body,{user_id:selected,status_text:current.status_text||'',profile_color:current.profile_color||'#ff5a2a',
+   avatar_frame:current.avatar_frame||'',contract_hours:current.contract_hours??null});
+ }
+ accountAdmin.error='';accountAdmin.notice='';
+ try{
+  const result=await invokeAccountFunction('admin-manage-user',body);
+  if(result.success!==true)throw Error('Enregistrement non confirmé.');
+  accountAdmin.notice=mode==='edit'?'Compte modifié.':'Compte créé.';
+  if(mode==='create'){accountAdmin.mode='list';accountAdmin.planningName='';}
+  await Promise.all([loadProfiles(),loadAdminAccounts()]);
+ }catch(e){accountAdmin.error=String(e.message||e);}
+ render();
+}
 function pageTeam(metrics){
   if(!canViewTeam(state.profile))return '';
   const filter=normalizeName(state.search);
@@ -651,7 +698,7 @@ function pageTeam(metrics){
     let right='<span class="chip '+(p.profile?'':'warn')+'">'+(p.profile?'Profil associé':'Association à contrôler')+'</span>';
     if(state.profile.role==='admin'){
       const opts='<option value="">Choisir un compte</option>'+accounts.map(a=>'<option value="'+escapeHtml(a.id)+'" '+(a.id===p.profile?.id?'selected':'')+'>'+escapeHtml(a.display_name||'Utilisateur')+'</option>').join('');
-      right='<div class="live-controls"><select class="btn" aria-label="Compte à associer à '+escapeHtml(p.name)+'" data-link-select="'+escapeHtml(p.name)+'">'+opts+'</select><button type="button" class="btn" data-link-save="'+escapeHtml(p.name)+'">Associer</button></div>';
+      right=p.profile?'<span class="chip">Profil associé</span>': '<details class="live-link-person"><summary class="btn" aria-label="Ajouter un compte à '+escapeHtml(p.name)+'">♙ + <span class="sr-only">Associer un compte</span></summary><div class="live-controls"><label>Compte existant<select class="btn" aria-label="Compte à associer à '+escapeHtml(p.name)+'" data-link-select="'+escapeHtml(p.name)+'">'+opts+'</select></label><button type="button" class="btn" data-link-save="'+escapeHtml(p.name)+'">Lier ce compte</button><button type="button" class="btn" data-account-create-for="'+escapeHtml(p.name)+'">+ Créer un compte</button></div></details>';
     }
     return '<div class="live-person">'+details+right+'</div>';
   }).join('');
@@ -832,6 +879,7 @@ async function requestRecoveryEmail(identifier,fromLogin=false){
 
 function pageSettings(){
  const syncMarkup=syncController?.settingsMarkup()||'';
+ const adminAccountsMarkup=state.profile?.role==='admin'?renderAccountAdmin(accountAdmin):'';
  return renderPageHeader('MON ESPACE','Paramètres','Informations personnelles, sécurité et préférences de ton compte.')+
   renderSettingsPage({
    view:state.settingsPanel,account:state.accountSecurity,
@@ -844,7 +892,7 @@ function pageSettings(){
    workerActive:Boolean(navigator.serviceWorker?.controller),
    appVersion:APP_VERSION,lastPlanningCheck:settingsDate(state.planningLoadedAt),updateReady:state.pwaUpdateReady,
    lastCheck:settingsDate(state.lastCheck),
-   syncMarkup,feedback:state.settingsFeedback
+   syncMarkup,adminAccountsMarkup,feedback:state.settingsFeedback
   });
 }
 function pageImport(){
@@ -1162,6 +1210,7 @@ document.addEventListener('click',event=>{
 });
 
 ROOT.addEventListener('submit',async event=>{
+  if(event.target.id==='adminAccountForm'){event.preventDefault();await submitAdminAccount(event.target);return;}
   if(event.target.id==='recoveryEmailForm'){
     event.preventDefault();await saveRecoveryEmail(event.target);return;
   }
@@ -1228,6 +1277,8 @@ ROOT.addEventListener('click',async event=>{
   }
   const day=event.target.closest('[data-day]');
   if(day){state.day=day.dataset.day;state.view='day';render();return;}
+  const createFor=event.target.closest('[data-account-create-for]');
+  if(createFor){openAccountsFor(createFor.dataset.accountCreateFor);return;}
   const link=event.target.closest('[data-link-save]');
   if(link){try{await saveLink(link.dataset.linkSave);}catch(err){state.error=String(err.message||err);render();}return;}
   const dl=event.target.closest('[data-download]');
@@ -1235,12 +1286,16 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(action==='admin-accounts-refresh'&&state.profile?.role==='admin'){await loadAdminAccounts();return;}
+  if(action==='admin-account-mode'&&state.profile?.role==='admin'){accountAdmin.mode=b.dataset.mode==='edit'?'edit':'create';accountAdmin.error='';accountAdmin.notice='';accountAdmin.selected='';render();return;}
   if(state.page==='settings'){
    if(action==='settings-open'){
-    const allowed=['profile','permissions','password','email','sessions','planning','notifications','application','diagnostic','sync'];
+    const allowed=['profile','permissions','password','email','sessions','planning','notifications','application','diagnostic','sync','accounts'];
     const view=b.dataset.settingsView;
     if(!allowed.includes(view)||(view==='sync'&&!syncController))return;
+    if(view==='accounts'&&state.profile?.role!=='admin')return;
     state.settingsPanel=view;state.settingsFeedback='';render();
+    if(view==='accounts')void loadAdminAccounts();
     ROOT.querySelector('#screen')?.scrollTo({top:0});return;
    }
    if(action==='settings-back'){
@@ -1347,7 +1402,10 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='history-refresh')await loadHistory();
   else if(action.startsWith('sync-')&&syncController)await syncController.action(action);
 });
-ROOT.addEventListener('change',event=>{if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);});
+ROOT.addEventListener('change',event=>{
+ if(event.target.id==='adminAccountTarget'&&state.profile?.role==='admin'){accountAdmin.selected=event.target.value;render();return;}
+ if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);
+});
 ROOT.addEventListener('input',event=>{
   if(event.target.id!=='searchTeam')return;
   state.search=event.target.value;
