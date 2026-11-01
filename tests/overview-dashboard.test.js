@@ -15,9 +15,10 @@ test('overview combines two explicit aliases linked to one account',()=>{
  assert.match(details,/n2dash-days/);
  assert.match(details,/Enzo L/);
 });
-test('past-week overview never labels past hours as today',()=>{
+test('past-week overview does not expose a past shift as the current-day summary',()=>{
  const person={name:'Clément',days:days([{startMinutes:840,endMinutes:1230}])};
  const html=renderOverviewDashboard({people:[person],week:'2026-10-26',today:'2026-11-02',sync:{loaded:false},hasPlanning:true});
  assert.doesNotMatch(html,/14:00–20:30/);
- assert.match(html,/Semaine consultée/);
+ assert.match(html,/Horaires de la semaine/);
+ assert.match(html,/Semaine du 26 octobre/);
 });
