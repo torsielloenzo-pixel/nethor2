@@ -72,7 +72,8 @@ export function createSyncController(client,root,profile){
  const isInstalled=()=>status?.installed===true;
  function markup(){
   const state=syncHealth(status);
-  const label=error&&!status?'État indisponible':state==='online'?'NethorSync opérationnel':isInstalled()?'NethorSync lié · hors ligne':'NethorSync non configuré';
+  const label=isInstalled()?'NethorSync lié':'NethorSync non configuré';
+  const stateLabel=error&&!status?'État indisponible':state==='online'?'En ligne':isInstalled()?'Hors ligne':'Non configuré';
   const details=isInstalled()
    ? '<div class="sync-side-details"><span>Poste : <strong>'+esc(status.deviceLabel||'Inconnu')+'</strong></span><span>Dépend de : '+esc(status.registeredBy||'Compte inconnu')+'</span><span>Dernière synchronisation : '+esc(time(status.lastCheckAt))+'</span><span>Dernier transfert Excel : '+esc(time(status.lastTransferAt))+'</span></div>'
    : '<p class="sync-side-small">Aucun poste NethorSync autorisé.</p>';
@@ -81,7 +82,7 @@ export function createSyncController(client,root,profile){
    : !isInstalled()
    ? '<button class="sync-action" type="button" data-action="sync-download">Installer NethorSync</button>'
    : '<button class="sync-action" type="button" data-action="sync-request-manual"'+(status?.pendingManual&&status?.manualStage!=='pc_error'?' disabled':'')+'>'+(status?.manualStage==='pc_error'?'Réessayer la vérification':status?.pendingManual?'Traitement en cours…':'Synchroniser')+'</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button><button class="sync-subaction" type="button" data-action="sync-download">Télécharger le correctif 2.1.8</button>';
-  return '<details class="sync-side-collapse"><summary class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><strong>'+label+'</strong><span class="sync-side-chevron" aria-hidden="true"></span></summary>'+
+  return '<details class="sync-side-collapse"><summary class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><span class="sync-side-title"><strong>'+label+'</strong><small>'+stateLabel+'</small></span><span class="sync-side-chevron" aria-hidden="true"></span></summary>'+
    '<div class="sync-side-content">'+details+
    (error?'<p class="sync-side-small sync-error">'+esc(error)+'</p>':'')+
    (notice?'<p class="sync-side-small">'+esc(notice)+'</p>':'')+
