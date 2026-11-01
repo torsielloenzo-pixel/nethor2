@@ -411,3 +411,15 @@
 #app .n2staff-cal-day[data-kind=morning] span,
 #app .n2staff-cal-day[data-kind=afternoon] span,
 #app .n2staff-cal-day[data-kind=leave] span{color:#60738e}
+
+/* Calendrier mensuel individuel : palette identique à la fiche hebdomadaire.
+   Le tableau principal conserve volontairement sa présentation neutre. */
+#app .n2staff-modal .n2staff-cal-day[data-kind="morning"]{background:#e7f2ff;border-color:#d5e6ff}
+#app .n2staff-modal .n2staff-cal-day[data-kind="morning"] span{color:#1b5dc2}
+#app .n2staff-modal .n2staff-cal-day[data-kind="afternoon"]{background:#f2edff;border-color:#e6dcff}
+#app .n2staff-modal .n2staff-cal-day[data-kind="afternoon"] span{color:#6a47ae}
+#app .n2staff-modal .n2staff-cal-day[data-kind="rest"]{background:#f1f3f7;border-color:#e2e9f4}
+#app .n2staff-modal .n2staff-cal-day[data-kind="rest"] span{color:#697990}
+#app .n2staff-modal .n2staff-cal-day[data-kind="leave"]{background:#eaf5ef;border-color:#d3ebde}
+#app .n2staff-modal .n2staff-cal-day[data-kind="leave"] span{color:#347b53}
+#app .n2staff-modal .n2staff-cal-day[data-kind="missing"]{background:#fff;border:1px dashed #e2e9f4}
