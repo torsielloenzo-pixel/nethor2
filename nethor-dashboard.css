@@ -55,3 +55,52 @@
 #app .n2dash-week-total strong{color:#263d60}
 @media(max-width:1060px){#app .n2dash-columns{grid-template-columns:1fr}#app .n2dash-roster{max-height:none}}
 @media(max-width:760px){#app .n2dash-kpis{grid-template-columns:1fr}#app .n2dash-modal-body{padding:15px}#app .n2dash-modal-head{padding:17px}#app .n2dash-overlay{padding:10px}#app .n2dash-modal footer{padding:13px}#app .n2dash-person{padding:14px}}
+
+
+/* NETHOR team dashboard refresh — desktop / desktop PWA only */
+#app .n2dash-section{border-radius:20px}
+#app .n2dash-section-head{padding:22px 25px}
+#app .n2dash-section-head h2{font-size:19px;letter-spacing:-.35px;margin-bottom:5px}
+#app .n2dash-section-head p{font-size:12px}
+#app .n2dash-text-action{border:1px solid #cad9f5;background:#f4f8ff;color:#2455af;border-radius:11px;padding:10px 13px;font-size:12px}
+#app .n2dash-text-action:hover{background:#e8f1ff}
+#app .n2dash-roster{padding:8px 14px 14px;max-height:590px}
+#app .n2dash-person{border-radius:12px;padding:10px 13px;min-height:66px;transition:background .17s ease}
+#app .n2dash-person+.n2dash-person{border-top:1px solid #edf1f6}
+#app .n2dash-person:hover,#app .n2dash-person:focus-visible{background:#eaf2ff}
+#app .n2dash-avatar{background:#e1edff;color:#2258ae;border-color:#d5e4fa;width:43px;height:43px;border-radius:13px}
+#app .n2dash-person-main{gap:4px}
+#app .n2dash-person-main strong{font-size:13px}
+#app .n2dash-person-main small{font-size:11px}
+#app .n2dash-person-time{padding:8px 11px;background:#f0f2f6;border-radius:999px;min-width:105px;font-size:11px;text-align:center}
+#app .n2dash-person-time[data-kind=morning]{background:#e5f1ff;color:#205bb8}
+#app .n2dash-person-time[data-kind=afternoon]{background:#f1ecff;color:#6749ad}
+#app .n2dash-person-time[data-kind=leave]{background:#e6f4ec;color:#367451}
+#app .n2dash-person-time[data-kind=unknown]{background:#f5f6f9;color:#61748e}
+#app .n2dash-person-modal{width:min(100%,680px);border-radius:22px}
+#app .n2dash-person-modal .n2dash-modal-head{padding:23px 26px;border-bottom:0}
+#app .n2dash-person-heading{display:flex;align-items:center;gap:15px}
+#app .n2dash-person-heading .n2dash-avatar{width:54px;height:54px;font-size:22px}
+#app .n2dash-person-heading h2{font-size:25px;margin:0 0 6px}
+#app .n2dash-person-heading small{font-size:12px}
+#app .n2dash-person-modal .n2dash-modal-body{padding:0 24px 22px}
+#app .n2dash-person-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+#app .n2dash-person-stats>div{display:grid;gap:6px;background:#edf4ff;border:1px solid #e2ebfa;border-radius:14px;padding:17px 20px}
+#app .n2dash-person-stats small{font-size:12px;color:#667c9a}
+#app .n2dash-person-stats strong{font-size:22px;color:#1e3b65}
+#app .n2dash-days{border-radius:14px}
+#app .n2dash-day{padding:9px 12px;min-height:62px;gap:14px}
+#app .n2dash-day-date{min-width:115px}
+#app .n2dash-day-date strong{font-size:13px}
+#app .n2dash-day-date small{font-size:11px}
+#app .n2dash-day-date em{font-style:normal;background:#245fca;color:#fff;border-radius:999px;font-size:9px;padding:3px 6px;margin-left:5px}
+#app .n2dash-shift{display:flex;align-items:center;justify-content:space-between;gap:15px;min-width:0;width:min(100%,355px);border-radius:11px;padding:10px 13px;background:#f1f3f7;color:#5a6b82}
+#app .n2dash-shift-kind{font-size:12px;font-weight:680;white-space:nowrap}
+#app .n2dash-shift[data-kind=morning]{background:#e7f2ff;color:#1b5dc2}
+#app .n2dash-shift[data-kind=afternoon]{background:#f2edff;color:#6a47ae}
+#app .n2dash-shift[data-kind=leave]{background:#eaf5ef;color:#347b53}
+#app .n2dash-shift b{color:inherit;white-space:nowrap;font-size:12px}
+#app .n2dash-today{background:#e9f2ff;box-shadow:inset 4px 0 #2865d7}
+#app .n2dash-person-modal footer{background:#fff;padding:19px 24px}
+#app .n2dash-person-modal footer .btn.primary{background:#245bce;border-color:#245bce;border-radius:12px;padding:13px 19px}
+@media(max-width:610px){#app .n2dash-person-modal .n2dash-modal-body{padding:0 14px 16px}#app .n2dash-shift{width:auto;flex:1;gap:7px;flex-wrap:wrap}#app .n2dash-day-date{min-width:84px}#app .n2dash-person-stats>div{padding:12px}#app .n2dash-person-time{min-width:auto}}
