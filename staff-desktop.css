@@ -369,3 +369,33 @@
     margin-top:0;
   }
 }
+
+
+/* Planning équipe — administrateur et point de vente Desktop/PWA */
+#app .n2-desktop-planning-palette .desktop-planning-table .table tbody tr.n2staff-row{cursor:pointer;transition:background .15s ease}
+#app .n2-desktop-planning-palette .desktop-planning-table .table tbody tr.n2staff-row:hover{background:#eff5ff}
+#app .n2-desktop-planning-palette .desktop-planning-table .table tbody tr.n2staff-row td:first-child{font-weight:400}
+#app .n2-desktop-planning-palette .desktop-planning-table .table tbody tr.n2staff-row td:first-child strong{font-weight:400}
+#app .n2staff-modal{width:min(96vw,780px);border-radius:22px}
+#app .n2staff-modal .n2dash-modal-body{padding:12px 24px 25px}
+#app .n2staff-weekdays{display:grid;border:1px solid #e4eaf5;border-radius:14px;overflow:hidden}
+#app .n2staff-weekday{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;gap:15px;border-bottom:1px solid #edf1f7}
+#app .n2staff-weekday:last-child{border-bottom:0}
+#app .n2staff-weekday span{color:#3b526f;font-size:13px}
+#app .n2staff-weekday b{font-size:12px;color:#2e5ca6;font-weight:600}
+#app .n2staff-open-month{display:block;margin:18px 0 0 auto;border-radius:12px}
+#app .n2staff-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;text-transform:capitalize}
+#app .n2staff-month-nav button{border:1px solid #dbe6f5;background:#f5f8fd;color:#2659b0;padding:8px 15px;border-radius:10px;cursor:pointer}
+#app .n2staff-month-nav strong{font-size:16px;color:#263f66}
+#app .n2staff-stats{display:flex;justify-content:space-between;gap:12px;background:#eef5ff;border-radius:12px;padding:14px 18px;margin-bottom:16px;font-size:12px;color:#234f90}
+#app .n2staff-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+#app .n2staff-cal-head{text-align:center;font-size:11px;font-weight:650;color:#7690b5;padding:7px 0}
+#app .n2staff-cal-day{min-width:0;min-height:76px;border:1px solid #e2e9f4;border-radius:10px;background:#f7f9fc;padding:8px;display:flex;flex-direction:column;gap:8px}
+#app .n2staff-cal-day strong{font-size:12px;color:#304c73}
+#app .n2staff-cal-day span{font-size:10px;color:#60738e;overflow-wrap:anywhere}
+#app .n2staff-cal-day[data-kind=morning]{background:#e5f1ff;border-color:#d5e6ff}
+#app .n2staff-cal-day[data-kind=afternoon]{background:#fff1e6;border-color:#ffead6}
+#app .n2staff-cal-day[data-kind=leave]{background:#e7f5ee;border-color:#d3ebde}
+#app .n2staff-cal-day[data-kind=missing]{background:#fff;color:#9daabd;border-style:dashed}
+#app .n2staff-note{font-size:11px;color:#8191aa;margin:13px 0 0}
+@media(max-width:700px){#app .n2staff-modal .n2dash-modal-body{padding:8px 12px 20px}#app .n2staff-cal-day{padding:4px;min-height:62px}#app .n2staff-cal-day span{font-size:9px}}
