@@ -95,8 +95,8 @@ test('états réseau et fraîcheur : aujourd’hui, hors ligne et mise à jour P
  const model=make({Marie:{[week]:work('b')}});
  const online=renderMobilePlanning({...options,model,updatedAt:new Date('2026-10-19T08:30:00Z').getTime(),isOnline:true});
  assert.match(online,/data-action="today"/);
- assert.match(online,/Mis à jour à/);
- assert.match(online,/data-online="true">En ligne/);
+ assert.doesNotMatch(online,/Mis à jour à/);
+ assert.doesNotMatch(online,/data-online="true">En ligne/);
  assert.match(online,/>Après-midi</);
 
  const offline=renderMobilePlanning({...options,model,isOnline:false});
