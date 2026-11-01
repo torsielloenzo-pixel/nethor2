@@ -28,6 +28,12 @@ test('mobile shell contains gated bell and panel',()=>{
   assert.match(live,/planningNotificationButton/);
   assert.match(live,/planning-notifications/);
   assert.match(live,/data-planning-notification-id/);
+  assert.match(live,/planningNotificationChange/);
+  assert.match(live,/ANCIEN HORAIRE/);
+  assert.match(live,/NOUVEL HORAIRE/);
+  assert.match(live,/planningDeltaText/);
   assert.match(css,/\.n2notif-button/);
+  assert.match(css,/\.n2notif-shift-grid/);
+  assert.match(css,/\.n2notif-shift-box/);
   assert.match(css,/@media\(max-width:760px\)/);
 });
