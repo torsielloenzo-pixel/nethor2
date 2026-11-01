@@ -19,6 +19,7 @@ import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublicati
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
 import {mergeImportHistory,renderHistoryBrowser} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
+import {getPlanningNotificationAccess,listPlanningChangeNotifications,markPlanningChangeNotificationRead,markAllPlanningChangeNotificationsRead} from '../data/planning-notifications.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
 import {createSyncController} from './nethor-sync-ui.js';
 import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
@@ -85,8 +86,8 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const APP_VERSION='2.2-mobile-2026.10.31';
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false}};
+const APP_VERSION='2.2-mobile-2026.11.01-notifs-beta';
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false},planningNotifications:{accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0}};
 let client;
 let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
@@ -174,7 +175,7 @@ function renderLogin(message=''){
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><div class="top-actions"><span class="live-tag" id="connectionStatus" data-online="true">● EN LIGNE</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><button type="button" class="n2notif-button" id="planningNotificationButton" data-action="notifications-toggle" aria-label="Notifications de planning" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="n2notif-badge" id="planningNotificationBadge" hidden></span></button><div class="top-actions"><span class="live-tag" id="connectionStatus" data-online="true">● EN LIGNE</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><section class="n2notif-panel" id="planningNotificationPanel" hidden aria-label="Notifications de planning"></section><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -203,6 +204,7 @@ async function signOut(){
   state.settingsPanel='home';state.settingsFeedback='';state.planningPreference='week';
   state.planningLoadedAt=0;state.pwaUpdateReady=false;state.networkOnline=navigator.onLine;
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
+  state.planningNotifications={accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
   syncController?.dispose();
   syncController=null;
@@ -233,6 +235,7 @@ async function startAuthorized(access){
   syncController=createSyncController(client,ROOT,state.profile);
   syncController?.mount();
   await loadProfiles();
+  await loadPlanningNotifications(true);
   if(isMobileHome())void loadPersonalHome();
   await loadWeek();
   // Vérifier une fois la page mobile complètement montée : aucun écran de chargement
@@ -246,6 +249,100 @@ async function loadProfiles(){
   state.profiles=Array.isArray(data)?data:[];
   const own=state.profiles.find(profile=>profile.id===state.user?.id);
   if(own)state.profile={...state.profile,planning_name:own.planning_name,planning_aliases:own.planning_aliases,contract_hours:own.contract_hours};
+}
+function planningNotificationDate(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return '';
+  return parseDate(value).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+}
+function planningNotificationCreatedAt(value){
+  const date=new Date(value||'');
+  if(!Number.isFinite(date.getTime()))return '';
+  return date.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function planningNotificationMarkup(){
+  const n=state.planningNotifications;
+  const unread=n.items.filter(item=>!item.read_at).length;
+  const body=n.loading&&!n.loaded
+    ?'<div class="n2notif-empty">Chargement…</div>'
+    :n.error
+      ?'<div class="n2notif-empty">'+escapeHtml(n.error)+'</div>'
+      :n.items.length
+        ?'<div class="n2notif-list">'+n.items.map(item=>{
+          const day=planningNotificationDate(item.planning_date);
+          const created=planningNotificationCreatedAt(item.created_at);
+          return '<button type="button" class="n2notif-item'+(item.read_at?'':' is-unread')+'" data-planning-notification-id="'+Number(item.id)+'" data-notification-week="'+escapeHtml(item.week_start||'')+'" data-notification-date="'+escapeHtml(item.planning_date||'')+'"><span class="n2notif-dot" aria-hidden="true"></span><span class="n2notif-copy"><strong>'+escapeHtml(item.title||'Horaire modifié')+'</strong><span class="n2notif-day">'+escapeHtml(day)+'</span><span class="n2notif-message">'+escapeHtml(item.message||'')+'</span><small>'+escapeHtml(created)+'</small></span><span class="n2notif-arrow" aria-hidden="true">›</span></button>';
+        }).join('')+'</div>'
+        :'<div class="n2notif-empty"><strong>Aucun changement d’horaire</strong><span>Les prochaines modifications qui te concernent apparaîtront ici.</span></div>';
+  return '<button type="button" class="n2notif-scrim" data-action="notifications-close" aria-label="Fermer les notifications"></button><div class="n2notif-card"><div class="n2notif-head"><div><span>MON PLANNING</span><h2>Notifications</h2></div><div class="n2notif-head-actions">'+(unread?'<button type="button" data-action="notifications-read-all">Tout lire</button>':'')+'<button type="button" class="n2notif-close" data-action="notifications-close" aria-label="Fermer">×</button></div></div>'+body+'</div>';
+}
+function paintPlanningNotifications(){
+  const button=ROOT.querySelector('#planningNotificationButton');
+  const badge=ROOT.querySelector('#planningNotificationBadge');
+  const panel=ROOT.querySelector('#planningNotificationPanel');
+  if(!button||!badge||!panel)return;
+  const n=state.planningNotifications;
+  const visible=Boolean(smallScreen()&&n.enabled===true&&state.user);
+  button.hidden=!visible;
+  const unread=n.items.filter(item=>!item.read_at).length;
+  badge.hidden=!visible||unread===0;
+  badge.textContent=unread>99?'99+':String(unread);
+  button.setAttribute('aria-expanded',String(visible&&n.open));
+  panel.hidden=!(visible&&n.open);
+  if(visible&&n.open)panel.innerHTML=planningNotificationMarkup();
+  else panel.innerHTML='';
+}
+async function loadPlanningNotifications(forceAccess=false){
+  if(!state.user||state.planningNotifications.loading)return;
+  const n=state.planningNotifications;
+  n.loading=true;
+  try{
+    if(forceAccess||!n.accessChecked){
+      n.enabled=await getPlanningNotificationAccess(client);
+      n.accessChecked=true;
+      if(!n.enabled){n.items=[];n.loaded=true;n.open=false;n.error='';return;}
+    }
+    if(!n.enabled)return;
+    n.items=await listPlanningChangeNotifications(client,{limit:40});
+    n.loaded=true;n.error='';
+  }catch(err){
+    n.error='Notifications temporairement indisponibles.';
+    console.warn('Notifications planning',String(err?.message||err));
+    if(!n.accessChecked){n.enabled=false;n.open=false;}
+  }finally{
+    n.loading=false;n.checkedAt=Date.now();paintPlanningNotifications();
+  }
+}
+async function markAllPlanningNotificationsRead(){
+  if(!state.planningNotifications.enabled)return;
+  try{
+    await markAllPlanningChangeNotificationsRead(client);
+    const now=new Date().toISOString();
+    state.planningNotifications.items=state.planningNotifications.items.map(item=>item.read_at?item:{...item,read_at:now});
+  }catch(err){console.warn('Lecture notifications',String(err?.message||err));}
+  paintPlanningNotifications();
+}
+async function openPlanningNotification(button){
+  const id=Number(button.dataset.planningNotificationId);
+  const week=String(button.dataset.notificationWeek||'');
+  const day=String(button.dataset.notificationDate||'');
+  if(Number.isFinite(id)){
+    try{
+      await markPlanningChangeNotificationRead(client,id);
+      const item=state.planningNotifications.items.find(row=>Number(row.id)===id);
+      if(item&&!item.read_at)item.read_at=new Date().toISOString();
+    }catch(err){console.warn('Lecture notification',String(err?.message||err));}
+  }
+  state.planningNotifications.open=false;
+  paintPlanningNotifications();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(week))return;
+  state.page='planning';
+  state.week=week;
+  state.day=/^\d{4}-\d{2}-\d{2}$/.test(day)?day:week;
+  state.view='day';
+  state.mobilePlanning.dayFilter='all';
+  closeMobileMenu();
+  await loadWeek();
+  const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=0;
 }
 function visibleModel(){
   const source=state.weekData?.model;
@@ -989,6 +1086,7 @@ function render(){
   if(state.notice&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-message ok">'+escapeHtml(state.notice)+'</div>';
   screen.innerHTML=top+pages[state.page]();
   syncController?.paint();
+  paintPlanningNotifications();
 }
 function go(page){
   if(!(page in TITLES)||!canNavigate(page,state.profile,smallScreen()))return;
@@ -1190,6 +1288,7 @@ async function refreshPublishedWeekQuietly(){
   if((state.weekData?.revision||null)!==(updated?.revision||null)){
     state.weekData=updated;
     render();
+    void loadPlanningNotifications();
     if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
   }
  }catch(err){console.warn('Actualisation silencieuse du planning indisponible',String(err?.message||err));}
@@ -1198,6 +1297,7 @@ async function refreshPublishedWeekQuietly(){
 setInterval(()=>{
  if(!state.user||document.visibilityState!=='visible')return;
  void refreshPublishedWeekQuietly();
+ if(state.planningNotifications.enabled&&Date.now()-state.planningNotifications.checkedAt>45000)void loadPlanningNotifications();
  if(state.page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())&&
     !state.nethorSync.loading&&Date.now()-(state.nethorSync.checkedAt||0)>60000){
    void loadNethorSyncStatus();
@@ -1286,6 +1386,8 @@ ROOT.addEventListener('click',async event=>{
       dashboardOpen=null;go('settings');state.settingsPanel='sync';render();return;
     }
   }
+  const planningNotification=event.target.closest('[data-planning-notification-id]');
+  if(planningNotification){await openPlanningNotification(planningNotification);return;}
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
 
@@ -1340,6 +1442,19 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(action==='notifications-toggle'){
+    if(!state.planningNotifications.enabled)return;
+    state.planningNotifications.open=!state.planningNotifications.open;
+    paintPlanningNotifications();
+    if(state.planningNotifications.open)await loadPlanningNotifications();
+    return;
+  }
+  if(action==='notifications-close'){
+    state.planningNotifications.open=false;paintPlanningNotifications();return;
+  }
+  if(action==='notifications-read-all'){
+    await markAllPlanningNotificationsRead();return;
+  }
   if(action==='admin-accounts-refresh'&&state.profile?.role==='admin'){await loadAdminAccounts();return;}
   if(action==='admin-account-edit'&&state.profile?.role==='admin'){
     const id=b.dataset.accountId;
@@ -1542,19 +1657,21 @@ function handleNetworkChange(){
  render();
  if(state.networkOnline){
   void refreshPublishedWeekQuietly();
+  if(state.planningNotifications.enabled)void loadPlanningNotifications();
   if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
  }
 }
 window.addEventListener('online',handleNetworkChange);
 window.addEventListener('offline',handleNetworkChange);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void verifyResume();});
-window.addEventListener('focus',()=>void verifyResume());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){void verifyResume();if(state.planningNotifications.enabled)void loadPlanningNotifications();}});
+window.addEventListener('focus',()=>{void verifyResume();if(state.planningNotifications.enabled)void loadPlanningNotifications();});
 window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
   if(!smallScreen()){
     closeFirstLoginRecovery();
     if(state.view==='year'){annualRequestId++;state.view='week';}
   }
   if(!state.user)return;
+  if(!smallScreen())state.planningNotifications.open=false;
   render();
   if(state.page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
   if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
