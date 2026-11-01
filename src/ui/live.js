@@ -86,7 +86,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const APP_VERSION='2.2-mobile-2026.11.01-notifs-beta';
+const APP_VERSION='2.2-mobile-2026.11.01-notifs-cards';
 const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false},planningNotifications:{accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0}};
 let client;
 let syncController=null;
@@ -259,6 +259,36 @@ function planningNotificationCreatedAt(value){
   if(!Number.isFinite(date.getTime()))return '';
   return date.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
+function planningShiftMinutes(label){
+  const text=String(label||'').trim();
+  if(!text||/^repos$/i.test(text))return 0;
+  const ranges=[...text.matchAll(/(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/g)];
+  if(!ranges.length)return null;
+  return ranges.reduce((sum,match)=>{
+    const start=Number(match[1])*60+Number(match[2]);
+    let end=Number(match[3])*60+Number(match[4]);
+    if(end<start)end+=1440;
+    return sum+(end-start);
+  },0);
+}
+function planningDeltaText(minutes){
+  if(!Number.isFinite(minutes))return '';
+  if(minutes===0)return 'Durée de travail inchangée';
+  const sign=minutes>0?'+':'−';
+  const absolute=Math.abs(minutes);
+  const h=Math.floor(absolute/60),m=absolute%60;
+  const duration=h&&m?h+' h '+String(m).padStart(2,'0'):h?h+' h':m+' minutes';
+  return sign+duration+' de travail prévue'+(absolute>60?'s':'');
+}
+function planningNotificationChange(item){
+  const raw=String(item?.message||'').trim();
+  const match=raw.match(/^\d{2}\/\d{2}\/\d{4}\s*·\s*(.+?)\s*→\s*(.+)$/);
+  if(!match)return null;
+  const oldShift=match[1].trim(),newShift=match[2].trim();
+  const oldMinutes=planningShiftMinutes(oldShift),newMinutes=planningShiftMinutes(newShift);
+  const delta=Number.isFinite(oldMinutes)&&Number.isFinite(newMinutes)?newMinutes-oldMinutes:null;
+  return {oldShift,newShift,delta};
+}
 function planningNotificationMarkup(){
   const n=state.planningNotifications;
   const unread=n.items.filter(item=>!item.read_at).length;
@@ -270,10 +300,17 @@ function planningNotificationMarkup(){
         ?'<div class="n2notif-list">'+n.items.map(item=>{
           const day=planningNotificationDate(item.planning_date);
           const created=planningNotificationCreatedAt(item.created_at);
-          return '<button type="button" class="n2notif-item'+(item.read_at?'':' is-unread')+'" data-planning-notification-id="'+Number(item.id)+'" data-notification-week="'+escapeHtml(item.week_start||'')+'" data-notification-date="'+escapeHtml(item.planning_date||'')+'"><span class="n2notif-dot" aria-hidden="true"></span><span class="n2notif-copy"><strong>'+escapeHtml(item.title||'Horaire modifié')+'</strong><span class="n2notif-day">'+escapeHtml(day)+'</span><span class="n2notif-message">'+escapeHtml(item.message||'')+'</span><small>'+escapeHtml(created)+'</small></span><span class="n2notif-arrow" aria-hidden="true">›</span></button>';
+          const change=planningNotificationChange(item);
+          const title=item.kind==='planning_shift_change'?'Planning modifié':(item.title||'Notification');
+          const base=' data-planning-notification-id="'+Number(item.id)+'" data-notification-week="'+escapeHtml(item.week_start||'')+'" data-notification-date="'+escapeHtml(item.planning_date||'')+'"';
+          if(change){
+            const delta=planningDeltaText(change.delta);
+            return '<button type="button" class="n2notif-item n2notif-change-card'+(item.read_at?'':' is-unread')+'"'+base+'><span class="n2notif-card-top"><strong>'+escapeHtml(title)+'</strong>'+(!item.read_at?'<span class="n2notif-new">Nouvelle</span>':'')+'</span><span class="n2notif-explain">Ton horaire du '+escapeHtml(day)+' a été modifié.</span><span class="n2notif-shift-grid"><span class="n2notif-shift-box"><small>ANCIEN HORAIRE</small><b>'+escapeHtml(change.oldShift)+'</b></span><span class="n2notif-shift-box"><small>NOUVEL HORAIRE</small><b>'+escapeHtml(change.newShift)+'</b></span></span>'+(delta?'<span class="n2notif-delta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+escapeHtml(delta)+'</span>':'')+'<span class="n2notif-meta">'+escapeHtml(created)+'<span aria-hidden="true">›</span></span></button>';
+          }
+          return '<button type="button" class="n2notif-item n2notif-generic'+(item.read_at?'':' is-unread')+'"'+base+'><span class="n2notif-dot" aria-hidden="true"></span><span class="n2notif-copy"><strong>'+escapeHtml(title)+'</strong><span class="n2notif-day">'+escapeHtml(day)+'</span><span class="n2notif-message">'+escapeHtml(item.message||'')+'</span><small>'+escapeHtml(created)+'</small></span><span class="n2notif-arrow" aria-hidden="true">›</span></button>';
         }).join('')+'</div>'
         :'<div class="n2notif-empty"><strong>Aucun changement d’horaire</strong><span>Les prochaines modifications qui te concernent apparaîtront ici.</span></div>';
-  return '<button type="button" class="n2notif-scrim" data-action="notifications-close" aria-label="Fermer les notifications"></button><div class="n2notif-card"><div class="n2notif-head"><div><span>MON PLANNING</span><h2>Notifications</h2></div><div class="n2notif-head-actions">'+(unread?'<button type="button" data-action="notifications-read-all">Tout lire</button>':'')+'<button type="button" class="n2notif-close" data-action="notifications-close" aria-label="Fermer">×</button></div></div>'+body+'</div>';
+  return '<button type="button" class="n2notif-scrim" data-action="notifications-close" aria-label="Fermer les notifications"></button><div class="n2notif-card"><div class="n2notif-head"><div><span>MON PLANNING</span><h2>Mes notifications</h2></div><div class="n2notif-head-actions">'+(unread?'<span class="n2notif-count">'+unread+' nouvelle'+(unread>1?'s':'')+'</span><button type="button" data-action="notifications-read-all">Tout lire</button>':'')+'<button type="button" class="n2notif-close" data-action="notifications-close" aria-label="Fermer">×</button></div></div>'+body+'</div>';
 }
 function paintPlanningNotifications(){
   const button=ROOT.querySelector('#planningNotificationButton');
