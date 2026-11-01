@@ -93,8 +93,8 @@ let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
 let syncChartPeriod=7;
 let dashboardOpen=null;
-const staffDetail={name:null,month:null,weeks:[],loading:false,error:'',request:0};
-const staffPlanningRole=()=>!smallScreen()&&['admin','point_de_vente','point-de-vente','point_de_vente','pointvente','magasin'].includes(state.profile?.role);
+const staffDetail={name:null,month:null,weeks:[],loading:false,error:'',request:0,showMonth:false};
+const staffPlanningRole=()=>!smallScreen()&&['admin','role_point-de-vente'].includes(state.profile?.role);
 
 const historyBrowser={query:'',source:'all',year:'all',sort:'newest',openMonths:[],expandedAll:false};
 let booted=false;
@@ -549,8 +549,9 @@ function renderStaffDetail(metrics){
   const label=ranges.map(r=>hhmm(r.startMinutes)+'–'+hhmm(r.endMinutes)).join(' · ')||(entry?(leave?'Congés':'Repos'):'Non publié');
   cells.push('<div class="n2staff-cal-day" data-kind="'+(entry?kind:'missing')+'"><strong>'+day+'</strong><span>'+escapeHtml(label)+'</span></div>');
  }
- const prev=new Date(yyyy,mm-2,1).toISOString().slice(0,7),next=new Date(yyyy,mm,1).toISOString().slice(0,7);
+
  const monthLabel=new Date(yyyy,mm-1,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+ const weekRows=person?.days.map((day,i)=>'<div class="n2staff-weekday"><span>'+['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'][i]+'</span><b>'+(day.ranges?.length?day.ranges.map(r=>hhmm(r.startMinutes)+'–'+hhmm(r.endMinutes)).join(' · '):day.cells?.includes('y')?'Congés':'Repos')+'</b></div>').join('')||'';
  return '<div class="n2dash-overlay" data-staff-backdrop><section class="n2dash-modal n2staff-modal" role="dialog" aria-modal="true" aria-label="Planning de '+escapeHtml(name)+'"><header class="n2dash-modal-head"><div class="n2dash-person-heading"><span class="n2dash-avatar">'+escapeHtml(name.charAt(0))+'</span><span><h2>'+escapeHtml(name)+'</h2><small>Planning individuel</small></span></div><button type="button" class="n2dash-close" data-action="staff-close" aria-label="Fermer">×</button></header><div class="n2dash-modal-body"><div class="n2staff-month-nav"><button data-action="staff-prev" aria-label="Mois précédent">‹</button><strong>'+escapeHtml(monthLabel)+'</strong><button data-action="staff-next" aria-label="Mois suivant">›</button></div>'+(staffDetail.loading?'<p>Chargement des semaines publiées…</p>':staffDetail.error?'<p role="alert">'+escapeHtml(staffDetail.error)+'</p>':'<div class="n2staff-stats"><span>'+worked+' jours travaillés</span><span>'+ (minutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})+' h sur les journées disponibles</span></div><div class="n2staff-calendar">'+['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=>'<div class="n2staff-cal-head">'+d+'</div>').join('')+cells.join('')+'</div><p class="n2staff-note">Non publié : aucun planning disponible pour cette date.</p>')+'</div></section></div>';
 }
 function planningCard(metrics){
@@ -1458,10 +1459,11 @@ ROOT.addEventListener('click',async event=>{
  if(staffPlanningRole()&&state.page==='planning'){
   if(event.target.matches('[data-staff-backdrop]')){staffDetail.name=null;staffDetail.request++;render();return;}
   const act=event.target.closest('[data-action^="staff-"]');
-  if(act){const action=act.dataset.action;if(action==='staff-close'){staffDetail.name=null;staffDetail.request++;render();return;}
+  if(act){const action=act.dataset.action;if(action==='staff-month'){staffDetail.showMonth=true;await loadStaffMonth();return;}
+   if(action==='staff-close'){staffDetail.name=null;staffDetail.request++;render();return;}
    if(action==='staff-prev'||action==='staff-next'){const [y,m]=staffDetail.month.split('-').map(Number);const d=new Date(y,m-1+(action==='staff-next'?1:-1),1);staffDetail.month=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');await loadStaffMonth();return;}}
   const row=event.target.closest('[data-staff-person]');
-  if(row&&!event.target.closest('.n2-link-menu,button,select')){staffDetail.name=row.dataset.staffPerson;staffDetail.month=state.week.slice(0,7);await loadStaffMonth();return;}
+  if(row&&!event.target.closest('.n2-link-menu,button,select')){staffDetail.name=row.dataset.staffPerson;staffDetail.month=state.week.slice(0,7);staffDetail.showMonth=false;render();return;}
  }
 
   if(event.target.closest('[data-dashboard-backdrop]')===event.target){
