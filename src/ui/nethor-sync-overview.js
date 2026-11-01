@@ -101,7 +101,8 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
  const action=showInstall?
   '<button type="button" class="btn primary" data-action="nethor-sync-install">Installer NethorSync 2.1.8</button>':
   '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>'+
-  (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger la correction 2.1.8</button>':'');
+  (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger la correction 2.1.8</button>':'')+
+  (bound?'<a class="btn" href="./NethorSync-Correctif-Demarrage.zip" download="NethorSync-Correctif-Demarrage.zip">Correctif de démarrage Windows</a>':'');
  const guide=showInstall?
   '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte NETHOR autorisé.</p>':
   bound?'<p class="n2sync-footnote">Correctif Windows 2.1.8 disponible : réutilise la liaison existante et reconnaît les fichiers déjà envoyés. Les plannings sont publiés côté Supabase. L’état du poste dépend de son dernier contact (moins de 30 minutes).</p>':'';
