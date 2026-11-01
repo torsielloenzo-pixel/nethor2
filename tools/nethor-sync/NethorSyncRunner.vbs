@@ -10,6 +10,8 @@ If WScript.Arguments.Count > 0 Then
   Select Case LCase(WScript.Arguments(0))
     Case "scheduled": flag = "-Scheduled"
     Case "poll": flag = "-PollOnly"
+    Case "watch": scriptName = "Watch-NethorSync.ps1"
+    Case "watchdog": scriptName = "Watch-NethorSync.ps1"
     Case "update": scriptName = "Update-NethorSync.ps1"
     Case Else: WScript.Quit 2
   End Select
