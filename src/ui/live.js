@@ -4,7 +4,7 @@ import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
 import {renderSettingsPage} from './settings-security.js';
-import {renderOverviewDashboard} from './overview-dashboard.js';
+import {renderOverviewDashboard,buildDashboardPeople} from './overview-dashboard.js';
 import {renderAccountAdmin} from './account-admin.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {installMobileZoomLock} from './mobile-zoom.js';
@@ -1485,7 +1485,19 @@ ROOT.addEventListener('click',async event=>{
     if(action==='dashboard-person'){dashboardOpen={type:'person',index:Number(dash.dataset.dashboardPerson)};render();return;}
     if(action==='dashboard-sync'){dashboardOpen={type:'sync'};render();return;}
     if(action==='dashboard-close'){dashboardOpen=null;render();return;}
-    if(action==='dashboard-open-planning'){dashboardOpen=null;go('planning');return;}
+    if(action==='dashboard-open-planning'){
+      const selected=dashboardOpen?.type==='person'?buildDashboardPeople(analyze(visibleModel()).people)[Number(dashboardOpen.index)]:null;
+      dashboardOpen=null;
+      if(!selected){render();return;}
+      const staffName=selected.people[0]?.name||selected.name;
+      staffDetail.name=staffName;
+      staffDetail.month=state.week.slice(0,7);
+      staffDetail.showMonth=true;
+      state.view='week';
+      go('planning');
+      if(staffPlanningRole())await loadStaffMonth();
+      return;
+    }
     if(action==='dashboard-sync-settings'){
       dashboardOpen=null;go('settings');state.settingsPanel='sync';render();return;
     }
