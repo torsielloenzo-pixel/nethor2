@@ -399,3 +399,15 @@
 #app .n2staff-cal-day[data-kind=missing]{background:#fff;color:#9daabd;border-style:dashed}
 #app .n2staff-note{font-size:11px;color:#8191aa;margin:13px 0 0}
 @media(max-width:700px){#app .n2staff-modal .n2dash-modal-body{padding:8px 12px 20px}#app .n2staff-cal-day{padding:4px;min-height:62px}#app .n2staff-cal-day span{font-size:9px}}
+
+/* Planning Desktop: neutraliser les couleurs des créneaux, conserver le clic sur la ligne. */
+#app .live-week-card .desktop-planning-table .table tbody tr.n2staff-row{cursor:pointer;transition:background .15s ease}
+#app .live-week-card .desktop-planning-table .table tbody tr.n2staff-row:hover{background:#f5f7fa}
+#app .live-week-card .desktop-planning-table .table tbody tr.n2staff-row td:first-child,
+#app .live-week-card .desktop-planning-table .table tbody tr.n2staff-row td:first-child strong{font-weight:400}
+#app .n2staff-cal-day[data-kind=morning],
+#app .n2staff-cal-day[data-kind=afternoon],
+#app .n2staff-cal-day[data-kind=leave]{background:#f7f9fc;border-color:#e2e9f4}
+#app .n2staff-cal-day[data-kind=morning] span,
+#app .n2staff-cal-day[data-kind=afternoon] span,
+#app .n2staff-cal-day[data-kind=leave] span{color:#60738e}
