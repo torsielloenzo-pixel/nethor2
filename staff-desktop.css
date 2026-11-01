@@ -423,3 +423,120 @@
 #app .n2staff-modal .n2staff-cal-day[data-kind="leave"]{background:#eaf5ef;border-color:#d3ebde}
 #app .n2staff-modal .n2staff-cal-day[data-kind="leave"] span{color:#347b53}
 #app .n2staff-modal .n2staff-cal-day[data-kind="missing"]{background:#fff;border:1px dashed #e2e9f4}
+
+
+/* Correctif 2026-11-01 : accueil personnel Desktop / PWA Desktop.
+   Les blocs ajoutés (aujourd'hui, KPI et informations) doivent occuper
+   des cellules explicites, sans hériter de l'affichage mobile compact. */
+@media (min-width:761px) {
+  #app.staff-desktop-layout .n2h-home.n2h-dashboard {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:none;
+    gap:18px;
+    align-content:start;
+    width:100%;
+    max-width:1200px;
+    height:auto;
+    overflow:visible;
+  }
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-greeting {
+    grid-column:1/-1;
+    min-width:0;
+  }
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-today {
+    grid-column:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:16px;
+    padding:23px 26px;
+    background:linear-gradient(135deg,#183c78,#275eb4);
+    color:#fff;
+    border:1px solid #285aa5;
+    border-radius:18px;
+    box-shadow:0 8px 24px #173b771a;
+  }
+  #app.staff-desktop-layout .n2h-today-top,
+  #app.staff-desktop-layout .n2h-today-bottom {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+    font-size:12px;
+    line-height:1.5;
+  }
+  #app.staff-desktop-layout .n2h-today-top {font-size:11px;font-weight:800;letter-spacing:.65px}
+  #app.staff-desktop-layout .n2h-today-tag {
+    padding:5px 9px;border:1px solid #ffffff55;border-radius:999px;
+    background:#ffffff1b;font-size:10px;letter-spacing:.5px;
+  }
+  #app.staff-desktop-layout .n2h-today-hours {
+    display:block;font-size:clamp(25px,2.6vw,38px);line-height:1.15;
+    font-weight:850;letter-spacing:-.6px;overflow-wrap:anywhere;
+  }
+  #app.staff-desktop-layout .n2h-today-bottom {color:#e3edff}
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-kpis {
+    grid-column:2;
+    min-width:0;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:stretch;
+    gap:14px;
+  }
+  #app.staff-desktop-layout .n2h-kpi {
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:13px;
+    padding:20px 22px;
+    border:1px solid #e2e9f4;
+    border-radius:17px;
+    background:#fff;
+    box-shadow:0 6px 22px #162f5a08;
+  }
+  #app.staff-desktop-layout .n2h-kpi-label {
+    font-size:11px;line-height:1.4;font-weight:800;
+    color:#6d82a3;letter-spacing:.5px;
+  }
+  #app.staff-desktop-layout .n2h-kpi strong {
+    display:block;min-width:0;max-width:100%;
+    font-size:clamp(19px,1.8vw,27px);line-height:1.2;
+    font-weight:850;color:#243f69;overflow-wrap:anywhere;
+  }
+  #app.staff-desktop-layout .n2h-kpi small {
+    display:block;margin:0;color:#8192aa;font-size:12px;line-height:1.45;
+    overflow-wrap:anywhere;
+  }
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-schedule {grid-column:1/-1}
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-bottom-grid {
+    grid-column:1/-1;
+    min-width:0;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:start;
+    gap:18px;
+  }
+  #app.staff-desktop-layout .n2h-bottom-grid > * {min-width:0}
+  #app.staff-desktop-layout .n2h-bottom-grid .n2h-leave,
+  #app.staff-desktop-layout .n2h-bottom-grid .n2h-rest {margin:0}
+  #app.staff-desktop-layout .n2h-week-link {
+    border:1px solid #d5e2f6;border-radius:10px;background:#f5f8ff;
+    color:#2859a5;padding:9px 13px;font-size:12px;font-weight:750;
+    cursor:pointer;white-space:nowrap;
+  }
+  #app.staff-desktop-layout .n2h-week-link:hover {background:#eaf2ff}
+  #app.staff-desktop-layout .n2h-week-link:focus-visible {outline:2px solid #2e6bc9;outline-offset:2px}
+}
+@media (min-width:761px) and (max-width:1080px) {
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-today,
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-kpis {grid-column:1/-1}
+}
+@media (min-width:761px) and (max-width:850px) {
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-bottom-grid {grid-template-columns:1fr}
+  #app.staff-desktop-layout .n2h-dashboard > .n2h-kpis {grid-template-columns:1fr 1fr}
+}
