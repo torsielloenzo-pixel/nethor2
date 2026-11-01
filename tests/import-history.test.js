@@ -66,7 +66,7 @@ test('branchement complet: historisation de l’agent, RPC et service worker PWA
  assert.match(sql,/p\.role='admin'/);
  const live=read('src/ui/live.js');
  assert.match(live,/mergeImportHistory/);
- assert.match(live,/renderImportHistory\(state\.history\)/);
+ assert.match(live,/renderHistoryBrowser\(state\.history,historyBrowser\)/);
  assert.match(live,/x\.source==='manual'&&x\.storage_path===path/);
  const sw=read('sw.js'),build=read('.github/workflows/preview-pages.yml'),dev=read('scripts/dev-server.js');
  for(const item of [sw,build,dev])assert.match(item,/import-history\.js/);
