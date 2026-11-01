@@ -1132,26 +1132,45 @@ html.nethor-zoom-locked select {
   .n2notif-badge[hidden]{display:none!important}
   #app .n2notif-panel{display:block;position:fixed;inset:0;z-index:32;padding:calc(74px + env(safe-area-inset-top)) 10px calc(88px + env(safe-area-inset-bottom));pointer-events:auto}
   #app .n2notif-panel[hidden]{display:none!important}
-  .n2notif-scrim{position:absolute;inset:0;border:0;background:rgba(7,18,38,.42)}
-  .n2notif-card{position:relative;z-index:1;margin-left:auto;width:min(430px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;border:1px solid #dbe5f2;border-radius:18px;background:#fff;box-shadow:0 20px 60px rgba(9,27,55,.28)}
-  .n2notif-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 15px 12px;border-bottom:1px solid #e8edf5}
+  .n2notif-scrim{position:absolute;inset:0;border:0;background:rgba(7,18,38,.48)}
+  .n2notif-card{position:relative;z-index:1;margin-left:auto;width:min(470px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;border:1px solid #dbe5f2;border-radius:20px;background:#f6f8fc;box-shadow:0 20px 60px rgba(9,27,55,.30)}
+  .n2notif-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 15px 13px;border-bottom:1px solid #e3e9f2;background:#fff}
   .n2notif-head>div:first-child span{display:block;color:#7990b0;font-size:9px;font-weight:850;letter-spacing:1.15px}
   .n2notif-head h2{margin:2px 0 0;color:#203a61;font-size:18px;line-height:1.1}
-  .n2notif-head-actions{display:flex;align-items:center;gap:7px}
+  .n2notif-head-actions{display:flex;align-items:center;gap:6px}
   .n2notif-head-actions button{border:0;background:#eef4ff;color:#3568b7;border-radius:9px;padding:7px 9px;font-size:10px;font-weight:800}
   .n2notif-head-actions .n2notif-close{width:31px;height:31px;padding:0;font-size:22px;line-height:1}
-  .n2notif-list{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
-  .n2notif-item{width:100%;display:grid;grid-template-columns:9px minmax(0,1fr) 16px;gap:9px;align-items:start;padding:13px 14px;border:0;border-bottom:1px solid #edf1f6;background:#fff;text-align:left;color:#263f64}
-  .n2notif-item.is-unread{background:#f5f9ff}
+  .n2notif-count{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:#fff0ef;color:#b83931;font-size:9px;font-weight:850;white-space:nowrap}
+  .n2notif-list{min-height:0;display:grid;gap:10px;padding:10px;overflow:auto;-webkit-overflow-scrolling:touch}
+  .n2notif-item{width:100%;border:1px solid #dce5f0;border-radius:16px;background:#fff;text-align:left;color:#263f64;box-shadow:0 5px 16px rgba(26,54,91,.05);cursor:pointer}
+  .n2notif-item.is-unread{border-color:#b9d3f7;box-shadow:0 6px 18px rgba(45,104,185,.10)}
+  .n2notif-change-card{display:flex;flex-direction:column;gap:9px;padding:13px}
+  .n2notif-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .n2notif-card-top>strong{font-size:13px;font-weight:900;color:#203a61}
+  .n2notif-new{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:#eaf2ff;color:#326ab8;font-size:9px;font-weight:850}
+  .n2notif-explain{font-size:11px;line-height:1.4;color:#536984}
+  .n2notif-shift-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .n2notif-shift-box{min-width:0;display:flex;flex-direction:column;gap:5px;padding:10px;border:1px solid #e0e7f1;border-radius:11px;background:#f2f5f9}
+  .n2notif-shift-box small{font-size:8px;font-weight:850;letter-spacing:.4px;color:#7d8da2}
+  .n2notif-shift-box b{font-size:15px;line-height:1.15;color:#263d5f;overflow-wrap:anywhere}
+  .n2notif-delta{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:750;color:#49617f}
+  .n2notif-delta svg{flex:none;width:16px;height:16px}
+  .n2notif-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:1px;color:#9aa7b8;font-size:9px}
+  .n2notif-meta>span{font-size:18px;line-height:1;color:#8293aa}
+  .n2notif-generic{display:grid;grid-template-columns:9px minmax(0,1fr) 16px;gap:9px;align-items:start;padding:13px}
   .n2notif-dot{width:7px;height:7px;margin-top:7px;border-radius:50%;background:#c6d1df}
   .n2notif-item.is-unread .n2notif-dot{background:#3d77d0;box-shadow:0 0 0 4px #e4efff}
   .n2notif-copy{min-width:0;display:flex;flex-direction:column;gap:3px}
   .n2notif-copy strong{font-size:12px;font-weight:850;color:#223b61}
   .n2notif-day{font-size:10px;font-weight:800;color:#5275aa;text-transform:capitalize}
-  .n2notif-message{font-size:11px;line-height:1.4;color:#5d708d;overflow-wrap:anywhere}
+  .n2notif-message{font-size:11px;line-height:1.4;color:#5d708d;overflow-wrap:anywhere;white-space:pre-line}
   .n2notif-copy small{font-size:9px;color:#96a4b8}
   .n2notif-arrow{align-self:center;color:#7d91ad;font-size:22px}
   .n2notif-empty{display:flex;flex-direction:column;gap:5px;padding:25px 18px;text-align:center;color:#7c8da5;font-size:11px}
   .n2notif-empty strong{color:#365376;font-size:12px}
 }
-@media(max-width:360px){#app .topbar .n2notif-button{flex-basis:39px;width:39px;height:39px}}
+@media(max-width:380px){
+  #app .topbar .n2notif-button{flex-basis:39px;width:39px;height:39px}
+  .n2notif-shift-grid{grid-template-columns:1fr}
+  .n2notif-head-actions [data-action="notifications-read-all"]{display:none}
+}
