@@ -93,6 +93,9 @@ let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
 let syncChartPeriod=7;
 let dashboardOpen=null;
+const staffDetail={name:null,month:null,weeks:[],loading:false,error:'',request:0};
+const staffPlanningRole=()=>!smallScreen()&&['admin','point_de_vente','point-de-vente','point_de_vente','pointvente','magasin'].includes(state.profile?.role);
+
 const historyBrowser={query:'',source:'all',year:'all',sort:'newest',openMonths:[],expandedAll:false};
 let booted=false;
 let swRegistration=null;
@@ -507,18 +510,61 @@ function personWithAccountLink(p){
  if(smallScreen()||state.profile?.role!=='admin'||p.profile)return identity;
  return '<span class="n2-person-account">'+identity+accountLinkControl(p.name)+'</span>';
 }
+async function loadStaffMonth(){
+ const month=staffDetail.month,name=staffDetail.name,request=++staffDetail.request;
+ if(!month||!name)return;
+ staffDetail.loading=true;staffDetail.error='';staffDetail.weeks=[];render();
+ const start=month+'-01',last=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate();
+ const lastDay=month+'-'+String(last).padStart(2,'0');
+ const firstMonday=mondayOf(start),lastMonday=mondayOf(lastDay);
+ const weeks=[];for(let d=firstMonday;d<=lastMonday;d=plusDays(d,7))weeks.push(d);
+ try{
+  const records=await Promise.all(weeks.map(async w=>({week:w,data:await getPlanningWeek(client,w)})));
+  if(request!==staffDetail.request)return;
+  staffDetail.weeks=records;
+ }catch(error){if(request!==staffDetail.request)return;staffDetail.error='Lecture du mois impossible : '+String(error.message||error);}
+ finally{if(request===staffDetail.request){staffDetail.loading=false;render();}}
+}
+function renderStaffDetail(metrics){
+ if(!staffDetail.name||!staffPlanningRole())return '';
+ const name=staffDetail.name,person=metrics.people.find(p=>p.name===name);
+ const profileId=person?.profile?.id;
+ const allNames=new Set([normalizeName(name),...(person?.profile?[person.profile.planning_name,person.profile.display_name,...(person.profile.planning_aliases||[])].filter(Boolean).map(normalizeName):[])]);
+ const entries=staffDetail.weeks.flatMap(record=>{
+  if(!record.data?.model)return [];
+  return analyze(record.data.model).people.filter(p=>profileId?(p.profile?.id===profileId||allNames.has(normalizeName(p.name))):allNames.has(normalizeName(p.name))).flatMap(p=>p.days);
+ });
+ const dataByDate=new Map();
+ for(const day of entries){const old=dataByDate.get(day.date);if(!old||(!old.ranges?.length&&day.ranges?.length))dataByDate.set(day.date,day);}
+ const yyyy=Number(staffDetail.month.slice(0,4)),mm=Number(staffDetail.month.slice(5,7));
+ const count=new Date(yyyy,mm,0).getDate(),lead=(new Date(yyyy,mm-1,1).getDay()+6)%7;
+ const cells=Array.from({length:lead},()=>'<div class="n2staff-cal-empty"></div>');
+ let minutes=0,worked=0;
+ for(let day=1;day<=count;day++){
+  const date=staffDetail.month+'-'+String(day).padStart(2,'0'),entry=dataByDate.get(date);
+  const ranges=entry?.ranges||[];
+  const duration=ranges.reduce((sum,r)=>sum+(r.endMinutes-r.startMinutes),0);
+  if(duration>0){minutes+=duration;worked++;}
+  const leave=entry?.cells?.includes('y'),kind=leave?'leave':ranges.length?(ranges[0].startMinutes<720?'morning':'afternoon'):'rest';
+  const label=ranges.map(r=>hhmm(r.startMinutes)+'–'+hhmm(r.endMinutes)).join(' · ')||(entry?(leave?'Congés':'Repos'):'Non publié');
+  cells.push('<div class="n2staff-cal-day" data-kind="'+(entry?kind:'missing')+'"><strong>'+day+'</strong><span>'+escapeHtml(label)+'</span></div>');
+ }
+ const prev=new Date(yyyy,mm-2,1).toISOString().slice(0,7),next=new Date(yyyy,mm,1).toISOString().slice(0,7);
+ const monthLabel=new Date(yyyy,mm-1,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+ return '<div class="n2dash-overlay" data-staff-backdrop><section class="n2dash-modal n2staff-modal" role="dialog" aria-modal="true" aria-label="Planning de '+escapeHtml(name)+'"><header class="n2dash-modal-head"><div class="n2dash-person-heading"><span class="n2dash-avatar">'+escapeHtml(name.charAt(0))+'</span><span><h2>'+escapeHtml(name)+'</h2><small>Planning individuel</small></span></div><button type="button" class="n2dash-close" data-action="staff-close" aria-label="Fermer">×</button></header><div class="n2dash-modal-body"><div class="n2staff-month-nav"><button data-action="staff-prev" aria-label="Mois précédent">‹</button><strong>'+escapeHtml(monthLabel)+'</strong><button data-action="staff-next" aria-label="Mois suivant">›</button></div>'+(staffDetail.loading?'<p>Chargement des semaines publiées…</p>':staffDetail.error?'<p role="alert">'+escapeHtml(staffDetail.error)+'</p>':'<div class="n2staff-stats"><span>'+worked+' jours travaillés</span><span>'+ (minutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})+' h sur les journées disponibles</span></div><div class="n2staff-calendar">'+['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=>'<div class="n2staff-cal-head">'+d+'</div>').join('')+cells.join('')+'</div><p class="n2staff-note">Non publié : aucun planning disponible pour cette date.</p>')+'</div></section></div>';
+}
 function planningCard(metrics){
   let content='';
   const dates=datesFor(state.week);
   // La palette est réservée à la consultation sur la page Planning Desktop/PWA.
   // Vue neutre identique dans Vue d’ensemble et Planning, sans palette Excel.
-  const desktopColors=false;
+  const desktopColors=staffPlanningRole();
   const first=Number(state.weekData?.model?.startTime??6)*60;
   const step=Number(state.weekData?.model?.slotMinutes)||15;
   const planningDay=day=>desktopColors?renderDesktopPlanningDay(day.cells,first,step):shift(day.ranges);
   if(!state.weekData)content='<div class="live-empty"><strong>Aucun planning publié pour cette semaine</strong>Utilise les flèches pour choisir une semaine existante.</div>';
   else if(state.view==='week'){
-    content='<div class="desktop-planning-table table-scroll"><table class="table"><thead><tr><th>Collaborateur</th>'+dates.map((d,i)=>'<th>'+DAYS[i]+'<br>'+shortDate(d)+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+metrics.people.map(p=>'<tr><td>'+personWithAccountLink(p)+'</td>'+p.days.map(day=>'<td>'+planningDay(day)+'</td>').join('')+'<td class="live-hours">'+hours(p.total)+'</td></tr>').join('')+'</tbody></table></div>'+
+    content='<div class="desktop-planning-table table-scroll"><table class="table"><thead><tr><th>Collaborateur</th>'+dates.map((d,i)=>'<th>'+DAYS[i]+'<br>'+shortDate(d)+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+metrics.people.map(p=>'<tr class="n2staff-row" data-staff-person="'+escapeHtml(p.name)+'"><td>'+personWithAccountLink(p)+'</td>'+p.days.map(day=>'<td>'+planningDay(day)+'</td>').join('')+'<td class="live-hours">'+hours(p.total)+'</td></tr>').join('')+'</tbody></table></div>'+
     '<div class="mobile-week-list">'+(metrics.people.length?metrics.people.map(p=>'<article class="mobile-week-person"><header><div>'+personWithAccountLink(p)+'<small>'+p.days.filter(d=>d.hours>0).length+' jour(s) planifié(s)</small></div><span class="mobile-hours">'+hours(p.total)+'</span></header><div class="mobile-week-days">'+p.days.map((d,i)=>'<button type="button" class="mobile-week-day" data-day="'+dates[i]+'"><span class="mobile-week-date"><b>'+DAYS[i]+'</b><small>'+shortDate(d.date)+'</small></span><span class="mobile-week-shift">'+shift(d.ranges)+'</span><span class="mobile-week-duration">'+(d.hours?hours(d.hours):'')+'</span></button>').join('')+'</div></article>').join(''):'<div class="live-empty">Aucun collaborateur planifié.</div>')+'</div>';
   }else{
     if(!dates.includes(state.day))state.day=state.week;
@@ -767,7 +813,7 @@ function pagePlanning(metrics){
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error,
     updatedAt:state.planningLoadedAt,isOnline:state.networkOnline,updateReady:state.pwaUpdateReady
   });
-  return renderPageHeader('PLANNING','Planning du personnel','La même présentation que dans Vue d’ensemble.',state.access==='manage'?button('Importer Excel','go-import',true):'')+collaboratorPanel()+planningCard(metrics);
+  return renderPageHeader('PLANNING','Planning du personnel','Horaires et planning de l’équipe.',staffPlanningRole()?'':state.access==='manage'?button('Importer Excel','go-import',true):'')+collaboratorPanel()+planningCard(metrics)+(staffPlanningRole()?renderStaffDetail(metrics):'');
 }
 
 async function loadMobileSyncStatus(force=false){
@@ -1409,6 +1455,15 @@ ROOT.addEventListener('submit',async event=>{
   }catch(err){showMessage(String(err.message||err));if(submit){submit.disabled=false;submit.textContent='Se connecter';}}
 });
 ROOT.addEventListener('click',async event=>{
+ if(staffPlanningRole()&&state.page==='planning'){
+  if(event.target.matches('[data-staff-backdrop]')){staffDetail.name=null;staffDetail.request++;render();return;}
+  const act=event.target.closest('[data-action^="staff-"]');
+  if(act){const action=act.dataset.action;if(action==='staff-close'){staffDetail.name=null;staffDetail.request++;render();return;}
+   if(action==='staff-prev'||action==='staff-next'){const [y,m]=staffDetail.month.split('-').map(Number);const d=new Date(y,m-1+(action==='staff-next'?1:-1),1);staffDetail.month=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');await loadStaffMonth();return;}}
+  const row=event.target.closest('[data-staff-person]');
+  if(row&&!event.target.closest('.n2-link-menu,button,select')){staffDetail.name=row.dataset.staffPerson;staffDetail.month=state.week.slice(0,7);await loadStaffMonth();return;}
+ }
+
   if(event.target.closest('[data-dashboard-backdrop]')===event.target){
     dashboardOpen=null;render();return;
   }
@@ -1644,6 +1699,7 @@ ROOT.addEventListener('toggle',event=>{
  panel.style.left=left+'px';panel.style.top=Math.max(8,top)+'px';
 },true);
 ROOT.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&state.page==='planning'&&staffDetail.name){staffDetail.name=null;staffDetail.request++;render();return;}
  if(event.key==='Escape'&&state.page==='home'&&dashboardOpen){
   dashboardOpen=null;render();
  }
