@@ -561,7 +561,7 @@ function planningCard(metrics){
   const dates=datesFor(state.week);
   // La palette est réservée à la consultation sur la page Planning Desktop/PWA.
   // Vue neutre identique dans Vue d’ensemble et Planning, sans palette Excel.
-  const desktopColors=staffPlanningRole();
+  const desktopColors=false;
   const first=Number(state.weekData?.model?.startTime??6)*60;
   const step=Number(state.weekData?.model?.slotMinutes)||15;
   const planningDay=day=>desktopColors?renderDesktopPlanningDay(day.cells,first,step):shift(day.ranges);
