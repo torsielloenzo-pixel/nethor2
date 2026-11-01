@@ -81,10 +81,11 @@ export function createSyncController(client,root,profile){
    : !isInstalled()
    ? '<button class="sync-action" type="button" data-action="sync-download">Installer NethorSync</button>'
    : '<button class="sync-action" type="button" data-action="sync-request-manual"'+(status?.pendingManual&&status?.manualStage!=='pc_error'?' disabled':'')+'>'+(status?.manualStage==='pc_error'?'Réessayer la vérification':status?.pendingManual?'Traitement en cours…':'Synchroniser')+'</button><button class="sync-subaction" type="button" data-action="sync-state-refresh">Actualiser l’état</button><button class="sync-subaction" type="button" data-action="sync-download">Télécharger le correctif 2.1.8</button>';
-  return '<div class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><strong>'+label+'</strong></div>'+details+
+  return '<details class="sync-side-collapse"><summary class="sync-side-heading"><span class="sync-indicator '+(state==='online'?'ok':isInstalled()?'warn':'muted')+'"></span><strong>'+label+'</strong><span class="sync-side-chevron" aria-hidden="true"></span></summary>'+
+   '<div class="sync-side-content">'+details+
    (error?'<p class="sync-side-small sync-error">'+esc(error)+'</p>':'')+
    (notice?'<p class="sync-side-small">'+esc(notice)+'</p>':'')+
-   renderManualSyncPipeline(status)+actions;
+   renderManualSyncPipeline(status)+actions+'</div></details>';
  }
  function settingsMarkup(){
   return '<section class="card nethor-sync-settings" id="syncSettings"><div class="card-head"><div><h2 class="card-title">NethorSync · Poste maître</h2><p class="sub">Un seul ordinateur peut être lié à la fois.</p></div></div><div class="card-body">'+
@@ -113,7 +114,7 @@ export function createSyncController(client,root,profile){
    '<section class="sync-diagnostic-panel"><h3>Rapports d’erreurs NethorSync</h3><p class="live-muted">Diagnostics techniques automatiques, sans données personnelles ni noms de fichiers. Conservation : 30 jours.</p>'+renderSyncDiagnostics(diagnostics,diagnosticsError)+'</section></div></section>';
  }
  function paint(){
-  const side=root.querySelector('#syncSideCard');if(side)side.innerHTML=markup();
+  const side=root.querySelector('#syncSideCard');if(side){const expanded=side.querySelector('.sync-side-collapse')?.open===true;side.innerHTML=markup();const disclosure=side.querySelector('.sync-side-collapse');if(disclosure)disclosure.open=expanded;}
   const settings=root.querySelector('#syncSettings');if(settings)settings.outerHTML=settingsMarkup();
  }
  async function refresh(){
