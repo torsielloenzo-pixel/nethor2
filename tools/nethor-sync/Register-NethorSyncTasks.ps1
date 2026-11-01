@@ -39,7 +39,7 @@ function New-TaskDefinition([string]$Name,[string]$Mode,[int]$Days,[int]$Hour,[i
   $task.Settings.DisallowStartIfOnBatteries = $false
   $task.Settings.StopIfGoingOnBatteries = $false
   $task.Settings.MultipleInstances = 2 # ignorer si une vérification est déjà en cours
-  $task.Settings.ExecutionTimeLimit = if ($Mode -eq 'watch') { 'PT0S' } else { 'PT15M' }
+  $task.Settings.ExecutionTimeLimit = if ($Mode -eq 'watch' -or $Mode -eq 'watchdog') { 'PT0S' } else { 'PT15M' }
   $action = $task.Actions.Create(0) # TASK_ACTION_EXEC
   $action.Path = $wscript
   $action.Arguments = '//B //Nologo "' + $runner + '" ' + $Mode
@@ -65,6 +65,7 @@ $plans = @(
   @{Name='Nethor Sync 2 - Dimanche';Mode='scheduled';Days=1;Hour=12;Type=3}
   @{Name='Nethor Sync 2 - Controle Manuel';Mode='poll';Days=0;Hour=0;Type=2}
   @{Name='Nethor Sync 2 - Ecoute';Mode='watch';Days=0;Hour=0;Type=9}
+  @{Name='Nethor Sync 2 - Surveillance';Mode='watchdog';Days=0;Hour=0;Type=2}
 )
 foreach ($plan in $plans) {
   $task = New-TaskDefinition -Name $plan.Name -Mode $plan.Mode -Days $plan.Days -Hour $plan.Hour -TriggerType $plan.Type
