@@ -57,18 +57,16 @@ test('Les noms de postes Supabase sont échappés en HTML',()=>{
  assert.doesNotMatch(html,/<img/);
  assert.match(html,/&lt;img/);
 });
-test('Vue ensemble admin/PDV n’affiche ni couverture ni détection d’anomalies',()=>{
+test('Vue ensemble admin/PDV utilise le tableau de bord compact sans couverture ni anomalies',()=>{
  const js=read('src/ui/live.js');
  const part=js.slice(js.indexOf('function pageHome(metrics){'),js.indexOf('function pagePlanning(metrics){'));
- const scope=part.slice(part.indexOf('if(isSyncOverviewRole('),part.indexOf('  return renderPageHeader(',part.indexOf('if(isSyncOverviewRole(')));
- assert.ok(scope.includes('renderSyncOverviewCard(state.nethorSync,Date.now(),syncChartPeriod)'));
- assert.ok(scope.includes('n2sync-home-content'));
- assert.ok(scope.indexOf('planningCard(metrics)')<scope.indexOf('renderSyncOverviewCard('));
- assert.doesNotMatch(scope,/Collaborateurs planifiés|Heures planifiées|n2sync-home-summary/);
- assert.ok(scope.includes('planningCard(metrics)'));
- assert.ok(!scope.includes('coverageCard(metrics)'));
- assert.ok(!scope.includes('alertsCard(metrics'));
- assert.ok(!scope.includes('Points à vérifier'));
+ const start=part.indexOf('if(isSyncOverviewRole(');
+ const end=part.indexOf("\n  }\n  return renderPageHeader",start);
+ const scope=part.slice(start,end>start?end:part.length);
+ assert.match(scope,/renderOverviewDashboard\(/);
+ assert.match(scope,/people:metrics\.people/);
+ assert.match(scope,/sync:state\.nethorSync/);
+ assert.doesNotMatch(scope,/coverageCard\(metrics\)|alertsCard\(metrics|Points à vérifier/);
  assert.match(js,/data-action='nethor-sync-install'|action==='nethor-sync-install'/);
 });
 test('Zip installer publié sans exposer de secret et sans cache PWA',()=>{
