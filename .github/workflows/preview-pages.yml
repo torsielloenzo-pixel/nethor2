@@ -47,6 +47,16 @@ jobs:
                       raise SystemExit(f'Fichier absent dans le programme NethorSync : {name}')
                   archive.write(path, arcname=name)
           PY
+          python3 - <<'PYREC'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          with ZipFile('_site/NethorSync-Correctif-Demarrage.zip','w',ZIP_DEFLATED) as archive:
+              for name in ('Repair-NethorSync-Startup.ps1','NethorSyncRunner.vbs','Register-NethorSyncTasks.ps1'):
+                  source=Path('tools/nethor-sync') / name
+                  if not source.is_file(): raise SystemExit(f'Correctif manquant : {name}')
+                  archive.write(source,arcname=name)
+          PYREC
+          test -s _site/NethorSync-Correctif-Demarrage.zip
           test -s _site/nethor-sync-2.zip
           test -s _site/reset-password.html && test -s _site/src/auth/password-recovery-page.js
           test ! -e _site/.env
