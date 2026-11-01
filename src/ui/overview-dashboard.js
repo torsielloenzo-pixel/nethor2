@@ -45,6 +45,9 @@ export function buildDashboardPeople(people=[]){
  }
  return [...grouped.values()].sort((a,b)=>a.name.localeCompare(b.name,'fr',{sensitivity:'base'}));
 }
+const serviceKind=day=>day.leave?'leave':!day.ranges.length?'rest':day.ranges[0].start<720?'morning':'afternoon';
+const serviceText=kind=>({morning:'Matin',afternoon:'Après-midi',leave:'Congés',rest:'Repos'})[kind];
+const humanDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'});
 const modalIcon='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 export function renderOverviewDashboard({people=[],week='',today='',sync={},open=null,syncPeriod=7,hasPlanning=false}={}){
  const currentWeek=monday(today)===week;
@@ -57,12 +60,13 @@ export function renderOverviewDashboard({people=[],week='',today='',sync={},open
  const dateTitle=currentWeek?"Aujourd’hui · "+new Date(today+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}):'Semaine consultée · '+week;
  const cards=roster.map((item,index)=>{
   const day=todayIndex>=0?dayInfo(item.people,todayIndex):null;
-  const dateLabel=day?day.label:'Voir les horaires de la semaine';
-  const names=[...new Set(item.people.map(p=>p.name))];
-  return '<button type="button" class="n2dash-person" data-action="dashboard-person" data-dashboard-person="'+index+'"><span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span><span class="n2dash-person-main"><strong>'+esc(item.name)+'</strong><small>'+esc(dateTitle)+'</small></span><span class="n2dash-person-time">'+esc(dateLabel)+'</span><span class="n2dash-chevron" aria-hidden="true">›</span></button>';
+  const kind=day?serviceKind(day):'unknown';
+  const dateLabel=day?day.label:'Consulter la semaine';
+  const subtitle=day?(kind==='rest'?'Non planifié aujourd’hui':kind==='leave'?'En congés':kind==='morning'?'Service du matin':'Service de l’après-midi'):'Horaires de la semaine';
+  return '<button type="button" class="n2dash-person" data-action="dashboard-person" data-dashboard-person="'+index+'"><span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span><span class="n2dash-person-main"><strong>'+esc(item.name)+'</strong><small>'+esc(subtitle)+'</small></span><span class="n2dash-person-time" data-kind="'+kind+'">'+esc(dateLabel)+'</span><span class="n2dash-chevron" aria-hidden="true">›</span></button>';
  }).join('');
  const totals='<div class="n2dash-kpis"><div><small>Collaborateurs au planning</small><strong>'+roster.length+'</strong></div><div><small>En poste aujourd’hui</small><strong>'+(currentlyWorking===null?'—':currentlyWorking)+'</strong></div><div><small>État NethorSync</small><strong>'+esc(statusLabel)+'</strong></div></div>';
- const peopleSection='<section class="card n2dash-section"><div class="n2dash-section-head"><div><h2>Équipe</h2><p>'+esc(hasPlanning?'Clique sur un collaborateur pour consulter ses sept jours.':'Aucun planning publié pour cette semaine.')+'</p></div><button type="button" class="n2dash-text-action" data-action="go-planning">Planning complet ›</button></div><div class="n2dash-roster">'+(cards||'<div class="n2dash-empty">Aucun collaborateur à afficher.</div>')+'</div></section>';
+ const peopleSection='<section class="card n2dash-section"><div class="n2dash-section-head"><div><h2>Équipe</h2><p>'+roster.length+' collaborateurs · '+esc(currentWeek?humanDate(today):'Semaine du '+humanDate(week))+'</p></div><button type="button" class="n2dash-text-action" data-action="go-planning">Planning complet ↗</button></div><div class="n2dash-roster">'+(cards||'<div class="n2dash-empty">Aucun collaborateur à afficher.</div>')+'</div></section>';
  const syncSummary='<section class="card n2dash-section n2dash-sync"><div class="n2dash-section-head"><div><h2>NethorSync</h2><p>Synchronisation des fichiers Excel</p></div></div><button type="button" class="n2dash-sync-button" data-action="dashboard-sync"><span class="n2dash-sync-dot" data-status="'+esc(currentStatus)+'"></span><span class="n2dash-sync-main"><strong>'+esc(statusLabel)+'</strong><small>'+(sync?.status?.installed?'Poste : '+esc(sync.status.deviceLabel||'Inconnu'):'Poste non lié')+'</small><small>'+(lastCheck?'Dernier contrôle : '+esc(lastCheck.date)+' à '+esc(lastCheck.time):'Aucun contrôle enregistré')+'</small></span><span class="n2dash-chevron" aria-hidden="true">›</span></button><p class="n2dash-footnote">Ouvrir pour consulter les transferts, vérifications et erreurs signalées.</p></section>';
  let modal='';
  if(open?.type==='person'){
@@ -70,11 +74,13 @@ export function renderOverviewDashboard({people=[],week='',today='',sync={},open
   if(item){
    const aliases=[...new Set(item.people.map(p=>p.name))];
    const rows=Array.from({length:7},(_,i)=>{
-    const date=plus(week,i),day=dayInfo(item.people,i);
-    return '<div class="n2dash-day'+(date===today?' n2dash-today':'')+'"><span><strong>'+weekdays[i]+'</strong><small>'+esc(date.slice(8,10)+'/'+date.slice(5,7))+'</small></span><b>'+esc(day.label)+'</b></div>';
+    const date=plus(week,i),day=dayInfo(item.people,i),kind=serviceKind(day);
+    return '<div class="n2dash-day'+(date===today?' n2dash-today':'')+'"><span class="n2dash-day-date"><strong>'+weekdays[i]+(date===today?' <em>Aujourd’hui</em>':'')+'</strong><small>'+esc(humanDate(date))+'</small></span><span class="n2dash-shift" data-kind="'+kind+'"><span class="n2dash-shift-kind">'+serviceText(kind)+'</span><b>'+esc(kind==='rest'?'':day.label)+'</b></span></div>';
    }).join('');
    const totalMinutes=Array.from({length:7},(_,i)=>dayInfo(item.people,i).minutes).reduce((a,b)=>a+b,0);
-   modal='<div class="n2dash-overlay" data-dashboard-backdrop><section class="n2dash-modal" role="dialog" aria-modal="true" aria-label="Semaine de '+esc(item.name)+'"><header class="n2dash-modal-head"><div><p>PLANNING DE LA SEMAINE</p><h2>'+esc(item.name)+'</h2><small>'+esc(week)+' au '+esc(plus(week,6))+'</small></div><button type="button" class="n2dash-close" data-action="dashboard-close" aria-label="Fermer">'+modalIcon+'</button></header><div class="n2dash-modal-body">'+(aliases.length>1?'<p class="n2dash-alias-label">Noms reconnus : '+esc(aliases.join(' · '))+'</p>':'')+'<div class="n2dash-days">'+rows+'</div><p class="n2dash-week-total">Total hebdomadaire <strong>'+(totalMinutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})+' h</strong></p></div><footer><button type="button" class="btn" data-action="dashboard-close">Fermer</button><button type="button" class="btn primary" data-action="dashboard-open-planning">Ouvrir le planning complet</button></footer></section></div>';
+   const workedDays=Array.from({length:7},(_,i)=>dayInfo(item.people,i).minutes>0).filter(Boolean).length;
+   modal='<div class="n2dash-overlay" data-dashboard-backdrop><section class="n2dash-modal n2dash-person-modal" role="dialog" aria-modal="true" aria-label="Semaine de '+esc(item.name)+'"><header class="n2dash-modal-head"><div class="n2dash-person-heading"><span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span><span><h2>'+esc(item.name)+'</h2><small>'+esc(humanDate(week))+' – '+esc(humanDate(plus(week,6)))+'</small></span></div><button type="button" class="n2dash-close" data-action="dashboard-close" aria-label="Fermer">'+modalIcon+'</button></header><div class="n2dash-modal-body">'+(aliases.length>1?'<p class="n2dash-alias-label">Noms reconnus : '+esc(aliases.join(' · '))+'</p>':'')+'<div class="n2dash-person-stats"><div><small>Temps de travail</small><strong>'+(totalMinutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})+' h</strong></div><div><small>Jours travaillés</small><strong>'+workedDays+' / 7</strong></div></div><div class="n2dash-days">'+rows+'</div></div><footer><button type="button" class="btn primary" data-action="dashboard-open-planning">Ouvrir le planning complet ↗</button></footer></section></div>';
+
   }
  }
  if(open?.type==='sync'){
