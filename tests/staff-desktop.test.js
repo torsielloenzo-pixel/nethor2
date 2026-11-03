@@ -34,7 +34,7 @@ test('Administrateur et Point de vente PC restent sur les pages desktop',()=>{
 
 test('Déploiement web et PWA contiennent styles et module de rôles',()=>{
  const html=read('index.html'),workflow=read('.github/workflows/preview-pages.yml'),sw=read('sw.js'),server=read('scripts/dev-server.js');
- assert.ok(html.includes('<link rel="stylesheet" href="./staff-desktop.css">'));
+ assert.match(html,/href="\.\/staff-desktop\.css(?:\?v=[^"]+)?"/);
  assert.ok(workflow.includes('staff-desktop.css'));
  assert.ok(workflow.includes('src/ui/layout-role.js'));
  assert.ok(sw.includes("'./staff-desktop.css'"));
