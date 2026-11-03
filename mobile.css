@@ -1174,3 +1174,24 @@ html.nethor-zoom-locked select {
   .n2notif-shift-grid{grid-template-columns:1fr}
   .n2notif-head-actions [data-action="notifications-read-all"]{display:none}
 }
+
+
+/* Export hebdomadaire vers Calendrier iPhone — bêta Mobile/PWA. */
+@media(max-width:760px){
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager:has(.n2pm-calendar-add){
+   grid-template-columns:34px minmax(0,1fr) 34px 34px 34px;
+ }
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager:has(.n2pm-calendar-add)>button{
+   width:34px;height:34px;min-height:34px;
+ }
+ #app.mobile-planning-active .n2pm-calendar-add svg{width:18px;height:18px}
+ #app.mobile-planning-active .n2pm-calendar-add:active{transform:scale(.94)}
+}
+@media(max-width:380px){
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager:has(.n2pm-calendar-add){
+   grid-template-columns:32px minmax(0,1fr) 32px 32px 32px;gap:4px;
+ }
+ #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager:has(.n2pm-calendar-add)>button{
+   width:32px;height:32px;min-height:32px;
+ }
+}
