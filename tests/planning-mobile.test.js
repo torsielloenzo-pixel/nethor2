@@ -109,3 +109,14 @@ test('états réseau et fraîcheur : aujourd’hui, hors ligne et mise à jour P
  assert.match(update,/data-action="pwa-update"/);
  assert.match(update,/Mettre à jour NETHOR/);
 });
+
+
+test('le bouton calendrier est générique mais masqué hors cohorte bêta',()=>{
+ const model=make({Marie:{[week]:work('b')}});
+ const hidden=renderMobilePlanning({...options,model,calendarExportEnabled:false});
+ assert.doesNotMatch(hidden,/data-action="calendar-export-week"/);
+ const enabled=renderMobilePlanning({...options,model,calendarExportEnabled:true});
+ assert.match(enabled,/data-action="calendar-export-week"/);
+ const unlinked=renderMobilePlanning({...options,model,currentProfile:{planning_name:'Inconnu'},calendarExportEnabled:true});
+ assert.doesNotMatch(unlinked,/data-action="calendar-export-week"/);
+});
