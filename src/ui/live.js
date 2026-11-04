@@ -12,8 +12,8 @@ import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
-import {renderMobilePlanning,planningMobileData} from './planning-mobile.js';
-import {buildPlanningCalendar,planningCalendarEventCount,planningCalendarFilename} from '../domain/planning-calendar.js';
+import {renderMobilePlanning} from './planning-mobile.js';
+import {readCalendarSubscription} from '../data/calendar-subscription.js';
 import {renderPlanningYear} from './planning-year.js';
 import {renderDesktopPlanningDay,renderDesktopPlanningLegend} from './planning-desktop-colors.js';
 import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics,readSyncHistoricalSummary} from '../data/nethor-sync-control.js';
@@ -87,8 +87,8 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const APP_VERSION='2.2-mobile-2026.11.03-calendar-beta';
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false},planningNotifications:{accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0}};
+const APP_VERSION='2.2-mobile-2026.11.04-calendar-subscription-beta';
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false},planningNotifications:{accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0},calendarSubscription:{checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''}};
 let client;
 let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
@@ -209,6 +209,7 @@ async function signOut(){
   state.planningLoadedAt=0;state.pwaUpdateReady=false;state.networkOnline=navigator.onLine;
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   state.planningNotifications={accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0};
+  state.calendarSubscription={checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
   syncController?.dispose();
   syncController=null;
@@ -233,12 +234,14 @@ async function startAuthorized(access){
   state.importSync={loaded:false,loading:false,status:null,error:'',checkedAt:0};
   state.mobileSync={loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0};
   state.accountSecurity={loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0};
+  state.calendarSubscription={checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''};
   state.access=access.access;
   state.lastCheck=Date.now();
   renderShell();
   syncController=createSyncController(client,ROOT,state.profile);
   syncController?.mount();
   await loadProfiles();
+  await loadCalendarSubscriptionAccess();
   await loadPlanningNotifications(true);
   if(isMobileHome())void loadPersonalHome();
   await loadWeek();
@@ -253,6 +256,26 @@ async function loadProfiles(){
   state.profiles=Array.isArray(data)?data:[];
   const own=state.profiles.find(profile=>profile.id===state.user?.id);
   if(own)state.profile={...state.profile,planning_name:own.planning_name,planning_aliases:own.planning_aliases,contract_hours:own.contract_hours};
+}
+async function loadCalendarSubscriptionAccess(force=false){
+  if(!state.user||state.calendarSubscription.loading)return;
+  if(!force&&state.calendarSubscription.checked)return;
+  const userId=state.user.id;
+  state.calendarSubscription={...state.calendarSubscription,loading:true,error:''};
+  try{
+    const result=await readCalendarSubscription(client);
+    if(state.user?.id!==userId)return;
+    state.calendarSubscription={
+      checked:true,loading:false,enabled:result.enabled===true,
+      webcalUrl:result.webcalUrl||'',httpsUrl:result.httpsUrl||'',
+      calendarName:result.calendarName||'',error:''
+    };
+  }catch(err){
+    if(state.user?.id!==userId)return;
+    state.calendarSubscription={checked:true,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:String(err?.message||err||'')};
+  }finally{
+    if(state.user?.id===userId&&state.page==='planning'&&isMobileHome())render();
+  }
 }
 function planningNotificationDate(value){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return '';
@@ -813,35 +836,18 @@ function collaboratorPanel(){
  '<div class="n2collab-list">'+c.items.map(item=>'<div class="n2collab-row"><strong>'+escapeHtml(item.name)+'</strong><span>Première semaine publiée : '+escapeHtml(shortDate(item.date))+' '+escapeHtml(item.date.slice(0,4))+'</span></div>').join('')+'</div>';
  return '<section class="card n2collab-panel" aria-label="Historique des collaborateurs"><div class="card-head"><div><h2 class="card-title">Collaborateurs</h2><p class="sub">Première apparition dans les plannings publiés disponibles, pas nécessairement date d’embauche.</p></div><button type="button" class="btn" data-action="collaborators-toggle">Fermer ✕</button></div>'+content+'</section>';
 }
-function planningCalendarEmployee(){
-  const data=planningMobileData(visibleModel(),state.profiles,state.profile,state.week);
-  return data.employees.find(employee=>employee.isMe)||null;
-}
-function exportPlanningWeekCalendar(){
-  if(!smallScreen()||state.page!=='planning'||!state.planningNotifications.enabled)return;
-  const employee=planningCalendarEmployee();
-  if(!employee||planningCalendarEventCount(employee)===0){
-    window.alert('Aucun horaire de travail à ajouter pour cette semaine.');
+function subscribePlanningCalendar(){
+  if(!smallScreen()||state.page!=='planning'||!state.calendarSubscription.enabled)return;
+  const appleTouch=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const target=appleTouch?state.calendarSubscription.webcalUrl:state.calendarSubscription.httpsUrl;
+  if(!target){
+    window.alert('Le lien Calendrier NETHOR est temporairement indisponible.');
     return;
   }
-  try{
-    const content=buildPlanningCalendar({weekStart:state.week,employee});
-    const fileName=planningCalendarFilename(state.week);
-    const blob=new Blob([content],{type:'text/calendar;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement('a');
-    link.href=url;
-    link.rel='noopener';
-    link.setAttribute('aria-hidden','true');
-    if(/iPhone|iPad|iPod/i.test(navigator.userAgent))link.target='_blank';
-    else link.download=fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(()=>URL.revokeObjectURL(url),30000);
-  }catch(err){
-    console.error('Export calendrier impossible',err);
-    window.alert('Impossible de préparer le calendrier pour cette semaine.');
+  try{window.location.assign(target);}
+  catch(err){
+    console.error('Ouverture calendrier impossible',err);
+    window.alert('Impossible d’ouvrir Calendrier pour le moment.');
   }
 }
 function pagePlanning(metrics){
@@ -853,9 +859,8 @@ function pagePlanning(metrics){
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:visibleModel(),profiles:state.profiles,
     currentProfile:state.profile,allowYear:annualAllowed(),filter:state.mobilePlanning.dayFilter,
-    // Cohorte bêta actuelle : Enzo uniquement via le même accès serveur que les notifications internes.
-    // L'exporteur lui-même est générique et fonctionne pour tout profil planning relié.
-    calendarExportEnabled:state.planningNotifications.enabled,
+    // Cohorte bêta gérée côté serveur : seul Enzo est actuellement activé.
+    calendarSubscriptionEnabled:state.calendarSubscription.enabled,
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error,
     updatedAt:state.planningLoadedAt,isOnline:state.networkOnline,updateReady:state.pwaUpdateReady
   });
@@ -1712,7 +1717,7 @@ ROOT.addEventListener('click',async event=>{
     else{state.pwaUpdateReady=false;render();}
   }
   else if(action==='install-pwa')await installPwa();
-  else if(action==='calendar-export-week')exportPlanningWeekCalendar();
+  else if(action==='calendar-subscribe')subscribePlanningCalendar();
   else if(action==='go-import')go('import');
   else if(action==='go-planning')go('planning');
   else if(action==='today'){
@@ -1810,6 +1815,7 @@ function handleNetworkChange(){
  render();
  if(state.networkOnline){
   void refreshPublishedWeekQuietly();
+  if(!state.calendarSubscription.enabled)void loadCalendarSubscriptionAccess(true);
   if(state.planningNotifications.enabled)void loadPlanningNotifications();
   if(isMobileHome()&&!state.personal.loading)void loadPersonalHome();
  }
