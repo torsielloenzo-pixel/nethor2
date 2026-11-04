@@ -1176,7 +1176,7 @@ html.nethor-zoom-locked select {
 }
 
 
-/* Export hebdomadaire vers Calendrier iPhone — bêta Mobile/PWA. */
+/* Abonnement Calendrier iPhone — bêta Mobile/PWA. */
 @media(max-width:760px){
  #app.mobile-planning-active .n2pm-toolbar-compact .n2pm-pager:has(.n2pm-calendar-add){
    grid-template-columns:34px minmax(0,1fr) 34px 34px 34px;
