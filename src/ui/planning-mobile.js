@@ -110,7 +110,7 @@ function toolbar(weekStart,view,allowYear=false,meta={}){
   '<button type="button" data-action="prev" aria-label="Semaine précédente"'+disabled+'>‹</button>'+
   '<span><strong>'+safe(month.charAt(0).toUpperCase()+month.slice(1))+'</strong><small>'+safe(dateLabel(weekStart))+' – '+safe(dateLabel(dateAt(weekStart,6)))+'</small></span>'+
   '<button type="button" class="n2pm-quick-today'+(isCurrent?' is-current':'')+'" data-action="today" aria-label="Revenir à aujourd’hui" title="Aujourd’hui"'+disabled+'><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg></button>'+
-  (meta.calendarEnabled?'<button type="button" class="n2pm-calendar-add" data-action="calendar-export-week" aria-label="Ajouter cette semaine au calendrier" title="Ajouter au calendrier"><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M12 13v6M9 16h6"/></svg></button>':'')+
+  (meta.calendarEnabled?'<button type="button" class="n2pm-calendar-add" data-action="calendar-subscribe" aria-label="Abonner Calendrier à NETHOR" title="Ajouter NETHOR au calendrier"><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M12 13v6M9 16h6"/></svg></button>':'')+
   '<button type="button" data-action="next" aria-label="Semaine suivante"'+disabled+'>›</button></div>'+
   ((!online||meta.updateReady)?'<div class="n2pm-context" role="status">'+
    (!online?'<span class="n2pm-network" data-online="false">Hors ligne</span>':'')+
@@ -191,11 +191,10 @@ function dayView(data,selected,today,clock,filter,awayExpanded){
  if(isToday)out+='<p class="n2pm-footnote">Les statuts reflètent les horaires prévus, pas une présence confirmée.</p>';
  return out;
 }
-export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,currentProfile,filter='all',awayExpanded=false,allowYear=false,calendarExportEnabled=false,loading=false,error='',updatedAt=0,isOnline=true,updateReady=false,now=new Date()}){
+export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,currentProfile,filter='all',awayExpanded=false,allowYear=false,calendarSubscriptionEnabled=false,loading=false,error='',updatedAt=0,isOnline=true,updateReady=false,now=new Date()}){
  const result=planningMobileData(model,profiles,currentProfile,weekStart);
  const selected=result.dates.includes(selectedDay)?selectedDay:result.dates[0];
- const mine=result.employees.find(employee=>employee.isMe);
- const canExportCalendar=Boolean(calendarExportEnabled&&mine&&mine.days.some(day=>day.kind==='work'&&day.shifts.length));
+ const canSubscribeCalendar=Boolean(calendarSubscriptionEnabled);
  const clock=parisClock(now);
  let content='';
  if(loading&&!model)content='<div class="n2pm-empty n2pm-loading" role="status"><strong>Chargement du planning…</strong><p>Vérification de la dernière version publiée.</p></div>';
@@ -205,7 +204,7 @@ export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,
  const offline=isOnline?'':'<div class="n2pm-offline" role="status"><strong>Mode hors ligne</strong><span>Seules les données déjà chargées dans cette session peuvent rester visibles. Elles peuvent ne plus être à jour.</span></div>';
  const syncing=loading&&model?'<div class="n2pm-syncing" role="status">Actualisation de la dernière version…</div>':'';
  return '<section class="n2pm" aria-label="Planning mobile de l’équipe">'+
-  toolbar(weekStart,view,allowYear,{updatedAt,isOnline,updateReady,loading,calendarEnabled:canExportCalendar})+
+  toolbar(weekStart,view,allowYear,{updatedAt,isOnline,updateReady,loading,calendarEnabled:canSubscribeCalendar})+
   offline+syncing+
   (error?'<p class="n2pm-error" role="alert">'+safe(error)+'</p>':'')+
   content+'</section>';
