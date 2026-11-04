@@ -111,12 +111,12 @@ test('états réseau et fraîcheur : aujourd’hui, hors ligne et mise à jour P
 });
 
 
-test('le bouton calendrier est générique mais masqué hors cohorte bêta',()=>{
+test('le bouton d’abonnement calendrier est piloté par la cohorte serveur',()=>{
  const model=make({Marie:{[week]:work('b')}});
- const hidden=renderMobilePlanning({...options,model,calendarExportEnabled:false});
- assert.doesNotMatch(hidden,/data-action="calendar-export-week"/);
- const enabled=renderMobilePlanning({...options,model,calendarExportEnabled:true});
- assert.match(enabled,/data-action="calendar-export-week"/);
- const unlinked=renderMobilePlanning({...options,model,currentProfile:{planning_name:'Inconnu'},calendarExportEnabled:true});
- assert.doesNotMatch(unlinked,/data-action="calendar-export-week"/);
+ const hidden=renderMobilePlanning({...options,model,calendarSubscriptionEnabled:false});
+ assert.doesNotMatch(hidden,/data-action="calendar-subscribe"/);
+ const enabled=renderMobilePlanning({...options,model,calendarSubscriptionEnabled:true});
+ assert.match(enabled,/data-action="calendar-subscribe"/);
+ const noWeek=renderMobilePlanning({...options,model:null,calendarSubscriptionEnabled:true});
+ assert.match(noWeek,/data-action="calendar-subscribe"/);
 });
