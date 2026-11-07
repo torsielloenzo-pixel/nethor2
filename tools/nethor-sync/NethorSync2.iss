@@ -29,6 +29,8 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
 [Files]
 Source: "NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Update-NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "NethorSync-Version.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Connect-NethorSync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Installer-Sync.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Register-NethorSyncTasks.ps1"; DestDir: "{app}"; Flags: ignoreversion
