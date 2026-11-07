@@ -53,9 +53,15 @@ function New-TaskDefinition([string]$Name,[string]$Mode,[int]$Days,[int]$Hour,[i
     $trigger.WeeksInterval = 1
   } elseif ($TriggerType -eq 2) {
     $trigger.DaysInterval = 1
-    $trigger.Repetition.Interval = 'PT5M'
+    $trigger.Repetition.Interval = if ($Mode -eq 'update') { 'PT4H' } else { 'PT5M' }
     $trigger.Repetition.Duration = 'P1D'
     $trigger.Repetition.StopAtDurationEnd = $false
+  }
+  if ($Mode -eq 'update') {
+    # Controle aussi a chaque ouverture de session, puis toutes les quatre heures.
+    $sessionTrigger = $task.Triggers.Create(9)
+    $sessionTrigger.Enabled = $true
+    $sessionTrigger.UserId = $user
   }
   return $task
 }
@@ -64,6 +70,7 @@ $plans = @(
   @{Name='Nethor Sync 2 - Lundi-Samedi';Mode='scheduled';Days=126;Hour=19;Type=3}
   @{Name='Nethor Sync 2 - Dimanche';Mode='scheduled';Days=1;Hour=12;Type=3}
   @{Name='Nethor Sync 2 - Controle Manuel';Mode='poll';Days=0;Hour=0;Type=2}
+  @{Name='Nethor Sync 2 - Mises a jour';Mode='update';Days=0;Hour=0;Type=2}
   @{Name='Nethor Sync 2 - Ecoute';Mode='watch';Days=0;Hour=0;Type=9}
   @{Name='Nethor Sync 2 - Surveillance';Mode='watchdog';Days=0;Hour=0;Type=2}
 )
