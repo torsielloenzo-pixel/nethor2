@@ -101,8 +101,7 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
  const action=showInstall?
   '<button type="button" class="btn primary" data-action="nethor-sync-install">Installer NethorSync 2.1.10</button>':
   '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>'+
-  (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger NethorSync 2.1.10</button>':'')+
-  ;
+  (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger NethorSync 2.1.10</button>':'');
  const guide=showInstall?
   '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte NETHOR autorisé.</p>':
   bound?'<p class="n2sync-footnote">NethorSync 2.1.10 intègre le correctif de démarrage et conserve la liaison du poste ainsi que les fichiers Excel déjà transmis. Les plannings sont publiés côté Supabase. L’état du poste dépend de son dernier contact (moins de 30 minutes).</p>':'';
