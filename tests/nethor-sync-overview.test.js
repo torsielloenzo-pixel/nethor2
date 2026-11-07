@@ -37,6 +37,8 @@ test('Poste opérationnel : date, heure, dernier transfert et nom de poste',()=>
  assert.match(html,/Dernier transfert de fichier/);
  assert.match(html,/Télécharger la correction 2\.1\.8/);
  assert.match(html,/data-action="nethor-sync-refresh"/);
+ assert.doesNotMatch(html,/NethorSync-Correctif-Demarrage\\.zip/);
+ assert.doesNotMatch(html,/Télécharger la correction 2\\.1\\.8/);
  assert.equal(syncHealth(snapshot.status,now),'online');
 });
 test('Poste associé mais hors ligne : garder informations sans suggérer installation',()=>{
