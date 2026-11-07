@@ -1215,10 +1215,13 @@ function render(){
   const model=visibleModel(),metrics=analyze(model);
   const pages={home:()=>pageHome(metrics),planning:()=>pagePlanning(metrics),anomalies:()=>pageAnomalies(metrics),import:pageImport,team:()=>pageTeam(metrics),history:pageHistory,settings:pageSettings};
   let top='';
-  if(state.loading&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-message">Chargement du planning…</div>';
+  // Sur le planning desktop des gestionnaires, garder les menus immobiles pendant le changement de semaine.
+  const loadingAtBottom=state.page==='planning'&&staffPlanningRole();
+  const loadingMessage='<div class="live-message" role="status" aria-live="polite">Chargement du planning…</div>';
+  if(state.loading&&!loadingAtBottom&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+=loadingMessage;
   if(state.error&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-error">'+escapeHtml(state.error)+'</div>';
   if(state.notice&&!((state.page==='home'||state.page==='planning')&&isMobileHome()))top+='<div class="live-message ok">'+escapeHtml(state.notice)+'</div>';
-  screen.innerHTML=top+pages[state.page]();
+  screen.innerHTML=top+pages[state.page]()+((loadingAtBottom&&state.loading)?loadingMessage:'');
   syncController?.paint();
   paintPlanningNotifications();
 }
