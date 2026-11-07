@@ -12,6 +12,12 @@ Disponible pour **Administrateur** et **Point de vente** via la barre latérale,
 
 **Le navigateur ne peut pas installer un programme sur Windows sans une action locale de l'utilisateur.** L'installation est discrète ensuite mais reste visible dans le Planificateur Windows et dans les fichiers de l'utilisateur. Aucun pilote, service système ni élévation automatique n'est installé.
 
+## NethorSync 2.1.10 — reprise automatique
+
+La version 2.1.10 intègre directement le correctif de démarrage. La tâche **Nethor Sync 2 - Ecoute** démarre à l'ouverture de session et la tâche **Nethor Sync 2 - Surveillance** la vérifie toutes les cinq minutes. En plus, chaque analyse **manuelle** ou **programmée** vérifie immédiatement si l'écoute est active et la relance si nécessaire. Si elle fonctionne déjà, aucune seconde instance n'est créée.
+
+La tâche **Nethor Sync 2 - Mises a jour** reste indépendante : contrôle à l'ouverture de session puis toutes les quatre heures. Une panne du mécanisme de reprise n'annule pas l'analyse Excel en cours.
+
 ## Mises a jour automatiques depuis la 2.1.7
 
 Après l'installation unique de NethorSync **2.1.7**, Windows crée une tâche
@@ -106,7 +112,7 @@ Pour arrêter localement, désactiver les tâches « Nethor Sync 2 » dans le Pl
 
 À partir de la 2.1.6, chaque échec Windows envoie automatiquement à Supabase un rapport regroupant l’étape, le code HTTP et les volumes d’erreurs, sans chemins, noms de fichiers ni jetons. Les gestionnaires consultent les 30 derniers jours depuis Paramètres → NethorSync. Si l’authentification ou le réseau sont totalement indisponibles, le diagnostic détaillé reste local jusqu’au rétablissement de la connexion.
 
-L'installateur compatible **2.1.8**, construit sur le socle Windows 2.1.1/2.1.2, est publié sous le nom [NethorSync-Setup.exe](https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe). Le programme local reste un simple scanner et transporteur de fichiers. Le correctif 2.1.8 prend en charge les objets déjà stockés, sans forcer une nouvelle liaison. Les règles de publication évoluent séparément sur Supabase.
+L'installateur compatible **2.1.10**, construit sur le socle Windows 2.1.1/2.1.2, est publié sous le nom [NethorSync-Setup.exe](https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe). Le programme local reste un simple scanner et transporteur de fichiers. Le correctif 2.1.8 prend en charge les objets déjà stockés, sans forcer une nouvelle liaison. Les règles de publication évoluent séparément sur Supabase.
 
 Le logiciel est non signé : Smart App Control peut bloquer un nouvel exécutable. Ne désactivez pas les protections Windows pour l'installer. Seule l'exécution programmée est discrète : les tâches restent visibles dans le Planificateur Windows.
 
