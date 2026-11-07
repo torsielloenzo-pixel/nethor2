@@ -1,6 +1,6 @@
 #requires -Version 5.1
 <#
-NethorSync 2.1.9 - mise a jour pilotée depuis Supabase.
+NethorSync 2.1.10 - mise a jour pilotée depuis Supabase.
 Le controle distant ne peut modifier les fichiers Excel, le manifeste local,
 l'identite du poste, ni les jetons. Binaire epingle par SHA-256.
 #>
@@ -15,7 +15,7 @@ $versionFile=Join-Path $agentDir 'NethorSync-Version.txt'
 $configFile=Join-Path $agentDir 'config.json'
 $script:stage='startup'
 $script:targetVersion=$null
-$script:installedVersion='2.1.9'
+$script:installedVersion='2.1.10'
 $script:latestErrorCode=$null
 $mutex=$null
 $hasLock=$false
@@ -145,7 +145,7 @@ try {
   if (-not (Test-Path -LiteralPath $backupDir)) { New-Item -Path $backupDir -ItemType Directory -Force | Out-Null }
   $protectedFiles=@('NethorSync.ps1','Connect-NethorSync.ps1','Installer-Sync.ps1',
     'Register-NethorSyncTasks.ps1','Verify-NethorSyncBinding.ps1','NethorSyncRunner.vbs',
-    'Update-NethorSync.ps1','NethorSync-Version.txt','README.md')
+    'Watch-NethorSync.ps1','Update-NethorSync.ps1','NethorSync-Version.txt','README.md')
   foreach ($name in $protectedFiles) {
     $src=Join-Path $agentDir $name
     if (Test-Path -LiteralPath $src -PathType Leaf) {
