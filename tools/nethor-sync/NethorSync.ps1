@@ -287,6 +287,30 @@ function Submit-FileHistoryBatch($Settings,[string]$Token,$Device,[object[]]$Bat
   }
 }
 
+function Ensure-NethorSyncListener {
+  # Une analyse manuelle ou planifiee sert aussi de point de reprise de l'agent.
+  # Si l'ecoute est deja active, MultipleInstances=2 empeche toute seconde instance.
+  if ($DryRun -or ((-not $Scheduled) -and (-not $PollOnly))) { return }
+  try {
+    $service = New-Object -ComObject 'Schedule.Service'
+    $service.Connect()
+    $folder = $service.GetFolder('\\')
+    $task = $folder.GetTask('Nethor Sync 2 - Ecoute')
+    if ($null -eq $task -or -not $task.Enabled) { return }
+    $instances = @($task.GetInstances(0))
+    if ($instances.Count -eq 0) {
+      $null = $task.Run($null)
+      Write-Host 'Agent NethorSync relance avant analyse.'
+    }
+  } catch {
+    # La synchronisation reste prioritaire : une panne du mecanisme de reprise
+    # ne bloque jamais l'analyse Excel elle-meme.
+    Write-Warning 'Relance de l agent NethorSync impossible ; analyse poursuivie.'
+  }
+}
+
+Ensure-NethorSyncListener
+
 # Une seule instance pour eviter la rotation simultanee du jeton Supabase.
 $mutex = [System.Threading.Mutex]::new($false, "Local\NethorSync2")
 if (-not $mutex.WaitOne(0)) {
