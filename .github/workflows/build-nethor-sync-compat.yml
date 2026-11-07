@@ -77,7 +77,9 @@ jobs:
           $updateSource=Get-Content -LiteralPath 'tools/nethor-sync/Update-NethorSync.ps1' -Raw
           if ($updateSource -notmatch 'hash_mismatch' -or $updateSource -notmatch 'nethor_sync_update_manifest' -or
               $updateSource -notmatch 'rolled_back') { throw 'Updater incomplet' }
-          foreach ($name in @('NethorSync.ps1','Update-NethorSync.ps1','Register-NethorSyncTasks.ps1')) {
+          # NethorSync.ps1 et Update-NethorSync.ps1 sont revalidés ici. Le script des tâches
+          # est déjà parsé et exécuté par le workflow Windows dédié sur la même révision.
+          foreach ($name in @('NethorSync.ps1','Update-NethorSync.ps1')) {
             $tokens=$null; $parseErrors=$null
             $sourceText=Get-Content -LiteralPath ('tools/nethor-sync/'+$name) -Raw -Encoding UTF8
             [System.Management.Automation.Language.Parser]::ParseInput($sourceText,[ref]$tokens,[ref]$parseErrors)|Out-Null
