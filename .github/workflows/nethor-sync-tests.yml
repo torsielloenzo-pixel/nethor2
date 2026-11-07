@@ -26,6 +26,7 @@ jobs:
             '.\tools\nethor-sync\Register-NethorSyncTasks.ps1',
             '.\tools\nethor-sync\Verify-NethorSyncBinding.ps1',
             '.\tools\nethor-sync\Watch-NethorSync.ps1',
+            '.\tools\nethor-sync\Update-NethorSync.ps1',
             '.\tools\nethor-sync\Connect-NethorSync.ps1',
             '.\tools\nethor-sync\NethorSync.ps1'
           )
@@ -37,10 +38,14 @@ jobs:
           }
           & .\tools\nethor-sync\Register-NethorSyncTasks.ps1 -AppPath (Resolve-Path .\tools\nethor-sync) -ProbeOnly
           if (-not $?) { throw 'La définition des tâches Windows a échoué.' }
+          $scan=Get-Content -LiteralPath '.\tools\nethor-sync\NethorSync.ps1' -Raw
+          if ($scan -notmatch 'Ensure-NethorSyncListener' -or $scan -notmatch 'Agent NethorSync relance avant analyse') {
+            throw 'Reprise NethorSync avant analyse absente.'
+          }
       - name: Tester création réelle des tâches sous Windows puis nettoyer le runner
         shell: powershell
         run: |
-          $names = @('Nethor Sync 2 - Lundi-Samedi','Nethor Sync 2 - Dimanche','Nethor Sync 2 - Controle Manuel','Nethor Sync 2 - Ecoute')
+          $names = @('Nethor Sync 2 - Lundi-Samedi','Nethor Sync 2 - Dimanche','Nethor Sync 2 - Controle Manuel','Nethor Sync 2 - Mises a jour','Nethor Sync 2 - Ecoute','Nethor Sync 2 - Surveillance')
           $service = New-Object -ComObject 'Schedule.Service'
           $service.Connect()
           $folder = $service.GetFolder('\')
