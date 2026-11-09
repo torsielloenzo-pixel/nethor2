@@ -75,6 +75,9 @@ test('vérification auprès du serveur après connexion, sauvegarde serveur et r
 
 test('publiée dans web, préchargement PWA et serveur de développement',()=>{
  const sw=read('sw.js'),build=read('.github/workflows/preview-pages.yml'),dev=read('scripts/dev-server.js');
- for(const file of [sw,build,dev])assert.ok(file.includes('recovery-prompt.js'));
+ assert.ok(sw.includes('recovery-prompt.js'));
+ assert.ok(dev.includes('recovery-prompt.js'));
+ assert.match(build,/cp -R src _site\//);
+ assert.match(build,/verify-pwa-shell\.py _site sw\.js/);
  assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });

@@ -100,7 +100,9 @@ test('lien Resend : jeton vérifié par Supabase et supprimé de l’URL',()=>{
 test('GitHub Pages et PWA : publication de récupération, aucune mise en cache du jeton',()=>{
  const workflow=file('.github/workflows/preview-pages.yml');
  const sw=file('sw.js');
- for(const name of ['reset-password.html','settings-security.js','account-security.js','password-recovery-page.js'])assert.ok(workflow.includes(name),name);
+ assert.ok(workflow.includes('reset-password.html'),'reset-password.html');
+ assert.match(workflow,/cp -R src _site\//);
+ assert.match(workflow,/verify-pwa-shell\.py _site sw\.js/);
  assert.ok(sw.includes("src/auth/account-security.js"));
  assert.ok(sw.includes("src/ui/settings-security.js"));
  assert.doesNotMatch(sw,/reset-password\.html|password-recovery-page\.js/);

@@ -50,6 +50,8 @@ test('intégration Desktop et PWA : guide, dialogue et ressources publiées',()=
   assert.match(index,/nethor-sync-import-guide\.css/);
   for(const asset of ['nethor-sync-import-guide.css','nethor-sync-import-guide.js']){
     assert.ok(sw.includes(asset),'cache : '+asset);
-    assert.ok(workflow.includes(asset),'déploiement : '+asset);
   }
+  assert.ok(workflow.includes('nethor-sync-import-guide.css'),'déploiement CSS');
+  assert.match(workflow,/cp -R src _site\//);
+  assert.match(workflow,/verify-pwa-shell\.py _site sw\.js/);
 });

@@ -83,6 +83,9 @@ test('intégration: état annuel, chargement, clic jour, responsive, PWA',()=>{
  assert.match(css,/#app\.mobile-planning-active \.n2py-fixed/);
  assert.match(css,/position:sticky;top:-14px/);
  assert.match(css,/@media\(min-width:540px\) and \(max-width:760px\)/);
- for(const text of [sw,build,dev])assert.match(text,/planning-year\.js/);
+ assert.match(sw,/planning-year\.js/);
+ assert.match(dev,/planning-year\.js/);
+ assert.match(build,/cp -R src _site\//);
+ assert.match(build,/verify-pwa-shell\.py _site sw\.js/);
  assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });

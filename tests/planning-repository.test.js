@@ -21,3 +21,20 @@ test('une révision identique vérifie la publication',async()=>{
  const c=client({data:{week_start:'2026-10-12',data:{},updated_at:'rev2'},error:null});
  assert.equal(await verifyPublishedWeek(c,'2026-10-12','rev2'),true);
 });
+
+test('un import identique est traité comme idempotent',async()=>{
+ const c=client({data:{status:'unchanged',revision:'rev2'},error:null});
+ const result=await publishPlanningWeek(c,{weekStart:'2026-10-12',expectedRevision:'rev2',model:{weekStart:'2026-10-12',employees:[{name:'A'}],days:{}}});
+ assert.equal(result.status,'unchanged');
+ assert.equal(result.revision,'rev2');
+});
+test('la vérification de publication retente une lecture transitoirement en échec',async()=>{
+ let calls=0;
+ const c={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>{
+   calls++;
+   if(calls<3)return {data:null,error:new Error('transient')};
+   return {data:{week_start:'2026-10-12',data:{},updated_at:'rev3'},error:null};
+ }})})})};
+ assert.equal(await verifyPublishedWeek(c,'2026-10-12','rev3',{attempts:3,delayMs:0}),true);
+ assert.equal(calls,3);
+});

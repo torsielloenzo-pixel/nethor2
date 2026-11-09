@@ -29,9 +29,9 @@ test('import manuel et worker Supabase refusent un classeur antérieur à 2025',
  assert.match(read('supabase/functions/nethor-sync-auto-publish/index.ts'),/model\.weekStart<"2025-01-01"/);
 });
 
-test('NethorSync 2.1.10 filtre avant hachage et upload',()=>{
+test('NethorSync 2.1.11 filtre avant hachage et upload',()=>{
  const ps=read('tools/nethor-sync/NethorSync.ps1');
- assert.equal(read('tools/nethor-sync/NethorSync-Version.txt').trim(),'2.1.10');
+ assert.equal(read('tools/nethor-sync/NethorSync-Version.txt').trim(),'2.1.11');
  assert.match(ps,/Get-PlanningFileDateHint/);
  assert.match(ps,/minimumPlanningDate=\[datetime\]::new\(2025,1,1\)/);
  assert.match(ps,/ignoredBefore2025/);

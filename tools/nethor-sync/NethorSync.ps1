@@ -396,7 +396,21 @@ foreach ($file in $files) {
       $entries += [pscustomobject]$entry
       continue
     }
+    # Vérifier que le fichier n'a pas changé pendant le calcul de l'empreinte.
+    # Un classeur modifié au même moment ne doit jamais être envoyé avec une
+    # taille/date provenant d'une autre version de ses octets.
+    $sizeBefore = [long]$file.Length
+    $modifiedBefore = $file.LastWriteTimeUtc
     $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $file.Refresh()
+    if ([long]$file.Length -ne $sizeBefore -or $file.LastWriteTimeUtc -ne $modifiedBefore) {
+      $entry.status = "still_writing"
+      $entry.sha256 = $null
+      $entry.size = $file.Length
+      $entry.modifiedUtc = $file.LastWriteTimeUtc.ToString("o")
+      $entries += [pscustomobject]$entry
+      continue
+    }
     $entry.sha256 = $hash
     $old = $previousByPath[$relative]
     if ($null -ne $old -and $old.sha256 -eq $hash -and $old.upload -in @("error","history_error")) {
@@ -419,7 +433,9 @@ foreach ($file in $files) {
       $script:syncStage='file_scan'
       $entry.upload = $result.status
       $entry.storageKey = $result.key
-      $uploaded[$hash] = $true
+      if ($result.status -in @("staged","already_staged")) {
+        $uploaded[$hash] = $true
+      }
     } elseif ($uploaded.ContainsKey($hash)) {
       $entry.upload = "already_sent"
     } else { $entry.upload = "pending" }
