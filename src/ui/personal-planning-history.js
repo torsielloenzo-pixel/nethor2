@@ -1,5 +1,5 @@
 // Historique personnel du planning — rendu lecture seule.
-const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
 const dayAt=(week,index)=>{const d=new Date(week+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+index);return d.toISOString().slice(0,10);};
 const SHORT=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
