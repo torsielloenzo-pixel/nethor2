@@ -97,7 +97,7 @@ jobs:
           $issPath='tools/nethor-sync/NethorSync2.iss'
           $iss=Get-Content -LiteralPath $issPath -Raw
           # Source Inno 2.1.11 preparee depuis le depot
-          if ($iss -notmatch '#define AppVersion "2\.1\.10"') { throw 'Version du correctif invalide' }
+          if ($iss -notmatch '#define AppVersion "2\.1\.11"') { throw 'Version du correctif invalide' }
           if ($iss -notmatch 'IsAutoUpdate' -or $iss -notmatch 'Update-NethorSync.ps1') { throw 'Mise a jour silencieuse indisponible' }
           Set-Content -LiteralPath $issPath -Value $iss -Encoding UTF8
           $tasksSource=Get-Content -LiteralPath 'tools/nethor-sync/Register-NethorSyncTasks.ps1' -Raw
