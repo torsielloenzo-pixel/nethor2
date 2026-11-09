@@ -203,9 +203,10 @@ export function renderMobilePlanning({weekStart,selectedDay,view,model,profiles,
  else content=weekView(result,selected,clock.key);
  const offline=isOnline?'':'<div class="n2pm-offline" role="status"><strong>Mode hors ligne</strong><span>Seules les données déjà chargées dans cette session peuvent rester visibles. Elles peuvent ne plus être à jour.</span></div>';
  const syncing=loading&&model?'<div class="n2pm-syncing" role="status">Actualisation de la dernière version…</div>':'';
+ const history='<button type="button" class="n2pm-history-link" data-action="personal-history-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span><strong>Historique personnel</strong><small>Retrouver les anciennes versions de mon planning</small></span><b aria-hidden="true">›</b></button>';
  return '<section class="n2pm" aria-label="Planning mobile de l’équipe">'+
   toolbar(weekStart,view,allowYear,{updatedAt,isOnline,updateReady,loading,calendarEnabled:canSubscribeCalendar})+
-  offline+syncing+
+  history+offline+syncing+
   (error?'<p class="n2pm-error" role="alert">'+safe(error)+'</p>':'')+
   content+'</section>';
 }

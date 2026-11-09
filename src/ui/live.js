@@ -21,6 +21,8 @@ import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './ne
 import {mergeImportHistory,renderHistoryBrowser} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
 import {getPlanningNotificationAccess,listPlanningChangeNotifications,markPlanningChangeNotificationRead,markAllPlanningChangeNotificationsRead,deletePlanningChangeNotification,deleteReadPlanningChangeNotifications} from '../data/planning-notifications.js';
+import {listPersonalPlanningHistory} from '../data/personal-planning-history.js';
+import {renderPersonalPlanningHistory} from './personal-planning-history.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
 import {createSyncController} from './nethor-sync-ui.js';
 import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
@@ -88,7 +90,7 @@ const button=(text,action,primary=false)=>'<button type="button" class="btn '+(p
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
 const APP_VERSION='2.2-mobile-2026.11.04-calendar-subscription-beta';
-const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false},planningNotifications:{accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0},calendarSubscription:{checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''}};
+const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false},planningNotifications:{accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0},personalHistory:{open:false,loaded:false,loading:false,items:[],error:'',checkedAt:0},calendarSubscription:{checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''}};
 let client;
 let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
@@ -179,7 +181,7 @@ function renderLogin(message=''){
 }
 function renderShell(){
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
-  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><button type="button" class="n2notif-button" id="planningNotificationButton" data-action="notifications-toggle" aria-label="Notifications de planning" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="n2notif-badge" id="planningNotificationBadge" hidden></span></button><div class="top-actions"><span class="live-tag" id="connectionStatus" data-online="true">● EN LIGNE</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><section class="n2notif-panel" id="planningNotificationPanel" hidden aria-label="Notifications de planning"></section><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
+  ROOT.innerHTML='<div class="app"><button id="sidebarBackdrop" type="button" class="mobile-drawer-backdrop" aria-label="Fermer le menu"></button><aside class="sidebar live-sidebar" id="sidebar"><div class="brand"><img class="nethor-sidebar-logo" src="./assets/icon.svg" width="43" height="43" alt=""><span class="nethor-sidebar-labels"><span class="nethor-sidebar-desktop"><strong>NETHOR</strong><small>Planning</small></span><span class="nethor-sidebar-mobile"><strong>NETHOR<span class="brand-number">2</span></strong><small>PLANNING · LE THOR</small></span></span></div><p class="nav-caption">VOTRE ESPACE</p><nav aria-label="Navigation">'+Object.entries(TITLES).filter(([key])=>canNavigate(key,state.profile,true)).map(([key,name])=>'<button type="button" class="nav-item" data-page="'+key+'" data-nav="'+key+'"'+(canNavigate(key,state.profile,smallScreen())?'':' hidden style="display:none"')+'>'+navIcon(smallScreen()&&key==='anomalies'?'sync':key)+(smallScreen()&&key==='anomalies'?'NethorSync':name)+'</button>').join('')+'</nav><div class="side-bottom"><div class="side-info"><span class="status-dot"></span> Connecté à NETHOR<small>Accès contrôlé par Supabase</small></div><button type="button" class="nav-item drawer-signout" data-action="logout">'+navIcon('logout')+'Déconnexion</button></div></aside><div class="workspace live-workspace"><header class="topbar"><div class="top-left"><button type="button" class="mobile-brand" id="mobileMenu" aria-label="Ouvrir la navigation" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">≡</span></button><img class="nethor-header-logo" src="./assets/icon.svg" width="32" height="32" alt=""><div class="nethor-header-titles"><div class="nethor-desktop-titles"><span class="breadcrumb"><strong class="nethor-desktop-name">NETHOR</strong><span class="sep">/</span><span id="breadPage">Accueil</span></span></div><div class="nethor-mobile-titles"><strong>NETHOR</strong><span id="mobileCurrentPage">Accueil</span></div></div></div><button type="button" class="n2notif-button" id="planningNotificationButton" data-action="notifications-toggle" aria-label="Notifications de planning" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="n2notif-badge" id="planningNotificationBadge" hidden></span></button><div class="top-actions"><span class="live-tag" id="connectionStatus" data-online="true">● EN LIGNE</span><span class="live-account" id="liveName"></span><button type="button" class="logout-btn" data-action="logout">Déconnexion</button></div></header><section class="n2notif-panel" id="planningNotificationPanel" hidden aria-label="Notifications de planning"></section><section class="n2ph-panel" id="personalPlanningHistoryPanel" hidden aria-label="Historique personnel du planning"></section><main id="screen" tabindex="-1" aria-live="polite"></main><footer class="live-bottom"><span>NETHOR 2 · Application officielle</span><span>Comptes et planning reliés à Supabase</span></footer></div></div><nav class="live-navigator '+(canViewTeam(state.profile)?'nav-count-4':'nav-count-3')+'" aria-label="Navigation rapide"><button type="button" data-page="home">'+navIcon('home')+'<span class="nav-label">Accueil</span></button><button type="button" data-page="planning">'+navIcon('planning')+'<span class="nav-label">Planning</span></button><button type="button" data-page="anomalies">'+navIcon(smallScreen()?'sync':'anomalies')+'<span class="nav-label">'+(smallScreen()?'NethorSync':'Alertes')+'</span></button>'+(canViewTeam(state.profile)?'<button type="button" data-page="team">'+navIcon('team')+'<span class="nav-label">Équipe</span></button>':'')+'</nav>';
   ROOT.querySelector('#liveName').textContent=state.profile.display_name||listRole(state.profile.role);
   ROOT.querySelectorAll('[data-nav="import"],[data-nav="history"]').forEach(el=>{
     if(el.dataset.nav==='import'&&state.access!=='manage')el.hidden=true;
@@ -209,6 +211,7 @@ async function signOut(){
   state.planningLoadedAt=0;state.pwaUpdateReady=false;state.networkOnline=navigator.onLine;
   state.personal={weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false};
   state.planningNotifications={accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0};
+  state.personalHistory={open:false,loaded:false,loading:false,items:[],error:'',checkedAt:0};
   state.calendarSubscription={checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''};
   try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
   syncController?.dispose();
@@ -359,6 +362,29 @@ function paintPlanningNotifications(){
   panel.hidden=!(visible&&n.open);
   if(visible&&n.open)panel.innerHTML=planningNotificationMarkup();
   else panel.innerHTML='';
+}
+function paintPersonalPlanningHistory(){
+  const panel=ROOT.querySelector('#personalPlanningHistoryPanel');
+  if(!panel)return;
+  const h=state.personalHistory;
+  panel.hidden=!(h.open&&state.user);
+  if(panel.hidden){panel.innerHTML='';return;}
+  panel.innerHTML=renderPersonalPlanningHistory(h);
+}
+async function loadPersonalPlanningHistory(force=false){
+  if(!state.user||state.personalHistory.loading)return;
+  const h=state.personalHistory;
+  if(!force&&h.loaded&&Date.now()-h.checkedAt<120000){paintPersonalPlanningHistory();return;}
+  h.loading=true;h.error='';paintPersonalPlanningHistory();
+  try{
+    h.items=await listPersonalPlanningHistory(client,{limit:240});
+    h.loaded=true;h.error='';
+  }catch(err){
+    h.error='Impossible de charger ton historique personnel pour le moment.';
+    console.warn('Historique personnel',String(err?.message||err));
+  }finally{
+    h.loading=false;h.checkedAt=Date.now();paintPersonalPlanningHistory();
+  }
 }
 async function loadPlanningNotifications(forceAccess=false){
   if(!state.user||state.planningNotifications.loading)return;
@@ -899,7 +925,7 @@ function pagePlanning(metrics){
     awayExpanded:state.mobilePlanning.awayExpanded,loading:state.loading,error:state.error,
     updatedAt:state.planningLoadedAt,isOnline:state.networkOnline,updateReady:state.pwaUpdateReady
   });
-  return renderPageHeader('PLANNING','Planning du personnel','Horaires et planning de l’équipe.',staffPlanningRole()?'':state.access==='manage'?button('Importer Excel','go-import',true):'')+collaboratorPanel()+planningCard(metrics)+(staffPlanningRole()?renderStaffDetail(metrics):'');
+  return renderPageHeader('PLANNING','Planning du personnel','Horaires et planning de l’équipe.',button('Historique personnel','personal-history-toggle')+(staffPlanningRole()?'':state.access==='manage'?button('Importer Excel','go-import',true):''))+collaboratorPanel()+planningCard(metrics)+(staffPlanningRole()?renderStaffDetail(metrics):'');
 }
 
 async function loadMobileSyncStatus(force=false){
@@ -1259,6 +1285,7 @@ function render(){
   screen.innerHTML=top+pages[state.page]()+((loadingAtBottom&&state.loading)?loadingMessage:'');
   syncController?.paint();
   paintPlanningNotifications();
+  paintPersonalPlanningHistory();
 }
 function go(page){
   if(!(page in TITLES)||!canNavigate(page,state.profile,smallScreen()))return;
@@ -1655,6 +1682,17 @@ ROOT.addEventListener('click',async event=>{
   if(action==='notifications-delete-read'){
     await removeReadPlanningNotifications();return;
   }
+  if(action==='personal-history-toggle'){
+    state.personalHistory.open=true;
+    paintPersonalPlanningHistory();
+    await loadPersonalPlanningHistory();
+    return;
+  }
+  if(action==='personal-history-close'){
+    state.personalHistory.open=false;
+    paintPersonalPlanningHistory();
+    return;
+  }
   if(action==='admin-accounts-refresh'&&state.profile?.role==='admin'){await loadAdminAccounts();return;}
   if(action==='admin-account-edit'&&state.profile?.role==='admin'){
     const id=b.dataset.accountId;
@@ -1808,6 +1846,7 @@ ROOT.addEventListener('toggle',event=>{
  panel.style.left=left+'px';panel.style.top=Math.max(8,top)+'px';
 },true);
 ROOT.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&state.personalHistory.open){state.personalHistory.open=false;paintPersonalPlanningHistory();return;}
  if(event.key==='Escape'&&state.page==='planning'&&staffDetail.name){staffDetail.name=null;staffDetail.request++;render();return;}
  if(event.key==='Escape'&&state.page==='home'&&dashboardOpen){
   dashboardOpen=null;render();
