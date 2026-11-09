@@ -48,11 +48,11 @@ test('l’écran donne des dates en heure française et n’invente rien si manq
  assert.match(renderMobileSyncSummary({loaded:true,planning:null,sync:{installed:false}}),/Aucun planning publié/);
  assert.match(renderMobileSyncSummary({loaded:true,planningError:true,syncError:true}),/Indisponible/);
 });
-test('NethorSync n’affiche aucune information interne du poste ni commande admin',()=>{
+test('NethorSync garde les données internes hors de la vue utilisateur',()=>{
  const snapshot={loaded:true,checkedAt:Date.now(),planning:{weekStart:'2026-10-19',publishedAt:'2026-10-19T01:00:00Z'},
   sync:{installed:true,lastSeenAt:'2026-10-19T01:00:00Z',lastCheckAt:'2026-10-19T00:00:00Z',lastTransferAt:null}};
  const html=renderMobileSyncSummary(snapshot,Date.parse('2026-10-19T01:04:00Z'));
- for(const part of ['NethorSync','DERNIÈRE PUBLICATION DU PLANNING','Dernier contrôle','Dernier transfert','Informations vérifiées','data-action="nethor-sync-mobile-refresh"'])
+ for(const part of ['Synchronisation','Dernière publication','Vérification automatique','Dernière vérification','Prochaine vérification','Informations techniques','data-action="nethor-sync-mobile-refresh"'])
   assert.ok(html.includes(part),part);
  for(const forbidden of ['nethor-sync-install','sync-reset-device','registeredBy','deviceLabel','deviceId','generation','sourceFile'])
   assert.equal(html.includes(forbidden),false,forbidden);
@@ -60,34 +60,27 @@ test('NethorSync n’affiche aucune information interne du poste ni commande adm
  assert.equal(mobileSyncState(snapshot,Date.parse('2026-10-19T02:04:00Z')),'offline');
  assert.equal(mobileSyncState({...snapshot,syncError:true}),'unknown');
 });
-test('la page Alertes est NethorSync seulement sur mobile et le scroll est bloqué',()=>{
- const js=read('src/ui/live.js'),css=read('mobile.css');
+test('la page Alertes devient une synthèse NethorSync simple et peut défiler si les détails sont ouverts',()=>{
+ const js=read('src/ui/live.js'),css=read('mobile-sync-simple.css'),index=read('index.html');
  assert.match(js,/anomalies:'NethorSync'/);
  assert.match(js,/if\(smallScreen\(\)\)return renderMobileSyncSummary\(state\.mobileSync\);/);
  assert.match(js,/return renderPageHeader\('ANALYSE','Points à vérifier'/);
  assert.match(js,/ROOT\.classList\.toggle\('mobile-sync-active',state\.page==='anomalies'&&smallScreen\(\)\)/);
  assert.match(read('src/ui/mobile-sync-summary.js'),/data-action="nethor-sync-mobile-refresh"/);
- const start=css.indexOf('/* NethorSync public : écran unique Mobile/PWA Mobile sans défilement.');
- assert.ok(start>0);
- // Limiter la vérification aux styles NethorSync : les pages suivantes
- // ont légitimement leur propre zone de défilement.
- const nextSection=css.indexOf('/* ============================================================',start);
- const rule=css.slice(start,nextSection>start?nextSection:undefined);
- assert.match(rule,/@media\(max-width:760px\)/);
- assert.match(rule,/body:has\(#app\.mobile-sync-active\)\{height:100dvh;overflow:hidden/);
- assert.match(rule,/#app\.mobile-sync-active main#screen\{/);
- assert.match(rule,/overflow:hidden;overscroll-behavior:none/);
- assert.match(rule,/grid-template-rows:auto minmax\(0,1\.05fr\) auto minmax\(0,1\.25fr\) auto/);
- assert.doesNotMatch(rule,/overflow-y:auto/);
+ assert.match(read('src/ui/mobile-sync-summary.js'),/Informations techniques/);
+ assert.match(index,/mobile-sync-simple\.css/);
+ assert.match(css,/#app\.mobile-sync-active main#screen\{/);
+ assert.match(css,/overflow-y:auto/);
+ assert.match(css,/\.n2ms-status-card/);
+ assert.match(css,/\.n2ms-tech/);
  const workflow=read('.github/workflows/preview-pages.yml'),sw=read('sw.js');
  assert.ok(sw.includes('mobile-sync-summary.js'));
+ assert.ok(sw.includes('mobile-sync-simple.css'));
  assert.match(workflow,/cp -R src _site\//);
  assert.match(workflow,/verify-pwa-shell\.py _site sw\.js/);
  assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });
-
-
-test('Contrôle toutes les quatre heures uniquement dans Supabase, distinct du MSI',async()=>{
+test('le contrôle toutes les quatre heures reste disponible sans encombrer la vue principale',async()=>{
  const status={
   installed:true,lastSeenAt:'2026-10-19T03:35:12Z',lastCheckAt:'2026-10-19T03:35:12Z',
   lastTransferAt:'2026-10-19T03:35:12Z',lastResult:'transferred',
@@ -104,21 +97,21 @@ test('Contrôle toutes les quatre heures uniquement dans Supabase, distinct du M
  assert.equal(result.sync.lastCloudScanned,10);
  assert.equal(result.sync.lastCloudPublished,2);
  const html=renderMobileSyncSummary(result,Date.parse('2026-10-19T04:59:00Z'));
- for(const label of ['CONTRÔLE SUPABASE','TOUTES LES 4 H','00:00','04:00','08:00',
- '12:00','16:00','20:00','Prochain contrôle base','Dernier contrôle base',
- 'Résultat du contrôle base','Dernier transfert MSI','Base vérifiée',
- '10 fichiers vérifiés','2 publiés','19 h / dimanche 12 h']){
+ for(const label of ['Planning à jour','Vérification automatique','Toutes les 4 h',
+  'Dernière vérification','Prochaine vérification','Informations techniques',
+  'Base vérifiée','10 fichiers','2 versions publiées','Dernier transfert NethorSync',
+  'Horaires de contrôle','00:00 · 04:00 · 08:00 · 12:00 · 16:00 · 20:00 · Paris']){
   assert.ok(html.includes(label),label);
  }
- assert.match(html,/data-cloud-state="completed"/);
- assert.match(html,/08:00/);
- assert.doesNotMatch(html,/En attente du MSI|Exécutée sur le MSI|Dernière demande/);
+ assert.doesNotMatch(html,/Dernier transfert MSI|CONTRÔLE SUPABASE|En attente du MSI|Exécutée sur le MSI|Dernière demande/);
  for(const forbidden of ['deviceLabel','deviceId','generation','storagePath','registeredBy']){
   assert.ok(!html.includes(forbidden));
  }
- const pending=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastCloudPending:2,lastCloudPublished:0}});
- assert.match(pending,/2 en attente/);
- const failed=renderMobileSyncSummary({loaded:true,sync:{...result.sync,lastCloudCheckStatus:'failed'}});
+ const pending=renderMobileSyncSummary({loaded:true,planning:result.planning,sync:{...result.sync,lastCloudPending:2,lastCloudPublished:0}});
+ assert.match(pending,/Mise à jour en attente/);
+ assert.match(pending,/2 versions en attente/);
+ const failed=renderMobileSyncSummary({loaded:true,planning:result.planning,sync:{...result.sync,lastCloudCheckStatus:'failed'}});
+ assert.match(failed,/Vérification retardée/);
  assert.match(failed,/Contrôle en échec/);
 });
 test('Le cron de 4 heures est uniquement cloud, Paris, sans commande MSI',()=>{

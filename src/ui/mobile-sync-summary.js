@@ -11,7 +11,7 @@ export function formatPublicSyncTime(value,{includeDate=true}={}){
  const time=new Intl.DateTimeFormat('fr-FR',{...opts,hour:'2-digit',minute:'2-digit'}).format(d);
  return {date:includeDate?date:'',time,short:date+' · '+time};
 }
-export function scheduledTime(value) {
+export function scheduledTime(value){
  const stamp=formatPublicSyncTime(value);
  return {time:stamp.time,date:stamp.date};
 }
@@ -28,59 +28,114 @@ export function mobileSyncState(snapshot,now=Date.now()){
  if(snapshot.syncError)return 'unknown';
  return syncHealth(snapshot.sync,now);
 }
+
+function parisDayKey(value){
+ const d=validDate(value);
+ if(!d)return '';
+ const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+ const pick=type=>parts.find(part=>part.type===type)?.value||'';
+ return pick('year')+'-'+pick('month')+'-'+pick('day');
+}
+function formatCheckMoment(value,now=Date.now()){
+ const d=validDate(value);
+ if(!d)return '—';
+ const stamp=formatPublicSyncTime(d);
+ return parisDayKey(d)===parisDayKey(now)?'Aujourd’hui, '+stamp.time:stamp.date+', '+stamp.time;
+}
+function publicPlanningStatus(snapshot,published,cloudStatus,cloudPending,cloudPublished,cloudRejected){
+ if(!snapshot?.loaded||snapshot.loading)return {key:'loading',title:'Vérification en cours',message:'Nethor vérifie l’état de ton planning.'};
+ if(snapshot.planningError||snapshot.syncError)return {key:'error',title:'État indisponible',message:'Ton planning reste consultable, mais son actualisation n’a pas pu être confirmée.'};
+ if(!published)return {key:'warning',title:'Aucun planning publié',message:'Aucun planning publié n’est disponible pour le moment.'};
+ if(cloudStatus==='failed')return {key:'warning',title:'Vérification retardée',message:'Le dernier contrôle automatique n’a pas abouti. Une nouvelle tentative sera effectuée.'};
+ if(cloudStatus==='running')return {key:'loading',title:'Vérification en cours',message:'Nethor recherche actuellement une nouvelle version du planning.'};
+ if(cloudPending>0)return {key:'warning',title:'Mise à jour en attente',message:'Une nouvelle version a été détectée et doit encore être publiée.'};
+ if(cloudRejected>0)return {key:'warning',title:'Planning vérifié',message:'Le dernier contrôle est terminé, mais une version n’a pas été publiée.'};
+ if(cloudStatus==='completed')return {
+  key:'ok',
+  title:'Planning à jour',
+  message:cloudPublished>0?'Ton planning a été actualisé lors du dernier contrôle.':'Ton planning est disponible et aucune nouvelle modification n’a été détectée lors du dernier contrôle.'
+ };
+ return {key:'available',title:'Planning disponible',message:'Ton planning est disponible. La prochaine vérification automatique confirmera s’il existe une nouvelle version.'};
+}
+function technicalCloudLabel(status){
+ return status==='completed'?'Base vérifiée':status==='running'?'Contrôle en cours':status==='failed'?'Contrôle en échec':'Pas encore contrôlé';
+}
+function technicalCloudResult(status,{pending=0,published=0,rejected=0,queued=0}={}){
+ if(status==='none')return 'Aucun contrôle';
+ if(status==='failed')return 'Contrôle en échec';
+ if(pending>0)return pending+' version'+(pending>1?'s':'')+' en attente';
+ if(published>0)return published+' version'+(published>1?'s':'')+' publiée'+(published>1?'s':'');
+ if(rejected>0)return rejected+' version'+(rejected>1?'s':'')+' refusée'+(rejected>1?'s':'');
+ return queued===0?'Aucune mise à jour':'Aucun changement';
+}
+
 export function renderMobileSyncSummary(snapshot={},now=Date.now()){
  const state=mobileSyncState(snapshot,now);
- const titles={online:'Opérationnel',offline:'Hors ligne','not-seen':'En attente','not-configured':'Non configuré',unknown:'État indisponible',loading:'Vérification…'};
  const published=snapshot?.planning&&!snapshot.planningError?snapshot.planning:null;
  const publication=formatPublicSyncTime(published?.publishedAt);
  const publishedState=snapshot?.planningError?'indisponible':!snapshot?.loaded?'chargement':!published?'vide':'ok';
- const dateLabel=publishedState==='ok'?publication.date:publishedState==='indisponible'?'Indisponible':publishedState==='chargement'?'Chargement…':'Aucun planning publié';
- const timeLabel=publishedState==='ok'?'à '+publication.time:'';
+ const publicationDate=publishedState==='ok'?publication.date:publishedState==='indisponible'?'Indisponible':publishedState==='chargement'?'Chargement…':'Aucun planning publié';
+ const publicationTime=publishedState==='ok'?'à '+publication.time:'';
  const weekLabel=published?formatPublishedWeek(published.weekStart):'En attente de publication';
- const lastCheck=formatPublicSyncTime(snapshot?.sync?.lastCheckAt);
- const lastTransfer=formatPublicSyncTime(snapshot?.sync?.lastTransferAt);
- const transferText=lastTransfer.date==='—'?'Aucun transfert':lastTransfer.date;
- const schedule=snapshot?.sync?.controlIntervalHours===4;
- const slots=Array.isArray(snapshot?.sync?.controlLocalHours)&&snapshot.sync.controlLocalHours.length===6
-   ?snapshot.sync.controlLocalHours:['00:00','04:00','08:00','12:00','16:00','20:00'];
- const next=scheduledTime(snapshot?.sync?.nextControlAt);
- const cloudTime=formatPublicSyncTime(snapshot?.sync?.lastCloudCheckAt);
- const cloudStatus=snapshot?.sync?.lastCloudCheckStatus||'none';
- const cloudScanned=snapshot?.sync?.lastCloudScanned||0;
- const cloudCandidates=snapshot?.sync?.lastCloudCandidates||0;
- const cloudQueued=snapshot?.sync?.lastCloudQueued||0;
- const cloudPublished=snapshot?.sync?.lastCloudPublished||0;
- const cloudRejected=snapshot?.sync?.lastCloudRejected||0;
- const cloudPending=snapshot?.sync?.lastCloudPending||0;
- const cloudLabel=cloudStatus==='completed'?'Base vérifiée':
-  cloudStatus==='running'?'Contrôle en cours':
-  cloudStatus==='failed'?'Erreur Supabase':'Pas encore contrôlé';
- const cloudBadge=cloudStatus==='completed'?'online':cloudStatus==='failed'?'offline':'not-seen';
- const cloudResult=cloudStatus==='none'?'Aucun contrôle':
-  cloudStatus==='failed'?'Contrôle en échec':
-  cloudPending>0?cloudPending+' en attente':
-  cloudPublished>0?cloudPublished+' publié'+(cloudPublished>1?'s':''):
-  cloudRejected>0?cloudRejected+' refusé'+(cloudRejected>1?'s':''):
-  cloudQueued===0?'Aucune mise à jour':'Aucun changement';
- const cloudDetail=cloudQueued+' version'+(cloudQueued>1?'s':'')+' analysée'+(cloudQueued>1?'s':'')+
-  (cloudRejected>0?' · '+cloudRejected+' refusée'+(cloudRejected>1?'s':''):'');
+
+ const sync=snapshot?.sync||{};
+ const schedule=sync.controlIntervalHours===4;
+ const slots=Array.isArray(sync.controlLocalHours)&&sync.controlLocalHours.length===6
+  ?sync.controlLocalHours:['00:00','04:00','08:00','12:00','16:00','20:00'];
+ const cloudStatus=sync.lastCloudCheckStatus||'none';
+ const cloudScanned=sync.lastCloudScanned||0;
+ const cloudQueued=sync.lastCloudQueued||0;
+ const cloudPublished=sync.lastCloudPublished||0;
+ const cloudRejected=sync.lastCloudRejected||0;
+ const cloudPending=sync.lastCloudPending||0;
+ const status=publicPlanningStatus(snapshot,published,cloudStatus,cloudPending,cloudPublished,cloudRejected);
+
+ const lastVerification=formatCheckMoment(sync.lastCloudCheckAt,now);
+ const nextVerification=schedule?formatCheckMoment(sync.nextControlAt,now):'—';
+ const lastTransfer=formatPublicSyncTime(sync.lastTransferAt);
  const refreshed=formatPublicSyncTime(snapshot?.checkedAt);
- const foot=snapshot?.planningError?'La date de publication n’a pas pu être vérifiée. Réessaie avec le bouton Actualiser.':
-   'Contrôle Supabase indépendant du MSI · Après chaque transfert : analyse et publication si nécessaire. Tâches Windows inchangées (19 h / dimanche 12 h).';
- return '<section class="n2ms" aria-label="Informations NethorSync" data-state="'+esc(state)+'">'+
-  '<header class="n2ms-head"><div><span>INFORMATIONS PLANNING</span><h1>NethorSync</h1></div>'+
-  '<button type="button" data-action="nethor-sync-mobile-refresh" aria-label="Actualiser les informations" title="Actualiser les informations"'+(snapshot?.loading?' disabled':'')+'>'+
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.4-4.8L3 9m0-5v5h5"/><path d="M4 13a8 8 0 0 0 14.4 4.8L21 15m0 5v-5h-5"/></svg></button></header>'+
-  '<div class="n2ms-primary" data-publication="'+publishedState+'"><div class="n2ms-primary-label"><span class="n2ms-primary-dot" aria-hidden="true"></span>DERNIÈRE PUBLICATION DU PLANNING</div>'+
-  '<div class="n2ms-primary-time"><strong>'+esc(dateLabel)+'</strong>'+(timeLabel?'<span>'+esc(timeLabel)+'</span>':'')+'</div>'+
-  '<p>'+esc(weekLabel)+'</p></div>'+
-  '<div class="n2ms-subtitle"><div class="n2ms-schedule"><span>CONTRÔLE SUPABASE'+(schedule?' · TOUTES LES 4 H':'')+'</span><small>'+(schedule?esc(slots.join(' · ')):'Horaires indisponibles')+' · Paris</small></div><span class="n2ms-state" data-state="'+esc(snapshot?.syncError?'unknown':cloudBadge)+'"><i aria-hidden="true"></i>'+esc(snapshot?.syncError?'État indisponible':cloudLabel)+'</span></div>'+
-  '<div class="n2ms-grid">'+
-   '<div class="n2ms-tile"><span>Prochain contrôle base</span><strong>'+esc(schedule?next.time:'—')+'</strong><small>'+esc(schedule?next.date+' · Paris':'Programmation indisponible')+'</small></div>'+
-   '<div class="n2ms-tile" data-cloud-state="'+esc(cloudStatus)+'"><span>Dernier contrôle base</span><strong>'+esc(cloudTime.time)+'</strong><small>'+esc(cloudTime.date==='—'?'Jamais effectué':cloudTime.date+' · '+cloudScanned+' fichiers vérifiés')+'</small></div>'+
-   '<div class="n2ms-tile" data-cloud-result="'+esc(cloudStatus)+'"><span>Résultat du contrôle base</span><strong>'+esc(cloudResult)+'</strong><small>'+esc(cloudDetail)+'</small></div>'+
-   '<div class="n2ms-tile"><span>Dernier transfert MSI</span><strong>'+esc(transferText)+'</strong><small>'+esc(lastTransfer.date==='—'?'Pas encore effectué':'à '+lastTransfer.time+' · contrôle PC indépendant')+'</small></div>'+
+ const cloudLabel=technicalCloudLabel(cloudStatus);
+ const cloudResult=technicalCloudResult(cloudStatus,{pending:cloudPending,published:cloudPublished,rejected:cloudRejected,queued:cloudQueued});
+ const transferLabel=lastTransfer.date==='—'?'Aucun transfert':lastTransfer.date+' à '+lastTransfer.time;
+ const scheduleLabel=schedule?slots.join(' · ')+' · Paris':'Horaires indisponibles';
+ const verifiedLabel=lastVerification==='—'?'Pas encore vérifié':lastVerification;
+ const nextLabel=nextVerification==='—'?'À venir':nextVerification;
+
+ return '<section class="n2ms" aria-label="Informations de synchronisation du planning" data-state="'+esc(state)+'" data-public-state="'+esc(status.key)+'">'+
+  '<header class="n2ms-head"><div><span>INFORMATIONS PLANNING</span><h1>Synchronisation</h1></div>'+
+   '<button type="button" data-action="nethor-sync-mobile-refresh" aria-label="Actualiser les informations" title="Actualiser les informations"'+(snapshot?.loading?' disabled':'')+'>'+
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.4-4.8L3 9m0-5v5h5"/><path d="M4 13a8 8 0 0 0 14.4 4.8L21 15m0 5v-5h-5"/></svg>'+
+   '</button></header>'+
+  '<div class="n2ms-status-card" data-status="'+esc(status.key)+'">'+
+   '<div class="n2ms-status-title"><i aria-hidden="true"></i><strong>'+esc(status.title)+'</strong></div>'+
+   '<p>'+esc(status.message)+'</p>'+
   '</div>'+
-  '<footer class="n2ms-foot"><p>'+esc(foot)+'</p><small>'+esc(snapshot?.loaded?'Informations vérifiées '+(refreshed.time==='—'?'': 'à '+refreshed.time):'Vérification en cours…')+'</small></footer>'+
-  '</section>';
+  '<section class="n2ms-publication" data-publication="'+esc(publishedState)+'">'+
+   '<span>Dernière publication</span>'+
+   '<strong>'+esc(publicationDate)+(publicationTime?'<small>'+esc(publicationTime)+'</small>':'')+'</strong>'+
+   '<p>'+esc(weekLabel)+'</p>'+
+  '</section>'+
+  '<section class="n2ms-checks" aria-label="Vérification automatique">'+
+   '<header><span>Vérification automatique</span><small>'+esc(schedule?'Toutes les 4 h':'Automatique')+'</small></header>'+
+   '<div class="n2ms-check-grid">'+
+    '<div><span>Dernière vérification</span><strong>'+esc(verifiedLabel)+'</strong></div>'+
+    '<div><span>Prochaine vérification</span><strong>'+esc(nextLabel)+'</strong></div>'+
+   '</div>'+
+   '<p>Nethor vérifie automatiquement si de nouveaux plannings sont disponibles. Aucune action n’est nécessaire.</p>'+
+  '</section>'+
+  '<details class="n2ms-tech">'+
+   '<summary><span>Informations techniques</span><i aria-hidden="true"></i></summary>'+
+   '<div class="n2ms-tech-body">'+
+    '<div class="n2ms-tech-grid">'+
+     '<div><span>État du contrôle</span><strong>'+esc(snapshot?.syncError?'État indisponible':cloudLabel)+'</strong></div>'+
+     '<div><span>Résultat</span><strong>'+esc(cloudResult)+'</strong></div>'+
+     '<div><span>Fichiers vérifiés</span><strong>'+esc(cloudScanned)+' fichier'+(cloudScanned>1?'s':'')+'</strong></div>'+
+     '<div><span>Versions analysées</span><strong>'+esc(cloudQueued)+' version'+(cloudQueued>1?'s':'')+'</strong></div>'+
+     '<div><span>Dernier transfert NethorSync</span><strong>'+esc(transferLabel)+'</strong></div>'+
+     '<div><span>Horaires de contrôle</span><strong>'+esc(scheduleLabel)+'</strong></div>'+
+    '</div>'+
+   '</div>'+
+  '</details>'+
+  '<div class="n2ms-updated">'+esc(snapshot?.loaded?(refreshed.time==='—'?'Informations actualisées':'Informations actualisées à '+refreshed.time):'Vérification en cours…')+'</div>'+
+ '</section>';
 }

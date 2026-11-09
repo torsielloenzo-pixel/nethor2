@@ -23,7 +23,7 @@ import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
 import {getPlanningNotificationAccess,listPlanningChangeNotifications,markPlanningChangeNotificationRead,markAllPlanningChangeNotificationsRead,deletePlanningChangeNotification,deleteReadPlanningChangeNotifications} from '../data/planning-notifications.js';
 import {listPersonalPlanningHistory} from '../data/personal-planning-history.js';
 import {renderPersonalPlanningHistory} from './personal-planning-history.js';
-import {renderMobileSyncSummary} from './mobile-sync-summary.js';
+import {renderMobileSyncSummary} from './mobile-sync-summary.js?v=20261109-1';
 import {createSyncController} from './nethor-sync-ui.js';
 import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
 import {isStaffDesktopLayout,usesCompactLayout} from './layout-role.js';
@@ -89,7 +89,7 @@ const hours=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString('fr-FR')+'
 const button=(text,action,primary=false)=>'<button type="button" class="btn '+(primary?'primary':'')+'" data-action="'+escapeHtml(action)+'">'+escapeHtml(text)+'</button>';
 const person=name=>{const initials=String(name||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return '<span class="person"><span class="person-bubble">'+escapeHtml(initials)+'</span>'+escapeHtml(name)+'</span>';};
 const listRole=role=>({'admin':'Administrateur','role_point-de-vente':'Point de vente','responsable':'Responsable','employe':'Employé'})[role]||role;
-const APP_VERSION='2.2-mobile-2026.11.04-calendar-subscription-beta';
+const APP_VERSION='2.2-mobile-2026.11.09-sync-simple';
 const state={week:mondayOf(iso(new Date())),day:iso(new Date()),page:'home',view:'week',access:'none',user:null,profile:null,profiles:[],weekData:null,planningLoadedAt:0,networkOnline:navigator.onLine,pwaUpdateReady:false,loading:false,busy:false,importFile:null,importModel:null,importAnalysis:null,importExisting:null,importError:'',history:[],notice:'',error:'',search:'',lastCheck:0,nethorSync:{loaded:false,loading:false,status:null,error:''},importSync:{loaded:false,loading:false,status:null,error:'',checkedAt:0},mobileSync:{loaded:false,loading:false,planning:null,planningError:false,sync:null,syncError:false,checkedAt:0},accountSecurity:{loaded:false,loading:false,configured:false,busy:false,error:false,message:'',kind:'',lastRequestAt:0},settingsPanel:'home',settingsFeedback:'',planningPreference:'week',mobilePlanning:{dayFilter:'all',awayExpanded:false,year:Number(dateInParis().slice(0,4)),annual:{year:null,weeks:[],loading:false,loaded:false,error:''}},personal:{weeks:[],absences:[],loadedAt:0,today:'',loading:false,weeksError:false,leaveError:false},planningNotifications:{accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0},personalHistory:{open:false,loaded:false,loading:false,items:[],error:'',checkedAt:0},calendarSubscription:{checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''}};
 let client;
 let syncController=null;
