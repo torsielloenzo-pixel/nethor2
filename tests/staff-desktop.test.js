@@ -36,7 +36,8 @@ test('Déploiement web et PWA contiennent styles et module de rôles',()=>{
  const html=read('index.html'),workflow=read('.github/workflows/preview-pages.yml'),sw=read('sw.js'),server=read('scripts/dev-server.js');
  assert.match(html,/href="\.\/staff-desktop\.css(?:\?v=[^"]+)?"/);
  assert.ok(workflow.includes('staff-desktop.css'));
- assert.ok(workflow.includes('src/ui/layout-role.js'));
+ assert.match(workflow,/cp -R src _site\//);
+ assert.match(workflow,/verify-pwa-shell\.py _site sw\.js/);
  assert.ok(sw.includes("'./staff-desktop.css'"));
  assert.ok(sw.includes("'./src/ui/layout-role.js'"));
  assert.ok(server.includes("'/staff-desktop.css'"));
