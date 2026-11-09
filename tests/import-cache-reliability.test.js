@@ -6,7 +6,7 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('PWA : le service worker ne conserve que le shell et abandonne un cache incomplet',()=>{
  const sw=read('sw.js');
- assert.match(sw,/nethor-shell-import-cache-v\\d+/);
+ assert.match(sw,/nethor-shell-import-cache-v[0-9]+/);
  assert.match(sw,/await caches\.delete\(CACHE_NAME\);[\s\S]*?await cache\.addAll/);
  assert.match(sw,/catch\(error\)[\s\S]*?await caches\.delete\(CACHE_NAME\)/);
  assert.match(sw,/fetch\(event\.request,\{cache:'no-store'\}\)/);

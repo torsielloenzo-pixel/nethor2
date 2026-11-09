@@ -87,5 +87,5 @@ test('interface planning : accès historique, panneau global et cache PWA',()=>{
  assert.match(css,/\.n2ph-panel/);
  assert.match(css,/\.n2pm-history-link/);
  assert.match(sw,/personal-planning-history\.js/);
- assert.match(sw,/nethor-shell-import-cache-v\\d+/);
+ assert.match(sw,/nethor-shell-import-cache-v[0-9]+/);
 });
