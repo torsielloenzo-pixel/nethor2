@@ -24,7 +24,7 @@ jobs:
       - name: Préparer les ressources publiques de la PWA Nethor 2
         run: |
           mkdir -p _site/assets
-          cp index.html reset-password.html styles.css live.css mobile.css staff-desktop.css nethor-sync.css nethor-sync-import-guide.css nethor-account-ui.css nethor-dashboard.css nethor-history-browser.css nethor-flow.css nethor-flow.js sw.js manifest.webmanifest CNAME _site/
+          cp index.html reset-password.html styles.css live.css mobile.css mobile-sync-simple.css staff-desktop.css nethor-sync.css nethor-sync-import-guide.css nethor-account-ui.css nethor-dashboard.css nethor-history-browser.css nethor-flow.css nethor-flow.js sw.js manifest.webmanifest CNAME _site/
           cp assets/icon.svg _site/assets/
           cp -R src _site/
           python3 -m pip install --disable-pip-version-check --quiet 'CairoSVG==2.8.2' 'Pillow==11.3.0'
