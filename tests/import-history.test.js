@@ -69,7 +69,10 @@ test('branchement complet: historisation de l’agent, RPC et service worker PWA
  assert.match(live,/renderHistoryBrowser\(state\.history,historyBrowser\)/);
  assert.match(live,/x\.source==='manual'&&x\.storage_path===path/);
  const sw=read('sw.js'),build=read('.github/workflows/preview-pages.yml'),dev=read('scripts/dev-server.js');
- for(const item of [sw,build,dev])assert.match(item,/import-history\.js/);
+ assert.match(sw,/import-history\.js/);
+ assert.match(dev,/import-history\.js/);
+ assert.match(build,/cp -R src _site\//);
+ assert.match(build,/verify-pwa-shell\.py _site sw\.js/);
  assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });
 
