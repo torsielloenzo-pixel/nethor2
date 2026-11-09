@@ -1392,6 +1392,17 @@ async function selectFile(file){
   }catch(err){state.importError='Impossible de lire ce planning : '+String(err.message||err);}
   finally{state.busy=false;render();}
 }
+async function sha256File(file){
+  if(!file||typeof file.arrayBuffer!=='function'||!crypto?.subtle)throw Error('Empreinte du fichier indisponible.');
+  const bytes=await file.arrayBuffer();
+  const hash=await crypto.subtle.digest('SHA-256',bytes);
+  return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function isStorageDuplicateError(error){
+  const status=String(error?.statusCode??error?.status??'');
+  const message=String(error?.message||'').toLowerCase();
+  return status==='409'||message.includes('duplicate')||message.includes('already exists');
+}
 async function publish(){
   if(state.busy||state.access!=='manage'||!state.importModel||!state.importFile)return;
   const ack=ROOT.querySelector('#publishAck');
@@ -1412,6 +1423,7 @@ async function publish(){
   if(state.page!=='import'||state.busy||state.importFile!==selectedFile||state.importModel!==selectedModel)return;
   state.busy=true;state.importError='';render();
   let uploadedPath=null;
+  let uploadedNew=false;
   let publicationAttempted=false;
   try{
     const gate=await checkSession();
@@ -1420,24 +1432,36 @@ async function publish(){
     const latest=await getPlanningWeek(client,model.weekStart);
     if((latest?.revision||null)!==(state.importExisting?.revision||null))throw Error('Le planning a changé depuis la prévisualisation. Rechargez le fichier avant publication.');
     const safe=state.importFile.name.replace(/[^a-zA-Z0-9_.-]/g,'_').slice(0,96);
-    const path='nethor2/'+model.weekStart+'/'+crypto.randomUUID()+'/'+safe;
+    const sourceSha256=await sha256File(state.importFile);
+    const path='nethor2/'+model.weekStart+'/'+sourceSha256+'-'+safe;
     const mime=/\.xls$/i.test(state.importFile.name)?'application/vnd.ms-excel':/\.xlsm$/i.test(state.importFile.name)?'application/vnd.ms-excel.sheet.macroenabled.12':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     const upload=await client.storage.from('planning-files').upload(path,state.importFile,{upsert:false,contentType:mime,cacheControl:'3600'});
-    if(upload.error)throw Error('Archivage du fichier impossible : '+upload.error.message);
+    if(upload.error&&!isStorageDuplicateError(upload.error))throw Error('Archivage du fichier impossible : '+upload.error.message);
+    uploadedNew=!upload.error;
     uploadedPath=path;
-    const data={...model,sourceFile:state.importFile.name,sourcePath:path,importedAt:new Date().toISOString()};
+    const data={...model,sourceFile:state.importFile.name,sourcePath:path,sourceSha256,importedAt:new Date().toISOString()};
     publicationAttempted=true;
     const outcome=await publishPlanningWeek(client,{weekStart:model.weekStart,expectedRevision:latest?.revision||null,model:data});
     if(outcome.status==='conflict')throw Error('Une autre publication a eu lieu. Rien n’a été écrasé.');
-    const verified=await verifyPublishedWeek(client,model.weekStart,outcome.revision);
+    if(outcome.status==='unchanged'){
+      if(uploadedNew){
+        try{await client.storage.from('planning-files').remove([path]);}catch(e){console.warn('Archive identique à nettoyer',e);}
+      }
+      uploadedPath=null;
+      state.week=model.weekStart;state.day=model.weekStart;state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.page='planning';
+      state.notice='Planning déjà à jour : aucun remplacement ni nouvelle révision n’a été créé.';
+      state.weekData=latest;
+      return;
+    }
+    const verified=await verifyPublishedWeek(client,model.weekStart,outcome.revision,{attempts:4,delayMs:150});
     if(!verified)throw Error('La publication a été acceptée mais sa révision reste non confirmée. Vérifiez le planning avant toute nouvelle opération.');
     uploadedPath=null;
     state.week=model.weekStart;state.day=model.weekStart;state.importFile=null;state.importModel=null;state.importAnalysis=null;state.importExisting=null;state.page='planning';
-    state.notice='Planning publié et vérifié. Le fichier original est archivé.';
+    state.notice='Planning publié et vérifié. Le fichier original est archivé avec son empreinte SHA-256.';
     state.weekData=await getPlanningWeek(client,state.week);
   }catch(err){
     state.importError=String(err.message||err);
-    if(uploadedPath&&!publicationAttempted){
+    if(uploadedNew&&uploadedPath&&!publicationAttempted){
       try{await client.storage.from('planning-files').remove([uploadedPath]);}catch(e){console.warn('Archive temporaire à vérifier',e);}
     }
     // Si une écriture a peut-être eu lieu, conserver l'original pour éviter une perte de traçabilité.
@@ -1905,8 +1929,8 @@ function handleNetworkChange(){
 }
 window.addEventListener('online',handleNetworkChange);
 window.addEventListener('offline',handleNetworkChange);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){void verifyResume();if(state.planningNotifications.enabled)void loadPlanningNotifications();}});
-window.addEventListener('focus',()=>{void verifyResume();if(state.planningNotifications.enabled)void loadPlanningNotifications();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){void swRegistration?.update();void verifyResume();if(state.planningNotifications.enabled)void loadPlanningNotifications();}});
+window.addEventListener('focus',()=>{void swRegistration?.update();void verifyResume();if(state.planningNotifications.enabled)void loadPlanningNotifications();});
 window.matchMedia('(max-width:760px)').addEventListener?.('change',()=>{
   if(!smallScreen()){
     closeFirstLoginRecovery();
@@ -1932,7 +1956,8 @@ document.addEventListener('keydown',event=>{
 async function registerPwaWorker(){
  if(!('serviceWorker' in navigator)||location.protocol!=='https:')return;
  try{
-  swRegistration=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+  swRegistration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});
+  void swRegistration.update();
   const markUpdate=()=>{
    if(!navigator.serviceWorker.controller||!swRegistration?.waiting)return;
    state.pwaUpdateReady=true;
