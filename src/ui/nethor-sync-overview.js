@@ -1,6 +1,6 @@
 import {canManageSync,syncHealth} from '../data/nethor-sync-control.js';
 
-// Installeur Windows 2.1.10 : correctif de démarrage intégré, sans ZIP séparé.
+// Installeur Windows 2.1.11 : correctif de démarrage intégré, sans ZIP séparé.
 // Le téléchargement est direct depuis GitHub Releases ; installation manuelle sur Windows.
 export const NETHOR_SYNC_INSTALLER_URL='https://github.com/torsielloenzo-pixel/nethor2/releases/download/nethor-sync2-latest/NethorSync-Setup.exe';
 
@@ -99,12 +99,12 @@ export function renderSyncOverviewCard(snapshot,now=Date.now(),period=7){
     'Aucun poste Windows n’est actuellement enregistré pour synchroniser les plannings.')+'</div>';
  const showInstall=current==='not-configured';
  const action=showInstall?
-  '<button type="button" class="btn primary" data-action="nethor-sync-install">Installer NethorSync 2.1.10</button>':
+  '<button type="button" class="btn primary" data-action="nethor-sync-install">Installer NethorSync 2.1.11</button>':
   '<button type="button" class="btn" data-action="nethor-sync-refresh"'+(current==='loading'?' disabled':'')+'>Actualiser l’état</button>'+
-  (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger NethorSync 2.1.10</button>':'');
+  (bound?'<button type="button" class="btn" data-action="nethor-sync-install">Télécharger NethorSync 2.1.11</button>':'');
  const guide=showInstall?
   '<p class="n2sync-footnote">Sur le poste Windows : télécharger puis exécuter <strong>NethorSync-Setup.exe</strong>. Choisissez le dossier des plannings, puis connectez votre compte NETHOR autorisé.</p>':
-  bound?'<p class="n2sync-footnote">NethorSync 2.1.10 intègre le correctif de démarrage et conserve la liaison du poste ainsi que les fichiers Excel déjà transmis. Les plannings sont publiés côté Supabase. L’état du poste dépend de son dernier contact (moins de 30 minutes).</p>':'';
+  bound?'<p class="n2sync-footnote">NethorSync 2.1.11 intègre le correctif de démarrage et conserve la liaison du poste ainsi que les fichiers Excel déjà transmis. Les plannings sont publiés côté Supabase. L’état du poste dépend de son dernier contact (moins de 30 minutes).</p>':'';
  return '<section class="card n2sync-card" id="nethorSyncHomeCard" aria-labelledby="n2sync-title">'+
    '<div class="card-head"><div><h2 class="card-title" id="n2sync-title">NethorSync</h2><p class="sub">Synchronisation des plannings · Windows</p></div>'+
    '<span class="n2sync-status" data-state="'+escapeHtml(current)+'"><i aria-hidden="true"></i>'+escapeHtml(titles[current]||'État inconnu')+'</span></div>'+
