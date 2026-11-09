@@ -15,7 +15,7 @@ const digest=async (bytes:ArrayBuffer):Promise<string>=>{
  const result=await crypto.subtle.digest("SHA-256",bytes);
  return Array.from(new Uint8Array(result),b=>b.toString(16).padStart(2,"0")).join("");
 };
-function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:string,uploadedAt:string,sourceKind:string) {
+function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:string,uploadedAt:string,sourceKind:string,sourceSha256:string) {
  const workbook=XLSX.read(new Uint8Array(buffer),{type:"array",cellDates:true,cellStyles:true});
  // BIFF8 conserve les couleurs des archives .xls, que SheetJS ne restitue pas toujours.
  // Sans une couleur exploitable, on conserve le refus explicite plutôt que de deviner.
@@ -33,7 +33,7 @@ function parseFile(buffer:ArrayBuffer,fileName:string,path:string,modifiedAt:str
  if((model.colorCounts.g+model.colorCounts.b)===0)
    throw new Error("Aucun horaire exploitable : les couleurs du classeur doivent être vérifiées");
  const label=/SEMAINE[ _-]*([ABC])/i.exec(fileName);
- return {...model,sourceFile:fileName,sourcePath:path,
+ return {...model,sourceFile:fileName,sourcePath:path,sourceSha256,
   ...(sourceKind==="storage" ? {sourceUploadedAt:uploadedAt} : {sourceModifiedAt:modifiedAt}),
   weekLabel:label?"SEMAINE "+label[1].toUpperCase():null,
   importedAt:new Date().toISOString()};
@@ -79,7 +79,7 @@ Deno.serve(async req=>{
        if(await digest(bytes)!==hash){
          result="rejected";detail="Empreinte SHA-256 du classeur incorrecte";
        }else{
-         try{model=parseFile(bytes,name,key,modified,uploaded,sourceKind);}
+         try{model=parseFile(bytes,name,key,modified,uploaded,sourceKind,hash);}
          catch(e){result="rejected";detail="Lecture du planning refusée : "+String((e as Error)?.message||e).slice(0,180);}
        }
      }
