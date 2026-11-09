@@ -20,7 +20,7 @@ import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublicati
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
 import {mergeImportHistory,renderHistoryBrowser} from './import-history.js';
 import {readMobileSyncSummary} from '../data/mobile-sync-summary.js';
-import {getPlanningNotificationAccess,listPlanningChangeNotifications,markPlanningChangeNotificationRead,markAllPlanningChangeNotificationsRead} from '../data/planning-notifications.js';
+import {getPlanningNotificationAccess,listPlanningChangeNotifications,markPlanningChangeNotificationRead,markAllPlanningChangeNotificationsRead,deletePlanningChangeNotification,deleteReadPlanningChangeNotifications} from '../data/planning-notifications.js';
 import {renderMobileSyncSummary} from './mobile-sync-summary.js';
 import {createSyncController} from './nethor-sync-ui.js';
 import {isSyncOverviewRole,renderSyncOverviewCard,NETHOR_SYNC_INSTALLER_URL} from './nethor-sync-overview.js';
@@ -319,6 +319,7 @@ function planningNotificationChange(item){
 function planningNotificationMarkup(){
   const n=state.planningNotifications;
   const unread=n.items.filter(item=>!item.read_at).length;
+  const read=n.items.filter(item=>item.read_at).length;
   const body=n.loading&&!n.loaded
     ?'<div class="n2notif-empty">Chargement…</div>'
     :n.error
@@ -330,14 +331,18 @@ function planningNotificationMarkup(){
           const change=planningNotificationChange(item);
           const title=item.kind==='planning_shift_change'?'Planning modifié':(item.title||'Notification');
           const base=' data-planning-notification-id="'+Number(item.id)+'" data-notification-week="'+escapeHtml(item.week_start||'')+'" data-notification-date="'+escapeHtml(item.planning_date||'')+'"';
+          const remove=item.read_at?'<button type="button" class="n2notif-delete" data-action="notification-delete" data-notification-delete-id="'+Number(item.id)+'" aria-label="Supprimer cette notification lue" title="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg></button>':'';
+          let card;
           if(change){
             const delta=planningDeltaText(change.delta);
-            return '<button type="button" class="n2notif-item n2notif-change-card'+(item.read_at?'':' is-unread')+'"'+base+'><span class="n2notif-card-top"><strong>'+escapeHtml(title)+'</strong>'+(!item.read_at?'<span class="n2notif-new">Nouvelle</span>':'')+'</span><span class="n2notif-explain">Ton horaire du '+escapeHtml(day)+' a été modifié.</span><span class="n2notif-shift-grid"><span class="n2notif-shift-box"><small>ANCIEN HORAIRE</small><b>'+escapeHtml(change.oldShift)+'</b></span><span class="n2notif-shift-box"><small>NOUVEL HORAIRE</small><b>'+escapeHtml(change.newShift)+'</b></span></span>'+(delta?'<span class="n2notif-delta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+escapeHtml(delta)+'</span>':'')+'<span class="n2notif-meta">'+escapeHtml(created)+'<span aria-hidden="true">›</span></span></button>';
+            card='<button type="button" class="n2notif-item n2notif-change-card'+(item.read_at?'':' is-unread')+'"'+base+'><span class="n2notif-card-top"><strong>'+escapeHtml(title)+'</strong>'+(!item.read_at?'<span class="n2notif-new">Nouvelle</span>':'')+'</span><span class="n2notif-explain">Ton horaire du '+escapeHtml(day)+' a été modifié.</span><span class="n2notif-shift-grid"><span class="n2notif-shift-box"><small>ANCIEN HORAIRE</small><b>'+escapeHtml(change.oldShift)+'</b></span><span class="n2notif-shift-box"><small>NOUVEL HORAIRE</small><b>'+escapeHtml(change.newShift)+'</b></span></span>'+(delta?'<span class="n2notif-delta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+escapeHtml(delta)+'</span>':'')+'<span class="n2notif-meta">'+escapeHtml(created)+'<span aria-hidden="true">›</span></span></button>';
+          }else{
+            card='<button type="button" class="n2notif-item n2notif-generic'+(item.read_at?'':' is-unread')+'"'+base+'><span class="n2notif-dot" aria-hidden="true"></span><span class="n2notif-copy"><strong>'+escapeHtml(title)+'</strong><span class="n2notif-day">'+escapeHtml(day)+'</span><span class="n2notif-message">'+escapeHtml(item.message||'')+'</span><small>'+escapeHtml(created)+'</small></span><span class="n2notif-arrow" aria-hidden="true">›</span></button>';
           }
-          return '<button type="button" class="n2notif-item n2notif-generic'+(item.read_at?'':' is-unread')+'"'+base+'><span class="n2notif-dot" aria-hidden="true"></span><span class="n2notif-copy"><strong>'+escapeHtml(title)+'</strong><span class="n2notif-day">'+escapeHtml(day)+'</span><span class="n2notif-message">'+escapeHtml(item.message||'')+'</span><small>'+escapeHtml(created)+'</small></span><span class="n2notif-arrow" aria-hidden="true">›</span></button>';
+          return '<div class="n2notif-item-row'+(item.read_at?' has-delete':'')+'">'+card+remove+'</div>';
         }).join('')+'</div>'
         :'<div class="n2notif-empty"><strong>Aucun changement d’horaire</strong><span>Les prochaines modifications qui te concernent apparaîtront ici.</span></div>';
-  return '<button type="button" class="n2notif-scrim" data-action="notifications-close" aria-label="Fermer les notifications"></button><div class="n2notif-card"><div class="n2notif-head"><div><span>MON PLANNING</span><h2>Mes notifications</h2></div><div class="n2notif-head-actions">'+(unread?'<span class="n2notif-count">'+unread+' nouvelle'+(unread>1?'s':'')+'</span><button type="button" data-action="notifications-read-all">Tout lire</button>':'')+'<button type="button" class="n2notif-close" data-action="notifications-close" aria-label="Fermer">×</button></div></div>'+body+'</div>';
+  return '<button type="button" class="n2notif-scrim" data-action="notifications-close" aria-label="Fermer les notifications"></button><div class="n2notif-card"><div class="n2notif-head"><div><span>MON PLANNING</span><h2>Mes notifications</h2></div><div class="n2notif-head-actions">'+(unread?'<span class="n2notif-count">'+unread+' nouvelle'+(unread>1?'s':'')+'</span><button type="button" data-action="notifications-read-all">Tout lire</button>':'')+(read?'<button type="button" data-action="notifications-delete-read">Effacer les lues</button>':'')+'<button type="button" class="n2notif-close" data-action="notifications-close" aria-label="Fermer">×</button></div></div>'+body+'</div>';
 }
 function paintPlanningNotifications(){
   const button=ROOT.querySelector('#planningNotificationButton');
@@ -383,6 +388,36 @@ async function markAllPlanningNotificationsRead(){
     const now=new Date().toISOString();
     state.planningNotifications.items=state.planningNotifications.items.map(item=>item.read_at?item:{...item,read_at:now});
   }catch(err){console.warn('Lecture notifications',String(err?.message||err));}
+  paintPlanningNotifications();
+}
+async function removePlanningNotification(button){
+  const id=Number(button.dataset.notificationDeleteId);
+  if(!Number.isSafeInteger(id)||id<=0)return;
+  const item=state.planningNotifications.items.find(row=>Number(row.id)===id);
+  if(!item?.read_at)return;
+  button.disabled=true;
+  try{
+    await deletePlanningChangeNotification(client,id);
+    state.planningNotifications.items=state.planningNotifications.items.filter(row=>Number(row.id)!==id);
+    state.planningNotifications.error='';
+  }catch(err){
+    state.planningNotifications.error='Suppression temporairement indisponible.';
+    console.warn('Suppression notification',String(err?.message||err));
+  }
+  paintPlanningNotifications();
+}
+async function removeReadPlanningNotifications(){
+  if(!state.planningNotifications.enabled)return;
+  const read=state.planningNotifications.items.filter(item=>item.read_at);
+  if(!read.length)return;
+  try{
+    await deleteReadPlanningChangeNotifications(client);
+    state.planningNotifications.items=state.planningNotifications.items.filter(item=>!item.read_at);
+    state.planningNotifications.error='';
+  }catch(err){
+    state.planningNotifications.error='Suppression temporairement indisponible.';
+    console.warn('Suppression notifications lues',String(err?.message||err));
+  }
   paintPlanningNotifications();
 }
 async function openPlanningNotification(button){
@@ -1613,6 +1648,12 @@ ROOT.addEventListener('click',async event=>{
   }
   if(action==='notifications-read-all'){
     await markAllPlanningNotificationsRead();return;
+  }
+  if(action==='notification-delete'){
+    await removePlanningNotification(b);return;
+  }
+  if(action==='notifications-delete-read'){
+    await removeReadPlanningNotifications();return;
   }
   if(action==='admin-accounts-refresh'&&state.profile?.role==='admin'){await loadAdminAccounts();return;}
   if(action==='admin-account-edit'&&state.profile?.role==='admin'){
