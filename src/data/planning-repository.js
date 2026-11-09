@@ -40,12 +40,24 @@ export async function publishPlanningWeek(client,{weekStart,expectedRevision=nul
   const {data,error}=await client.rpc('planning_save_week_if_revision',params);
   if(error) throw error;
   if(data?.status==='conflict') return {status:'conflict',revision:null};
+  if(data?.status==='unchanged'&&data.revision)
+    return {status:'unchanged',revision:String(data.revision)};
   if(data?.status!=='ok'||!data.revision) throw new Error('Publication non confirmée');
   return {status:'accepted-pending-verification',revision:String(data.revision)};
 }
-export async function verifyPublishedWeek(client,weekStart,expectedRevision) {
-  const current=await getPlanningWeek(client,weekStart);
-  return !!current && current.revision===expectedRevision;
+const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+export async function verifyPublishedWeek(client,weekStart,expectedRevision,{attempts=4,delayMs=150}={}) {
+  if(!Number.isInteger(attempts)||attempts<1||attempts>8)throw new RangeError('Nombre de vérifications invalide');
+  let lastError=null;
+  for(let attempt=0;attempt<attempts;attempt++){
+    try{
+      const current=await getPlanningWeek(client,weekStart);
+      if(current?.revision===expectedRevision)return true;
+    }catch(error){lastError=error;}
+    if(attempt<attempts-1&&delayMs>0)await delay(delayMs*(attempt+1));
+  }
+  if(lastError)throw lastError;
+  return false;
 }
 
 /** Dates des semaines publiées dans l'année, en lecture seule (RLS planning).
