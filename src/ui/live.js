@@ -503,8 +503,7 @@ async function openPlanningNotification(button){
   await loadWeek();
   const scroller=ROOT.querySelector('#screen');if(scroller)scroller.scrollTop=0;
 }
-function visibleModel(){
-  const source=state.weekData?.model;
+function visibleModel(source=state.weekData?.model){
   if(!source||!Array.isArray(source.employees)||!source.days)return null;
   const disabled=new Set();
   for(const p of state.profiles){
