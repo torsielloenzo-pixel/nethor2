@@ -98,6 +98,38 @@ const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planni
 let syncChartPeriod=7;
 const promoCatalogState={loaded:false,loading:false,data:null,error:''};
 let dashboardOpen=null;
+let dashboardPersonDetail=null;
+let dashboardPersonRequest=0;
+function dashboardIssuesFor(issues,person){
+ if(!person)return [];
+ const names=new Set(person.people.map(p=>normalizeName(p.name)));
+ return (issues||[]).filter(issue=>names.has(normalizeName(issue.name)));
+}
+async function loadDashboardPersonWeek(week){
+ if(!dashboardOpen||dashboardOpen.type!=='person'||!staffPlanningRole())return;
+ const request=++dashboardPersonRequest;
+ dashboardOpen.week=week;
+ if(week===state.week){dashboardPersonDetail=null;render();return;}
+ dashboardPersonDetail={week,loading:true,published:false,people:[],issues:[]};
+ render();
+ try{
+  const record=await getPlanningWeek(client,week);
+  if(request!==dashboardPersonRequest||dashboardOpen?.type!=='person'||dashboardOpen.week!==week)return;
+  const metrics=analyze(visibleModel(record?.model));
+  const people=buildDashboardPeople(metrics.people);
+  const original=buildDashboardPeople(analyze(visibleModel()).people)[Number(dashboardOpen.index)];
+  const matched=people.find(person=>person.id===original?.id)||
+   people.find(person=>person.people.some(p=>original?.people.some(other=>normalizeName(other.name)===normalizeName(p.name))));
+  dashboardPersonDetail={week,loading:false,published:!!record,people,issues:dashboardIssuesFor(metrics.issues,matched),
+   sourceFile:record?.sourceFile||'',revision:record?.revision||null,error:''};
+ }catch(error){
+  if(request!==dashboardPersonRequest||dashboardOpen?.type!=='person'||dashboardOpen.week!==week)return;
+  dashboardPersonDetail={week,loading:false,published:false,people:[],issues:[],
+   error:'Lecture du planning impossible : '+String(error?.message||error)};
+ }finally{
+  if(request===dashboardPersonRequest&&dashboardOpen?.type==='person'&&dashboardOpen.week===week)render();
+ }
+}
 const staffDetail={name:null,month:null,weeks:[],loading:false,error:'',request:0,showMonth:false};
 const staffPlanningRole=()=>!smallScreen()&&['admin','role_point-de-vente'].includes(state.profile?.role);
 
@@ -869,7 +901,11 @@ function pageHome(metrics){
       'Équipe, horaires du jour et synchronisation des plannings.',
       state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+
       renderOverviewDashboard({people:metrics.people,week:state.week,today:dateInParis(),
-        sync:state.nethorSync,open:dashboardOpen,syncPeriod:syncChartPeriod,hasPlanning:!!state.weekData});
+        sync:state.nethorSync,open:dashboardOpen,syncPeriod:syncChartPeriod,hasPlanning:!!state.weekData,
+        personDetail:dashboardPersonDetail,personSource:state.weekData?.sourceFile||'',
+        personRevision:state.weekData?.revision||null,
+        personIssues:dashboardIssuesFor(metrics.issues,
+          dashboardOpen?.type==='person'?buildDashboardPeople(metrics.people)[Number(dashboardOpen.index)]:null)});
   }
   return renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',','Retrouve les horaires de l’équipe et les contrôles de la semaine.',state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+personal+homePwaInstall()+summary(metrics)+'<div class="layout"><div class="stack">'+planningCard(metrics)+coverageCard(metrics)+'</div><div class="stack">'+alertsCard(metrics,true)+'</div></div>';
 }
@@ -1320,12 +1356,12 @@ function go(page){
   if(!(page in TITLES)||!canNavigate(page,state.profile,smallScreen()))return;
   const previousPage=state.page;
   state.page=page;state.notice='';state.error='';
-  if(page!=='home')dashboardOpen=null;
+  if(page!=='home'){dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;}
   const dashboardToday=page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())?dateInParis():null;
   const dashboardWeekChanged=Boolean(dashboardToday)&&state.week!==mondayOf(dashboardToday);
   if(dashboardWeekChanged){
     state.week=mondayOf(dashboardToday);state.day=dashboardToday;state.weekData=null;
-    dashboardOpen=null;
+    dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;
   }
   if(page==='settings'&&previousPage!==page){state.settingsPanel='home';state.settingsFeedback='';}
   if(page==='planning'&&previousPage!==page){
@@ -1636,21 +1672,32 @@ ROOT.addEventListener('click',async event=>{
  }
 
   if(event.target.closest('[data-dashboard-backdrop]')===event.target){
-    dashboardOpen=null;render();return;
+    dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;render();return;
   }
   const dash=event.target.closest('[data-action^="dashboard-"]');
   if(dash&&state.page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())){
     const action=dash.dataset.action;
-    if(action==='dashboard-person'){dashboardOpen={type:'person',index:Number(dash.dataset.dashboardPerson)};render();return;}
+    if(action==='dashboard-person'){dashboardPersonRequest++;dashboardPersonDetail=null;dashboardOpen={type:'person',index:Number(dash.dataset.dashboardPerson),week:state.week,tab:'planning'};render();return;}
     if(action==='dashboard-sync'){dashboardOpen={type:'sync'};render();return;}
-    if(action==='dashboard-close'){dashboardOpen=null;render();return;}
+    if(action==='dashboard-close'){dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;render();return;}
+    if(action==='dashboard-tab-planning'||action==='dashboard-tab-suivi'){
+      if(dashboardOpen?.type==='person'){dashboardOpen.tab=action==='dashboard-tab-suivi'?'suivi':'planning';render();}return;
+    }
+    if(action==='dashboard-week-prev'||action==='dashboard-week-next'||action==='dashboard-week-today'){
+      if(dashboardOpen?.type!=='person')return;
+      const base=dashboardOpen.week||state.week;
+      const next=action==='dashboard-week-today'?state.week:plusDays(base,action==='dashboard-week-prev'?-7:7);
+      if(next>=MIN_PLANNING_DATE)await loadDashboardPersonWeek(next);
+      return;
+    }
     if(action==='dashboard-open-planning'){
       const selected=dashboardOpen?.type==='person'?buildDashboardPeople(analyze(visibleModel()).people)[Number(dashboardOpen.index)]:null;
-      dashboardOpen=null;
+      const selectedWeek=dashboardOpen?.week||state.week;
+      dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;
       if(!selected){render();return;}
       const staffName=selected.people[0]?.name||selected.name;
       staffDetail.name=staffName;
-      staffDetail.month=state.week.slice(0,7);
+      staffDetail.month=selectedWeek.slice(0,7);
       staffDetail.showMonth=true;
       state.view='week';
       go('planning');
@@ -1906,7 +1953,7 @@ ROOT.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&state.personalHistory.open){state.personalHistory.open=false;paintPersonalPlanningHistory();return;}
  if(event.key==='Escape'&&state.page==='planning'&&staffDetail.name){staffDetail.name=null;staffDetail.request++;render();return;}
  if(event.key==='Escape'&&state.page==='home'&&dashboardOpen){
-  dashboardOpen=null;render();
+  dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;render();
  }
 });
 ROOT.addEventListener('change',event=>{
