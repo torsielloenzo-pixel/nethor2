@@ -13,7 +13,7 @@
   #app .n2-agenda-refresh{border:0;background:none;color:#3162b3;font-size:11px;font-weight:700;padding:9px;white-space:nowrap}
   #app .n2-agenda-refresh:hover{color:#153d84;text-decoration:underline}
   #app .n2-agenda-tabs{
-    margin:3px 20px 15px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;
+    margin:3px 20px 15px;display:grid;grid-template-columns:repeat(var(--agenda-tabs,3),minmax(0,1fr));gap:5px;
     padding:4px;border:1px solid #e0e7f0;border-radius:11px;background:#f7f9fd;
   }
   #app .n2-agenda-tabs button{border:0;background:transparent;border-radius:8px;padding:11px 9px;color:#435979;font-size:12px;font-weight:700}
