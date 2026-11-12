@@ -1,0 +1,112 @@
+/* Planning NETHOR : agenda uniquement sur ordinateur / PWA Desktop.
+   Aucun changement de présentation pour les écrans mobiles. */
+@media (min-width:761px) {
+  #app .n2-agenda{
+    width:100%;min-width:0;overflow:hidden;padding:0;border-radius:17px;
+    border:1px solid #e4eaf3;box-shadow:0 5px 22px #162a5209;background:#fff;
+  }
+  #app .n2-agenda-top{
+    padding:21px 22px 13px;display:flex;align-items:center;justify-content:space-between;gap:18px;
+  }
+  #app .n2-agenda-top h2{margin:0 0 5px;font-size:15px;letter-spacing:-.15px;color:#152a4d}
+  #app .n2-agenda-top p{margin:0;font-size:11px;color:#8292aa}
+  #app .n2-agenda-refresh{border:0;background:none;color:#3162b3;font-size:11px;font-weight:700;padding:9px;white-space:nowrap}
+  #app .n2-agenda-refresh:hover{color:#153d84;text-decoration:underline}
+  #app .n2-agenda-tabs{
+    margin:3px 20px 15px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;
+    padding:4px;border:1px solid #e0e7f0;border-radius:11px;background:#f7f9fd;
+  }
+  #app .n2-agenda-tabs button{border:0;background:transparent;border-radius:8px;padding:11px 9px;color:#435979;font-size:12px;font-weight:700}
+  #app .n2-agenda-tabs button.active{background:#173d7e;color:#fff;box-shadow:0 2px 7px #1b44712d}
+  #app .n2-agenda-tabs button:not(.active):hover{background:#e8eef9}
+  #app .n2-agenda-toolbar{
+    display:grid;grid-template-columns:minmax(145px,1fr) minmax(245px,1.6fr) minmax(175px,1fr);
+    gap:17px;align-items:end;margin:0 20px 15px;
+  }
+  #app .n2-agenda-team{display:grid;gap:5px}
+  #app .n2-agenda-team small{color:#8291a9;font-size:10px}
+  #app .n2-agenda-team span{display:flex;align-items:center;padding:10px 12px;min-height:39px;border:1px solid #e0e7f2;border-radius:9px;color:#3f5372;font-size:11px;font-weight:650;background:#fff}
+  #app .n2-agenda-nav{display:flex;align-items:center;justify-content:center;gap:9px;min-width:0}
+  #app .n2-agenda-nav>div{text-align:center;min-width:0;flex:1}
+  #app .n2-agenda-nav strong{display:block;color:#203559;font-size:12px;line-height:1.35;text-transform:capitalize}
+  #app .n2-agenda-nav small{display:block;color:#8493a9;font-size:10px;margin-top:3px}
+  #app .n2-agenda-icon{width:34px;height:34px;flex:none;border:1px solid #e0e8f4;background:#fff;border-radius:9px;font-size:23px;line-height:1;color:#284c86}
+  #app .n2-agenda-icon:hover{background:#eef4ff}
+  #app .n2-agenda-search{display:flex;align-items:center;gap:5px;padding:0 11px;min-height:39px;border:1px solid #e0e7f2;border-radius:9px;color:#647eae}
+  #app .n2-agenda-search:focus-within{border-color:#6392e4;box-shadow:0 0 0 2px #6392e424}
+  #app .n2-agenda-search input{width:100%;min-width:0;border:0;background:transparent;outline:none;color:#294264;font-size:11px}
+  #app .n2-agenda-search input::placeholder{color:#8b9aaf}
+  #app .n2-agenda-scroll{width:100%;max-width:100%;overflow:auto;scrollbar-width:thin;scrollbar-color:#d1dbec transparent}
+  #app .n2-agenda-week-table{width:100%;min-width:1040px;border-collapse:collapse;table-layout:fixed}
+  #app .n2-agenda-week-table th:first-child{width:180px;text-align:left}
+  #app .n2-agenda-week-table th:last-child{width:73px}
+  #app .n2-agenda-week-table thead th{
+    background:#f8fafd;border-top:1px solid #e8edf5;border-bottom:1px solid #e8edf5;
+    color:#445b78;font-size:11px;padding:12px 8px;font-weight:700;text-align:center;
+  }
+  #app .n2-agenda-week-table thead th:first-child{padding-left:19px}
+  #app .n2-agenda-week-table thead button{display:block;width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:0;border-radius:6px}
+  #app .n2-agenda-week-table thead button:hover{color:#2963bb;text-decoration:underline}
+  #app .n2-agenda-week-table thead small{display:block;font-size:10px;font-weight:500;color:#8798b0;margin-top:5px}
+  #app .n2-agenda-week-table tbody th,#app .n2-agenda-week-table tbody td{
+    border-bottom:1px solid #edf1f7;padding:6px 5px;height:43px;text-align:center;vertical-align:middle;
+  }
+  #app .n2-agenda-week-table tbody th{padding-left:13px;text-align:left}
+  #app .n2-agenda-person{display:flex;align-items:center;min-width:0;gap:7px}
+  #app .n2-agenda-person .person{font-size:11px;font-weight:500;min-width:0;gap:8px}
+  #app .n2-agenda-person .person-bubble{width:27px;height:27px;flex:none;border-radius:8px}
+  #app .n2-agenda-person .n2-person-account{max-width:100%}
+  #app .n2-agenda-person-row:hover{background:#f6f9fe}
+  #app .n2-agenda-person-row{cursor:pointer}
+  #app .n2-agenda-shift-list{display:grid;gap:3px}
+  #app .n2-agenda-pill,#app .n2-agenda-status{
+    display:block;width:100%;min-width:0;white-space:nowrap;border-radius:6px;
+    padding:6px 3px;font-size:10px;line-height:1.2;font-weight:650;text-align:center;
+  }
+  #app .n2-agenda-pill[data-tone=morning],#app .n2-agenda-bar[data-tone=morning]{background:#d7e9ff;color:#20528c}
+  #app .n2-agenda-pill[data-tone=afternoon],#app .n2-agenda-bar[data-tone=afternoon]{background:#e9d9fa;color:#653889}
+  #app .n2-agenda-status[data-tone=rest]{background:#f0f2f6;color:#738198}
+  #app .n2-agenda-status[data-tone=leave]{background:#e3f6e8;color:#307c50}
+  #app .n2-agenda-status[data-tone=unavailable]{background:#fff0dd;color:#966322}
+  #app .n2-agenda-status[data-tone=unknown],#app .n2-agenda-status[data-tone=empty]{background:#f7f9fc;color:#9ba7b8}
+  #app .n2-agenda-hours{white-space:nowrap;font-size:11px;color:#37567c;font-weight:700}
+  #app .n2-agenda-day-content{min-width:1040px}
+  #app .n2-agenda-day-head,#app .n2-agenda-day-row{display:grid;grid-template-columns:170px minmax(0,1fr)}
+  #app .n2-agenda-day-head{height:47px;align-items:center;background:#f8fafd;border-block:1px solid #e8edf5}
+  #app .n2-agenda-day-head>strong{font-size:11px;font-weight:700;color:#435b78;padding-left:19px}
+  #app .n2-agenda-hour-head{height:100%;position:relative;margin-right:32px}
+  #app .n2-agenda-hour-head span{position:absolute;top:17px;transform:translateX(-50%);font-size:10px;font-weight:650;color:#566b88;white-space:nowrap}
+  #app .n2-agenda-hour-head span:first-child{transform:translateX(0)}
+  #app .n2-agenda-hour-head span:last-child{transform:translateX(-100%)}
+  #app .n2-agenda-day-row{min-height:45px;border-bottom:1px solid #edf1f7}
+  #app .n2-agenda-day-person{display:flex;align-items:center;padding:5px 8px 5px 14px}
+  #app .n2-agenda-track{
+    position:relative;min-height:45px;margin-right:32px;
+    background-image:linear-gradient(to right,#e7edf5 1px,transparent 1px);
+    background-size:calc(100% / var(--agenda-hours)) 100%;
+    background-repeat:repeat-x;
+  }
+  #app .n2-agenda-track:after{content:"";position:absolute;top:0;bottom:0;right:0;border-right:1px solid #e7edf5}
+  #app .n2-agenda-bar{position:absolute;top:7px;bottom:7px;border-radius:6px;display:flex;align-items:center;justify-content:center;min-width:2px;overflow:hidden;white-space:nowrap;font-size:10px;font-weight:700;padding:0 3px;border-left:3px solid #5b94dd}
+  #app .n2-agenda-bar[data-tone=afternoon]{border-color:#a67bdd}
+  #app .n2-agenda-day-status{position:absolute;inset:7px 0}
+  #app .n2-agenda-day-status .n2-agenda-status{height:100%;display:grid;place-items:center}
+  #app .n2-agenda-footer{padding:14px 19px;display:flex;align-items:center;gap:18px;justify-content:space-between;flex-wrap:wrap;border-top:1px solid #e8edf5;background:#fbfcff;font-size:11px;color:#5d708d}
+  #app .n2-agenda-footer strong{color:#234775}
+  #app .n2-agenda-legend{display:flex;flex-wrap:wrap;gap:17px;align-items:center}
+  #app .n2-agenda-legend span{display:inline-flex;gap:6px;align-items:center}
+  #app .n2-agenda-legend i{display:inline-block;width:13px;height:13px;border-radius:4px}
+  #app .n2-agenda-legend i[data-tone=morning]{background:#bcdafe}
+  #app .n2-agenda-legend i[data-tone=afternoon]{background:#dcc5f6}
+  #app .n2-agenda-legend i[data-tone=rest]{background:#e2e6ee}
+  #app .n2-agenda-legend i[data-tone=leave]{background:#d0efd9}
+  #app .n2-agenda-empty{padding:40px 18px;text-align:center;color:#7788a0;font-size:12px}
+  #app .n2-agenda-loading{padding:12px 20px;text-align:center;color:#5373a5;font-size:11px;border-top:1px solid #e8edf5}
+  #app .n2-agenda-person-row[hidden]{display:none!important}
+}
+@media (min-width:761px) and (max-width:1120px){
+  #app .n2-agenda-toolbar{grid-template-columns:1fr 1fr}
+  #app .n2-agenda-toolbar .n2-agenda-nav{grid-column:1/-1;grid-row:1}
+  #app .n2-agenda-team{grid-column:1;grid-row:2}
+  #app .n2-agenda-search{grid-column:2;grid-row:2}
+}
