@@ -35,11 +35,11 @@ function weekCell(day){
 function personName(p,renderPerson){
   return '<div class="n2-agenda-person">'+renderPerson(p)+'</div>';
 }
-function nav(view,week,day,canYear){
+function nav(view,week,day,canYear,query){
   const date=view==='day'?day:week;
   const datestring=view==='day'?label(day,{weekday:'long',day:'numeric',month:'long',year:'numeric'}):
     'Semaine du '+label(week,{day:'numeric',month:'short'})+' au '+label(plusDays(week,6),{day:'numeric',month:'short',year:'numeric'});
-  return '<div class="n2-agenda-tabs" role="group" aria-label="Affichage du planning">'+
+  return '<div class="n2-agenda-tabs" style="--agenda-tabs:'+(canYear?3:2)+'" role="group" aria-label="Affichage du planning">'+
     '<button type="button" data-action="week-view" class="'+(view==='week'?'active':'')+'" aria-pressed="'+(view==='week')+'">▦ <span>Semaine</span></button>'+
     '<button type="button" data-action="day-view" class="'+(view==='day'?'active':'')+'" aria-pressed="'+(view==='day')+'">▣ <span>Jour</span></button>'+
     (canYear?'<button type="button" data-action="year-view" aria-pressed="false">▤ <span>Année</span></button>':'')+
@@ -50,7 +50,7 @@ function nav(view,week,day,canYear){
         '<div><strong>'+esc(datestring)+'</strong>'+(view==='week'?'<small>7 jours</small>':'')+'</div>'+
         '<button class="n2-agenda-icon" type="button" data-action="'+(view==='day'?'agenda-next-day':'next')+'" aria-label="'+(view==='day'?'Jour suivant':'Semaine suivante')+'">›</button>'+
       '</div>'+
-      '<label class="n2-agenda-search">⌕ <input id="n2AgendaSearch" type="search" autocomplete="off" placeholder="Rechercher un collaborateur…" aria-label="Rechercher un collaborateur"></label>'+
+      '<label class="n2-agenda-search">⌕ <input id="n2AgendaSearch" type="search" autocomplete="off" value="'+esc(query)+'" placeholder="Rechercher un collaborateur…" aria-label="Rechercher un collaborateur"></label>'+
     '</div>';
 }
 function weekGrid(people,week,model,renderPerson,formatHours){
@@ -88,17 +88,18 @@ function summary(people,day,week,model,view){
   const index=Math.max(0,Math.min(6,Math.round((new Date(day+'T12:00:00')-new Date(week+'T12:00:00'))/86400000)));
   const active=people.filter(p=>p.days[index]?.ranges?.length).length;
   return '<div class="n2-agenda-footer"><span>♧ <strong>'+people.length+'</strong> collaborateurs</span>'+
-    (view==='day'?'<span>'+esc(label(day,{weekday:'long',day:'numeric',month:'long'}))+' · <strong>'+active+'</strong> en poste</span>':'<span>Horaires de la semaine publiée</span>')+
+    (view==='day'?'<span>'+esc(label(day,{weekday:'long',day:'numeric',month:'long'}))+' · <strong>'+active+'</strong> planifiés</span>':'<span>Horaires de la semaine publiée</span>')+
     '<div class="n2-agenda-legend" aria-label="Légende">'+
       '<span><i data-tone="morning"></i>Matin</span><span><i data-tone="afternoon"></i>Après-midi</span>'+
       '<span><i data-tone="rest"></i>Repos</span><span><i data-tone="leave"></i>Congés</span></div></div>';
 }
-export function renderDesktopPlanningAgenda({model,people=[],week,day,view='week',sourceFile='',renderPerson,formatHours,canYear=false,loading=false}){
+export function renderDesktopPlanningAgenda({model,people=[],week,day,view='week',sourceFile='',renderPerson,formatHours,canYear=false,loading=false,query=''}){
   const currentDay=Array.from({length:7},(_,i)=>plusDays(week,i)).includes(day)?day:week;
+  const shown=people.filter(p=>p.name.toLocaleLowerCase('fr').includes(query.trim().toLocaleLowerCase('fr')));
   const content=!model?'<div class="n2-agenda-empty">Aucun planning publié pour cette semaine. Utilise les flèches pour choisir une autre semaine.</div>':
-    view==='day'?dayGrid(people,currentDay,week,model,renderPerson):weekGrid(people,week,model,renderPerson,formatHours);
+    view==='day'?dayGrid(shown,currentDay,week,model,renderPerson):weekGrid(shown,week,model,renderPerson,formatHours);
   return '<section class="card n2-agenda" aria-label="Planning de l’équipe">'+
-    '<div class="n2-agenda-top"><div><h2>Planning de l’équipe</h2><p>'+esc(sourceFile||'Semaine publiée')+'</p></div><button class="n2-agenda-refresh" type="button" data-action="refresh">Actualiser ↻</button></div>'+
-    nav(view,week,currentDay,canYear)+content+(model?summary(people,currentDay,week,model,view):'')+
+    '<div class="n2-agenda-top"><div><h2>Planning de l’équipe</h2><p>'+esc(model?(sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div><button class="n2-agenda-refresh" type="button" data-action="refresh">Actualiser ↻</button></div>'+
+    nav(view,week,currentDay,canYear,query)+content+(model?summary(shown,currentDay,week,model,view):'')+
     (loading?'<div class="n2-agenda-loading" role="status">Chargement du planning…</div>':'')+'</section>';
 }
