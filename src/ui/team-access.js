@@ -11,6 +11,7 @@ export function canViewTeam(profile) {
  * isSmallScreen reflète la largeur effective de l'interface (<= 760px).
  */
 export function canNavigate(page, profile, isSmallScreen = false) {
+  if(page === 'promo') return profile?.role === 'admin' && !isSmallScreen;
   if(page === 'team') return canViewTeam(profile);
   if(page === 'anomalies' && profile?.role === 'role_point-de-vente' && !isSmallScreen) return false;
   return true;
