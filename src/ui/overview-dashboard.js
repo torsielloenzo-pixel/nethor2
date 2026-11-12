@@ -49,30 +49,10 @@ const serviceKind=day=>day.leave?'leave':!day.ranges.length?'rest':day.ranges[0]
 const serviceText=kind=>({morning:'Matin',afternoon:'Après-midi',leave:'Congés',rest:'Repos'})[kind];
 const humanDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'});
 const modalIcon='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
-export function renderOverviewDashboard({people=[],week='',today='',sync={},open=null,syncPeriod=7,hasPlanning=false,personDetail=null,personIssues=[],personSource='',personRevision=null}={}){
- const currentWeek=monday(today)===week;
- const todayIndex=currentWeek?Math.round((Date.parse(today+'T12:00:00Z')-Date.parse(week+'T12:00:00Z'))/86400000):-1;
- const roster=buildDashboardPeople(people);
- const currentlyWorking=todayIndex>=0?roster.filter(p=>dayInfo(p.people,todayIndex).minutes>0).length:null;
- const currentStatus=syncOverviewStatus(sync);
- const statusLabel={online:'Connecté',offline:'Hors ligne','not-seen':'En attente du premier contact','not-configured':'Non configuré',loading:'Vérification…',error:'État indisponible'}[currentStatus]||'État inconnu';
- const lastCheck=sync?.status?.lastCheckAt?formatSyncTimestamp(sync.status.lastCheckAt):null;
- const dateTitle=currentWeek?"Aujourd’hui · "+new Date(today+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}):'Semaine consultée · '+week;
- const cards=roster.map((item,index)=>{
-  const day=todayIndex>=0?dayInfo(item.people,todayIndex):null;
-  const kind=day?serviceKind(day):'unknown';
-  const dateLabel=day?day.label:'Consulter la semaine';
-  const subtitle=day?(kind==='rest'?'Non planifié aujourd’hui':kind==='leave'?'En congés':kind==='morning'?'Service du matin':'Service de l’après-midi'):'Horaires de la semaine';
-  return '<button type="button" class="n2dash-person" data-action="dashboard-person" data-dashboard-person="'+index+'"><span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span><span class="n2dash-person-main"><strong>'+esc(item.name)+'</strong><small>'+esc(subtitle)+'</small></span><span class="n2dash-person-time" data-kind="'+kind+'">'+esc(dateLabel)+'</span><span class="n2dash-chevron" aria-hidden="true">›</span></button>';
- }).join('');
- const totals='<div class="n2dash-kpis"><div><small>Collaborateurs au planning</small><strong>'+roster.length+'</strong></div><div><small>En poste aujourd’hui</small><strong>'+(currentlyWorking===null?'—':currentlyWorking)+'</strong></div><div><small>État NethorSync</small><strong>'+esc(statusLabel)+'</strong></div></div>';
- const peopleSection='<section class="card n2dash-section"><div class="n2dash-section-head"><div><h2>Équipe</h2><p>'+roster.length+' collaborateurs · '+esc(currentWeek?humanDate(today):'Semaine du '+humanDate(week))+'</p></div><button type="button" class="n2dash-text-action" data-action="go-planning">Planning complet ↗</button></div><div class="n2dash-roster">'+(cards||'<div class="n2dash-empty">Aucun collaborateur à afficher.</div>')+'</div></section>';
- const syncSummary='<section class="card n2dash-section n2dash-sync"><div class="n2dash-section-head"><div><h2>NethorSync</h2><p>Synchronisation des fichiers Excel</p></div></div><button type="button" class="n2dash-sync-button" data-action="dashboard-sync"><span class="n2dash-sync-dot" data-status="'+esc(currentStatus)+'"></span><span class="n2dash-sync-main"><strong>'+esc(statusLabel)+'</strong><small>'+(sync?.status?.installed?'Poste : '+esc(sync.status.deviceLabel||'Inconnu'):'Poste non lié')+'</small><small>'+(lastCheck?'Dernier contrôle : '+esc(lastCheck.date)+' à '+esc(lastCheck.time):'Aucun contrôle enregistré')+'</small></span><span class="n2dash-chevron" aria-hidden="true">›</span></button><p class="n2dash-footnote">Ouvrir pour consulter les transferts, vérifications et erreurs signalées.</p></section>';
+/** Fiche collaborateur partagée entre Vue d'ensemble et Planning Desktop/PWA. */
+export function renderCollaboratorSheet({item,week='',today='',open=null,hasPlanning=false,personDetail=null,personIssues=[],personSource='',personRevision=null}={}){
+ if(!item||open?.type!=='person')return '';
  let modal='';
-
- if(open?.type==='person'){
-  const item=roster[Number(open.index)];
-  if(item){
    const focus=personDetail?.week&&personDetail.week!==week?personDetail:null;
    const focusedWeek=focus?.week||week;
    const selected=focus?focus.people?.find(p=>p.id===item.id):item;
@@ -125,7 +105,33 @@ export function renderOverviewDashboard({people=[],week='',today='',sync={},open
     '<div class="n2dash-person-tabs" role="tablist" aria-label="Sections de la fiche"><button type="button" role="tab" aria-selected="'+(tab==='planning')+'" class="'+(tab==='planning'?'active':'')+'" data-action="dashboard-tab-planning">Planning</button><button type="button" role="tab" aria-selected="'+(tab==='suivi')+'" class="'+(tab==='suivi'?'active':'')+'" data-action="dashboard-tab-suivi">Suivi</button></div>'+
     '<div class="n2dash-modal-body">'+nav+(tab==='planning'?availability+((days&&selected)?stats+'<div class="n2dash-days">'+rows+'</div>':''):follow)+'</div>'+
     '<footer><button type="button" class="btn primary" data-action="dashboard-open-planning">Ouvrir le planning mensuel ↗</button></footer></section></div>';
-  }
+
+ return modal;
+}
+
+export function renderOverviewDashboard({people=[],week='',today='',sync={},open=null,syncPeriod=7,hasPlanning=false,personDetail=null,personIssues=[],personSource='',personRevision=null}={}){
+ const currentWeek=monday(today)===week;
+ const todayIndex=currentWeek?Math.round((Date.parse(today+'T12:00:00Z')-Date.parse(week+'T12:00:00Z'))/86400000):-1;
+ const roster=buildDashboardPeople(people);
+ const currentlyWorking=todayIndex>=0?roster.filter(p=>dayInfo(p.people,todayIndex).minutes>0).length:null;
+ const currentStatus=syncOverviewStatus(sync);
+ const statusLabel={online:'Connecté',offline:'Hors ligne','not-seen':'En attente du premier contact','not-configured':'Non configuré',loading:'Vérification…',error:'État indisponible'}[currentStatus]||'État inconnu';
+ const lastCheck=sync?.status?.lastCheckAt?formatSyncTimestamp(sync.status.lastCheckAt):null;
+ const dateTitle=currentWeek?"Aujourd’hui · "+new Date(today+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}):'Semaine consultée · '+week;
+ const cards=roster.map((item,index)=>{
+  const day=todayIndex>=0?dayInfo(item.people,todayIndex):null;
+  const kind=day?serviceKind(day):'unknown';
+  const dateLabel=day?day.label:'Consulter la semaine';
+  const subtitle=day?(kind==='rest'?'Non planifié aujourd’hui':kind==='leave'?'En congés':kind==='morning'?'Service du matin':'Service de l’après-midi'):'Horaires de la semaine';
+  return '<button type="button" class="n2dash-person" data-action="dashboard-person" data-dashboard-person="'+index+'"><span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span><span class="n2dash-person-main"><strong>'+esc(item.name)+'</strong><small>'+esc(subtitle)+'</small></span><span class="n2dash-person-time" data-kind="'+kind+'">'+esc(dateLabel)+'</span><span class="n2dash-chevron" aria-hidden="true">›</span></button>';
+ }).join('');
+ const totals='<div class="n2dash-kpis"><div><small>Collaborateurs au planning</small><strong>'+roster.length+'</strong></div><div><small>En poste aujourd’hui</small><strong>'+(currentlyWorking===null?'—':currentlyWorking)+'</strong></div><div><small>État NethorSync</small><strong>'+esc(statusLabel)+'</strong></div></div>';
+ const peopleSection='<section class="card n2dash-section"><div class="n2dash-section-head"><div><h2>Équipe</h2><p>'+roster.length+' collaborateurs · '+esc(currentWeek?humanDate(today):'Semaine du '+humanDate(week))+'</p></div><button type="button" class="n2dash-text-action" data-action="go-planning">Planning complet ↗</button></div><div class="n2dash-roster">'+(cards||'<div class="n2dash-empty">Aucun collaborateur à afficher.</div>')+'</div></section>';
+ const syncSummary='<section class="card n2dash-section n2dash-sync"><div class="n2dash-section-head"><div><h2>NethorSync</h2><p>Synchronisation des fichiers Excel</p></div></div><button type="button" class="n2dash-sync-button" data-action="dashboard-sync"><span class="n2dash-sync-dot" data-status="'+esc(currentStatus)+'"></span><span class="n2dash-sync-main"><strong>'+esc(statusLabel)+'</strong><small>'+(sync?.status?.installed?'Poste : '+esc(sync.status.deviceLabel||'Inconnu'):'Poste non lié')+'</small><small>'+(lastCheck?'Dernier contrôle : '+esc(lastCheck.date)+' à '+esc(lastCheck.time):'Aucun contrôle enregistré')+'</small></span><span class="n2dash-chevron" aria-hidden="true">›</span></button><p class="n2dash-footnote">Ouvrir pour consulter les transferts, vérifications et erreurs signalées.</p></section>';
+ let modal='';
+
+ if(open?.type==='person'){
+  modal=renderCollaboratorSheet({item:roster[Number(open.index)],week,today,open,hasPlanning,personDetail,personIssues,personSource,personRevision});
  }
  if(open?.type==='sync'){
   modal='<div class="n2dash-overlay" data-dashboard-backdrop><section class="n2dash-modal n2dash-modal-wide" role="dialog" aria-modal="true" aria-label="Détails NethorSync"><header class="n2dash-modal-head"><div><p>ÉTAT DU POSTE ET DU CLOUD</p><h2>NethorSync</h2><small>Contrôles, historique, transferts et diagnostics</small></div><button type="button" class="n2dash-close" data-action="dashboard-close" aria-label="Fermer">'+modalIcon+'</button></header><div class="n2dash-modal-body">'+renderSyncOverviewCard(sync,Date.now(),syncPeriod)+'</div><footer><button type="button" class="btn" data-action="dashboard-close">Fermer</button><button type="button" class="btn primary" data-action="dashboard-sync-settings">Paramètres NethorSync</button></footer></section></div>';
