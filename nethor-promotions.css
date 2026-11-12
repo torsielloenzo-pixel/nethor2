@@ -1,0 +1,58 @@
+/* Promotions — tableau de bord cohérent avec la vue d'ensemble Desktop. */
+#app .n2promo{color:#273e60;display:grid;gap:17px;min-width:0;padding-bottom:16px}
+#app .n2promo-hero{background:linear-gradient(112deg,#fff 0%,#f6f9ff 100%);border:1px solid #e2eaf5;border-radius:19px;padding:23px 26px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+#app .n2promo-hero-copy{display:grid;gap:9px;min-width:0}
+#app .n2promo-overline{font-size:10px;letter-spacing:1.35px;font-weight:820;color:#6e89af}
+#app .n2promo-hero h2{font-weight:840;letter-spacing:-.65px;color:#213b63;font-size:24px;margin:0}
+#app .n2promo-hero p{color:#76869d;max-width:700px;font-size:12px;line-height:1.65;margin:0}
+#app .n2promo-hero-meta{display:flex;align-items:center;flex-wrap:wrap;gap:13px;color:#8a99ae;font-size:11px;font-weight:660}
+#app .n2promo-status{display:inline-flex;align-items:center;gap:7px;background:#f2f5fa;border:1px solid #e4eaf2;color:#64738b;padding:7px 11px;border-radius:25px;font-size:11px;font-weight:770}
+#app .n2promo-status[data-health="ok"]{color:#267454;background:#ecf7f0;border-color:#d4eddd}
+#app .n2promo-status[data-health="warn"]{color:#9a692b;background:#fff5e8;border-color:#f1dfc1}
+#app .n2promo-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+#app .n2promo-refresh{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:none;border:1px solid #d3e0f1;background:#fff;color:#2458a8;padding:12px 15px;border-radius:11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px #24456a09}
+#app .n2promo-refresh:hover{background:#f0f6ff;border-color:#aac6ef}
+#app .n2promo-refresh:disabled{opacity:.55;cursor:wait}
+#app .n2promo-refresh span{font-size:20px;font-weight:500;line-height:12px}
+#app .n2promo-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#app .n2promo-metric{background:#fff;border:1px solid #e3eaf4;border-radius:15px;padding:17px 20px;display:grid;gap:6px;box-shadow:0 5px 19px #203b6809;min-width:0}
+#app .n2promo-metric small{color:#7c8ca3;font-size:11px;font-weight:700}
+#app .n2promo-metric strong{color:#273e60;font-size:27px;font-weight:840;line-height:1.2;font-variant-numeric:tabular-nums}
+#app .n2promo-metric span{color:#9aa7b8;font-size:10px;font-weight:600}
+#app .n2promo-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr);gap:17px;align-items:start}
+#app .n2promo-main,#app .n2promo-aside{min-width:0;display:grid;gap:17px}
+#app .n2promo-card{background:#fff;border:1px solid #e3eaf4;border-radius:17px;box-shadow:0 4px 18px #193b6708;min-width:0;overflow:hidden}
+#app .n2promo-card-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 23px;border-bottom:1px solid #edf1f6}
+#app .n2promo-card-head h2{color:#253d60;margin:0 0 4px;font-size:16px;font-weight:820;letter-spacing:-.3px}
+#app .n2promo-card-head p{color:#8b9ab0;margin:0;font-size:11px;line-height:1.5}
+#app .n2promo-count{background:#edf3fe;color:#3562a3;border-radius:9px;min-width:30px;text-align:center;padding:7px 9px;font-size:11px;font-weight:820}
+#app .n2promo-list-body{display:grid;padding:8px 13px 13px}
+#app .n2promo-item{display:flex;align-items:center;gap:13px;padding:13px 10px;border-radius:11px}
+#app .n2promo-item+.n2promo-item{border-top:1px solid #edf1f7}
+#app .n2promo-item:hover{background:#f7faff}
+#app .n2promo-item-icon{flex:none;display:grid;place-items:center;width:40px;height:42px;background:#eaf1fe;border:1px solid #dce8f8;border-radius:12px;color:#3c6ba9}
+#app .n2promo-item-icon svg{width:20px;height:20px}
+#app .n2promo-item-main{min-width:0;flex:1;display:grid;gap:3px}
+#app .n2promo-item-tag{color:#4973a7;font-size:9px;font-weight:810;letter-spacing:.65px;text-transform:uppercase}
+#app .n2promo-item h3{font-size:13px;color:#263e61;font-weight:800;margin:0;overflow-wrap:anywhere}
+#app .n2promo-item p{font-size:11px;color:#8c99ab;margin:1px 0 0}
+#app .n2promo-official-link{flex:none;text-decoration:none;border:1px solid #dbe6f5;color:#2d62af;font-size:11px;font-weight:800;padding:10px 12px;border-radius:10px;white-space:nowrap}
+#app .n2promo-official-link:hover{background:#eaf3ff}
+#app .n2promo-empty{padding:23px;color:#8a98ae;text-align:center}
+#app .n2promo-empty strong{display:block;color:#566e8f;font-size:12px;margin-bottom:6px}
+#app .n2promo-empty p{font-size:11px;line-height:1.6;margin:0}
+#app .n2promo-details{margin:0;padding:8px 22px;display:grid}
+#app .n2promo-details div{padding:13px 0;display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #edf1f5}
+#app .n2promo-details div:last-child{border-bottom:0}
+#app .n2promo-details dt{color:#8495ac;font-size:11px}
+#app .n2promo-details dd{color:#334e73;font-size:11px;font-weight:790;margin:0;text-align:right}
+#app .n2promo-footnote{font-size:10.5px;line-height:1.7;margin:8px 22px 20px;color:#8b9cb1}
+#app .n2promo-upcoming{display:flex;align-items:flex-start;gap:10px;margin:14px 22px}
+#app .n2promo-upcoming span{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:9px;background:#eef4fe;color:#3365ad;font-size:11px;font-weight:830}
+#app .n2promo-upcoming p{color:#667c98;font-size:11px;line-height:1.6;margin:3px 0}
+#app .n2promo-notice{background:#fff8ed;border:1px solid #f3e2c5;border-radius:13px;color:#876638;font-size:12px;line-height:1.6;padding:13px 17px}
+#app .n2promo-notice a{color:#255c9b;font-weight:800}
+#app .n2promo button:focus-visible,#app .n2promo a:focus-visible{outline:2px solid #3372bf;outline-offset:3px}
+@media(max-width:1140px){#app .n2promo-layout{grid-template-columns:1fr}#app .n2promo-aside{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:860px){#app .n2promo-hero{align-items:flex-start;flex-direction:column}#app .n2promo-aside{grid-template-columns:1fr}}
+@media(max-width:760px){#app .n2promo{display:none}}

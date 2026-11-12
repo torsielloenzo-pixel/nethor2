@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '15 5 * * *'
 permissions:
   contents: read
   pages: write
@@ -21,10 +23,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Vérifier la syntaxe et les tests
         run: npm run check
+      - name: Vérifier et collecter les prospectus Netto
+        run: |
+          python3 -m unittest discover -s tests -p 'test_netto_collector.py'
+          python3 scripts/collect-netto-promotions.py --output _site/data/netto-catalogues.json
+          test -s _site/data/netto-catalogues.json
       - name: Préparer les ressources publiques de la PWA Nethor 2
         run: |
           mkdir -p _site/assets
-          cp index.html reset-password.html styles.css live.css mobile.css mobile-sync-simple.css staff-desktop.css nethor-sync.css nethor-sync-import-guide.css nethor-account-ui.css nethor-dashboard.css nethor-history-browser.css nethor-flow.css nethor-flow.js sw.js manifest.webmanifest CNAME _site/
+          cp index.html reset-password.html styles.css live.css mobile.css mobile-sync-simple.css staff-desktop.css nethor-sync.css nethor-sync-import-guide.css nethor-account-ui.css nethor-dashboard.css nethor-promotions.css nethor-history-browser.css nethor-flow.css nethor-flow.js sw.js manifest.webmanifest CNAME _site/
           cp assets/icon.svg _site/assets/
           cp -R src _site/
           python3 -m pip install --disable-pip-version-check --quiet 'CairoSVG==2.8.2' 'Pillow==11.3.0'

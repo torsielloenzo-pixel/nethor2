@@ -19,3 +19,5 @@ jobs:
           node-version: '22'
       - name: Vérifier la syntaxe et les tests
         run: npm run check
+      - name: Vérifier le collecteur Netto
+        run: python3 -m unittest discover -s tests -p 'test_netto_collector.py'

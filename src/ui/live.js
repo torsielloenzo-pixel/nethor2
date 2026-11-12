@@ -66,7 +66,7 @@ function closeMobileMenu(){
 }
 
 const DAYS=['Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.','Dim.'];
-const TITLES={home:'Vue d’ensemble',planning:'Planning',anomalies:'Anomalies',import:'Importer',team:'Équipe',history:'Historique',promo:'NETHOR Promo',settings:'Paramètres'};
+const TITLES={home:'Vue d’ensemble',planning:'Planning',anomalies:'Anomalies',import:'Importer',team:'Équipe',history:'Historique',promo:'Promotions',settings:'Paramètres'};
 const MOBILE_PAGE_TITLES={home:'Accueil',planning:'Planning',anomalies:'NethorSync',import:'Importer',team:'Équipe',history:'Historique',settings:'Paramètres'};
 
 // Pictogrammes SVG communs : desktop, mobile et PWA.
@@ -96,6 +96,7 @@ let client;
 let syncController=null;
 const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planningName:'',mode:'list',query:''};
 let syncChartPeriod=7;
+const promoCatalogState={loaded:false,loading:false,data:null,error:''};
 let dashboardOpen=null;
 const staffDetail={name:null,month:null,weeks:[],loading:false,error:'',request:0,showMonth:false};
 const staffPlanningRole=()=>!smallScreen()&&['admin','role_point-de-vente'].includes(state.profile?.role);
@@ -1239,7 +1240,24 @@ function pageHistory(){
 }
 function pagePromo(){
   if(!canNavigate('promo',state.profile,smallScreen()))return '<div class="live-error">Accès réservé aux administrateurs sur ordinateur.</div>';
-  return renderPageHeader('GESTION COMMERCIALE','NETHOR Promo','Catalogues Netto et préparation des opérations commerciales.')+renderNethorPromo();
+  return renderPageHeader('GESTION COMMERCIALE','Promotions','Prospectus Netto de la semaine en cours, de la suivante et opérations spéciales.')+renderNethorPromo(promoCatalogState);
+}
+async function loadPromoCatalogs(){
+  if(!canNavigate('promo',state.profile,smallScreen())||promoCatalogState.loading)return;
+  promoCatalogState.loading=true;promoCatalogState.error='';
+  if(state.page==='promo')render();
+  try{
+    const response=await fetch('./data/netto-catalogues.json?cb='+Date.now(),{cache:'no-store'});
+    if(!response.ok)throw new Error('Résultats de collecte non disponibles (HTTP '+response.status+').');
+    const data=await response.json();
+    if(!data||!Array.isArray(data.catalogs)||!data.collected_at)throw new Error('Fichier de collecte invalide.');
+    promoCatalogState.data=data;promoCatalogState.loaded=true;
+  }catch(error){
+    promoCatalogState.error=String(error?.message||error);
+  }finally{
+    promoCatalogState.loading=false;
+    if(state.page==='promo'&&canNavigate('promo',state.profile,smallScreen()))render();
+  }
 }
 function render(){
   const screen=ROOT.querySelector('#screen');
@@ -1319,6 +1337,7 @@ function go(page){
   }
   closeMobileMenu();
   if(page==='history')void loadHistory();else render();
+  if(page==='promo'&&!promoCatalogState.loaded)void loadPromoCatalogs();
   if(dashboardWeekChanged)void loadWeek();
   if(page==='anomalies'&&smallScreen())void loadMobileSyncStatus();
   if(page==='import'&&!smallScreen())void loadImportSyncStatus();
@@ -1698,6 +1717,9 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(action==='promo-refresh'&&state.page==='promo'&&canNavigate('promo',state.profile,smallScreen())){
+    await loadPromoCatalogs();return;
+  }
   if(action==='notifications-toggle'){
     if(!state.planningNotifications.enabled)return;
     state.planningNotifications.open=!state.planningNotifications.open;
