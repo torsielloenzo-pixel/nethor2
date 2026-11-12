@@ -144,6 +144,7 @@ let personalRequestId=0;
 let annualRequestId=0;
 let collaboratorsRequestId=0;
 const collaboratorHistory={loaded:false,loading:false,items:[],error:'',open:false};
+let desktopAgendaQuery='';
 let recoveryPrompt={step:'closed',dismissed:false,saving:false,error:'',mailStatus:''};
 // Préférence de planning locale, cloisonnée par compte et par navigateur.
 const planningPreferenceKey=id=>'nethor2-planning-start-v1:'+id;
@@ -964,7 +965,7 @@ function pagePlanning(metrics){
   return renderPageHeader('PLANNING','Planning du personnel','Horaires et planning de l’équipe.',button('Historique personnel','personal-history-toggle')+(staffPlanningRole()?'':state.access==='manage'?button('Importer Excel','go-import',true):''))+collaboratorPanel()+
     renderDesktopPlanningAgenda({model:visibleModel(),people:metrics.people,week:state.week,day:state.day,view:state.view,
       sourceFile:state.weekData?.sourceFile||'',renderPerson:personWithAccountLink,formatHours:hours,
-      canYear:desktopAnnualAllowed(),loading:state.loading})+
+      canYear:desktopAnnualAllowed(),loading:state.loading,query:desktopAgendaQuery})+
     (staffPlanningRole()?(staffDetail.showMonth?renderStaffDetail(metrics):sheet):'');
 }
 
@@ -1988,10 +1989,12 @@ ROOT.addEventListener('change',event=>{
 });
 ROOT.addEventListener('input',event=>{
   if(event.target.id==='n2AgendaSearch'&&state.page==='planning'&&!smallScreen()){
-    const term=event.target.value.trim().toLocaleLowerCase('fr');
-    ROOT.querySelectorAll('.n2-agenda-person-row').forEach(row=>{
-      row.hidden=!row.dataset.agendaPerson?.includes(term);
-    });
+    desktopAgendaQuery=event.target.value;
+    const caret=event.target.selectionStart;
+    render();
+    const input=ROOT.querySelector('#n2AgendaSearch');
+    input?.focus();
+    if(Number.isInteger(caret))input?.setSelectionRange(caret,caret);
     return;
   }
   if(event.target.id==='historySearch'&&state.page==='history'&&state.profile?.role==='admin'){
