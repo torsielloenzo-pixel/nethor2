@@ -945,7 +945,7 @@ function pagePlanning(metrics){
     return renderPlanningYear({...state.mobilePlanning.annual,year:state.mobilePlanning.year,
       today:dateInParis(),selectedDay:state.day});
   }
-  if(smallScreen())return renderMobilePlanning({
+  if(isMobileHome())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:visibleModel(),profiles:state.profiles,
     currentProfile:state.profile,allowYear:annualAllowed(),filter:state.mobilePlanning.dayFilter,
