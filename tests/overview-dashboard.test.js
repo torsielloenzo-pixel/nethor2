@@ -13,7 +13,8 @@ test('overview combines two explicit aliases linked to one account',()=>{
  assert.doesNotMatch(overview,/n2dash-days/);
  const details=renderOverviewDashboard({people:rows,week:'2026-10-26',today:'2026-10-31',sync:{loaded:false},hasPlanning:true,open:{type:'person',index:0}});
  assert.match(details,/n2dash-days/);
- assert.match(details,/Enzo L/);
+ const suivi=renderOverviewDashboard({people:rows,week:'2026-10-26',today:'2026-10-31',sync:{loaded:false},hasPlanning:true,open:{type:'person',index:0,tab:'suivi'}});
+ assert.match(suivi,/Enzo L/);
 });
 test('past-week overview does not expose a past shift as the current-day summary',()=>{
  const person={name:'Clément',days:days([{startMinutes:840,endMinutes:1230}])};
