@@ -45,11 +45,13 @@
  .n2sync-period-summary .n2sync-chart-progress{width:100%;margin-top:7px;height:7px}
  .n2sync-last-report{margin:0;padding:10px 12px;border-radius:9px;background:#f4f9ff;border:1px solid #e1ebf7;color:#446388;font-size:11px;line-height:1.5}
  .n2sync-last-report[data-state=error]{background:#fff8f7;border-color:#f1d8d4;color:#9b4b55}
- .n2sync-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+ .n2sync-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
  .n2sync-metric{background:#f7f9fd;border:1px solid #e7edf6;border-radius:12px;padding:15px;min-width:0}
  .n2sync-metric span{display:block;color:#7587a1;font-size:11px;line-height:1.5}
  .n2sync-metric strong{display:block;margin-top:6px;color:#243e66;font-size:26px;font-weight:850;font-variant-numeric:tabular-nums}
  .n2sync-metric.success strong{color:#2468b4}
+ .n2sync-metric.incident strong{color:#ad751c}
+ .n2sync-metric.control strong{color:#2468b4}
  .n2sync-metric.error strong{color:#bb555a}
  .n2sync-metric.transfer strong{color:#277e68}
  .n2sync-metric.no-transfer strong{color:#247360}
