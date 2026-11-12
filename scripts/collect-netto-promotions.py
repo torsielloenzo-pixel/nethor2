@@ -212,8 +212,12 @@ def robots_policy():
     try:
         text = http_text(BASE + "/robots.txt", limit=400_000)
     except urllib.error.HTTPError as exc:
-        if exc.code == 404:
-            return lambda url: True, None
+        # RFC 9309, § 2.3.1.3 : robots.txt HTTP 4xx est « unavailable »
+        # (une tentative d'accès aux pages publiques est permise).
+        # Un refus HTTP 403 sur les pages elles-mêmes reste bloquant.
+        if 400 <= exc.code < 500:
+            return lambda url: True, (
+                f"robots.txt non publié (HTTP {exc.code}), accès aux pages à vérifier")
         return lambda url: False, f"robots.txt indisponible (HTTP {exc.code})"
     except Exception as exc:
         return lambda url: False, "robots.txt inaccessible : " + type(exc).__name__
@@ -273,15 +277,17 @@ def collect(today: date | None = None, fetch=http_text, sleep=time.sleep,
     if check_robots:
         allowed, robot_error = robots_policy()
         if robot_error:
-            result["status"] = "blocked"
             result["warnings"].append(robot_error)
-            return result
+            if not allowed(BASE + "/prospectus"):
+                result["status"] = "blocked"
+                return result
     else:
         allowed = lambda url: True
 
     discovery = {url for path in SEEDS if (url := official_catalog_url(path))}
     discovery.update(weekly_url_candidates(today))
     source_ok = False
+    forbidden_pages = 0
     for url in (BASE + "/prospectus", BASE + "/"):
         if not allowed(url):
             result["warnings"].append("Accès interdit par robots.txt : " + url)
@@ -289,9 +295,20 @@ def collect(today: date | None = None, fetch=http_text, sleep=time.sleep,
         try:
             discovery.update(candidate_urls(fetch(url)))
             source_ok = True
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                forbidden_pages += 1
+            result["warnings"].append("Page de découverte inaccessible (HTTP " + str(exc.code) + ")")
         except Exception as exc:
             result["warnings"].append("Page de découverte inaccessible : " + type(exc).__name__)
         sleep(0.25)
+
+    # On ne multiplie pas les requêtes si le site refuse les deux points d'entrée.
+    if forbidden_pages == 2:
+        result["status"] = "blocked"
+        result["warnings"].append("Les pages officielles refusent l'accès (HTTP 401/403)")
+        result["warnings"] = list(dict.fromkeys(result["warnings"]))[:8]
+        return result
 
     if fetch is http_text:
         discovery.update(sitemap_candidates(allowed, result["warnings"]))
@@ -346,6 +363,8 @@ def main():
     print("Collecte Netto :", output["status"], "|",
           len(output["catalogs"]), "catalogue(s) confirmé(s) |",
           len(output["warnings"]), "avertissement(s)")
+    for warning in output["warnings"]:
+        print("Avertissement Netto :", warning)
 
 
 if __name__ == "__main__":

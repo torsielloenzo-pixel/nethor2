@@ -1,5 +1,7 @@
 import importlib.util
 import unittest
+import urllib.error
+from unittest.mock import patch
 from datetime import date
 from pathlib import Path
 
@@ -59,6 +61,26 @@ class CollectorTests(unittest.TestCase):
             sleep=lambda _: None, check_robots=False)
         self.assertEqual(result["catalogs"], [])
         self.assertEqual(result["status"], "none_found")
+
+    def test_robots_http_403_unavailable_not_a_disallow_rule(self):
+        def error403(url, limit=400_000):
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, None)
+        with patch.object(MODULE, "http_text", error403):
+            allowed, note = MODULE.robots_policy()
+        self.assertTrue(allowed("https://www.netto.fr/prospectus"))
+        self.assertIn("HTTP 403", note)
+
+    def test_refuses_more_requests_when_official_pages_deny_access(self):
+        called = []
+        def denied(url):
+            called.append(url)
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, None)
+        result = MODULE.collect(
+            date(2026, 11, 12), fetch=denied,
+            sleep=lambda _: None, check_robots=False)
+        self.assertEqual(result["status"], "blocked")
+        self.assertEqual(len(called), 2)
+        self.assertEqual(result["catalogs"], [])
 
     def test_expired_catalogs_do_not_appear(self):
         result = MODULE.parse_catalog(
