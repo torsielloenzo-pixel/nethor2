@@ -17,6 +17,7 @@ import {renderMobilePlanning} from './planning-mobile.js';
 import {readCalendarSubscription} from '../data/calendar-subscription.js';
 import {renderPlanningYear} from './planning-year.js';
 import {renderDesktopPlanningDay,renderDesktopPlanningLegend} from './planning-desktop-colors.js';
+import {renderDesktopPlanningAgenda} from './planning-desktop-agenda.js';
 import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics,readSyncHistoricalSummary} from '../data/nethor-sync-control.js';
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
 import {mergeImportHistory,renderHistoryBrowser} from './import-history.js';
@@ -943,7 +944,7 @@ function pagePlanning(metrics){
     return renderPlanningYear({...state.mobilePlanning.annual,year:state.mobilePlanning.year,
       today:dateInParis(),selectedDay:state.day});
   }
-  if(isMobileHome())return renderMobilePlanning({
+  if(smallScreen())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:visibleModel(),profiles:state.profiles,
     currentProfile:state.profile,allowYear:annualAllowed(),filter:state.mobilePlanning.dayFilter,
@@ -960,7 +961,11 @@ function pagePlanning(metrics){
     personSource:state.weekData?.sourceFile||'',personRevision:state.weekData?.revision||null,
     personIssues:dashboardIssuesFor(metrics.issues,person)
   }):'';
-  return renderPageHeader('PLANNING','Planning du personnel','Horaires et planning de l’équipe.',button('Historique personnel','personal-history-toggle')+(staffPlanningRole()?'':state.access==='manage'?button('Importer Excel','go-import',true):''))+collaboratorPanel()+planningCard(metrics)+(staffPlanningRole()?(staffDetail.showMonth?renderStaffDetail(metrics):sheet):'');
+  return renderPageHeader('PLANNING','Planning du personnel','Horaires et planning de l’équipe.',button('Historique personnel','personal-history-toggle')+(staffPlanningRole()?'':state.access==='manage'?button('Importer Excel','go-import',true):''))+collaboratorPanel()+
+    renderDesktopPlanningAgenda({model:visibleModel(),people:metrics.people,week:state.week,day:state.day,view:state.view,
+      sourceFile:state.weekData?.sourceFile||'',renderPerson:personWithAccountLink,formatHours:hours,
+      canYear:desktopAnnualAllowed(),loading:state.loading})+
+    (staffPlanningRole()?(staffDetail.showMonth?renderStaffDetail(metrics):sheet):'');
 }
 
 async function loadMobileSyncStatus(force=false){
@@ -1914,7 +1919,16 @@ ROOT.addEventListener('click',async event=>{
   else if(action==='calendar-subscribe')subscribePlanningCalendar();
   else if(action==='go-import')go('import');
   else if(action==='go-planning')go('planning');
-  else if(action==='today'){
+  else if((action==='agenda-prev-day'||action==='agenda-next-day')&&state.page==='planning'&&!smallScreen()){
+    if(weekLoadBusy)return;
+    const target=plusDays(state.day,action==='agenda-prev-day'?-1:1);
+    const nextWeek=mondayOf(target);
+    if(nextWeek<MIN_PLANNING_DATE)return;
+    state.day=target;
+    if(nextWeek!==state.week){state.week=nextWeek;await loadWeek();}
+    else render();
+   }
+   else if(action==='today'){
     if(weekLoadBusy)return;
     const today=dateInParis();state.week=mondayOf(today);state.day=today;state.mobilePlanning.dayFilter='all';await loadWeek();
   }
@@ -1973,6 +1987,13 @@ ROOT.addEventListener('change',event=>{
  if(event.target.id==='excelFile')void selectFile(event.target.files?.[0]);
 });
 ROOT.addEventListener('input',event=>{
+  if(event.target.id==='n2AgendaSearch'&&state.page==='planning'&&!smallScreen()){
+    const term=event.target.value.trim().toLocaleLowerCase('fr');
+    ROOT.querySelectorAll('.n2-agenda-person-row').forEach(row=>{
+      row.hidden=!row.dataset.agendaPerson?.includes(term);
+    });
+    return;
+  }
   if(event.target.id==='historySearch'&&state.page==='history'&&state.profile?.role==='admin'){
    historyBrowser.query=event.target.value;historyBrowser.openMonths=[];
    const caret=event.target.selectionStart;render();const input=ROOT.querySelector('#historySearch');input?.focus();
