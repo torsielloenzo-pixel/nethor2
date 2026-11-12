@@ -15,6 +15,7 @@ jobs:
           python3 - <<'PY'
           import re
           import urllib.request
+          import urllib.parse
           import urllib.error
           from html import unescape
 
@@ -41,7 +42,7 @@ jobs:
               continue
             with response:
               print("HTTP:", response.status)
-              print("Final host:", urllib.request.urlparse(response.geturl()).hostname)
+              print("Final host:", urllib.parse.urlparse(response.geturl()).hostname)
               for name in interesting:
                 if value := response.headers.get(name):
                   print(name + ":", value[:150])
