@@ -1,10 +1,10 @@
 /**
- * Point d'entrée Nethor Promo : présentation de la configuration retenue.
+ * Point d'entrée NETHOR Promo : présentation de la configuration retenue.
  * Aucun collecteur ni traitement automatique n'est activé à ce stade.
  * Cette interface ne lit ni ne modifie les données de planning.
  */
 export function renderNethorPromo(){
-  return '<section class="card" aria-label="Nethor Promo — collecteur">'+
+  return '<section class="card" aria-label="NETHOR Promo — collecteur">'+
     '<div class="card-head"><div><h2 class="card-title">Collecteur de catalogues Netto</h2>'+
     '<p class="sub">Espace de préparation des opérations commerciales</p></div></div>'+
     '<div class="live-banner" role="status"><strong>Module en préparation.</strong> La recherche automatique des catalogues n’est pas encore activée. Aucun prospectus n’est analysé à ce stade.</div>'+
