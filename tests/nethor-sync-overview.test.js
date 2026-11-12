@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {canManageSync,syncHealth} from '../src/data/nethor-sync-control.js';
-import {formatSyncTimestamp,isSyncOverviewRole,NETHOR_SYNC_INSTALLER_URL,renderSyncOverviewCard,prepareSyncChart,syncOverviewStatus} from '../src/ui/nethor-sync-overview.js';
+import {formatSyncTimestamp,isSyncOverviewRole,NETHOR_SYNC_INSTALLER_URL,renderSyncOverviewCard,prepareSyncChart,summarizeSyncDays,syncOverviewStatus} from '../src/ui/nethor-sync-overview.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const now=Date.parse('2026-10-19T17:00:00Z');
 
@@ -152,12 +152,26 @@ test('Absence de données NethorSync : jamais de chiffres fictifs',()=>{
  const withData=renderSyncOverviewCard({...snapshot,history:[
   {date:'2026-10-19',success:5,errors:2,transfers:1}
  ]},now,30);
- assert.match(withData,/Taux de réussite/);
+ assert.match(withData,/Taux de réussite journalier/);
  assert.match(withData,/Cycles avec transfert/);
- assert.match(withData,/71 %/);
+ assert.match(withData,/0 %/); // Même journée : un échec suffit à signaler un incident.
+ assert.match(withData,/1 journée avec incident/);
 });
 
-test('Fiabilité récente visible sans masquer le taux de la période et ses échecs',()=>{
+test('Taux journalier : les tentatives répétées ne multiplient pas les journées en échec',()=>{
+ const report=summarizeSyncDays([
+  {success:2,errors:4},{success:1,errors:0},
+  {success:1,errors:0},{success:1,errors:0},
+  {success:1,errors:0},{success:0,errors:0}
+ ]);
+ assert.deepEqual(report,{checkedDays:5,cleanDays:4,incidentDays:1,rate:80});
+ assert.deepEqual(summarizeSyncDays([{success:7,errors:3}]),
+  {checkedDays:1,cleanDays:0,incidentDays:1,rate:0});
+ assert.deepEqual(summarizeSyncDays([{success:0,errors:0}]),
+  {checkedDays:0,cleanDays:0,incidentDays:0,rate:null});
+});
+
+test('Fiabilité récente journalière : 80 % sur 7 jours sans masquer les quatre tentatives en échec',()=>{
  const reference=Date.parse('2026-11-12T21:00:00Z');
  const history=[
   {date:'2026-11-07',success:2,errors:4,transfers:2},
@@ -171,30 +185,31 @@ test('Fiabilité récente visible sans masquer le taux de la période et ses éc
  assert.match(weekly,/Tendance récente · 3 jours calendaires/);
  assert.match(weekly,/data-state="ok"/);
  assert.match(weekly,/100 %/);
- assert.match(weekly,/2 contrôles réussis sur 2/);
- assert.match(weekly,/Taux de réussite · 7 jours/);
- assert.match(weekly,/60 %/);
- assert.match(weekly,/6 contrôles réussis \/ 10 vérifications/);
- assert.match(weekly,/4 échecs conservés dans ce calcul/);
- assert.match(weekly,/Supabase ne sont pas ajoutés à ce taux/);
+ assert.match(weekly,/2 journées sans incident sur 2 journées contrôlées/);
+ assert.match(weekly,/Taux de réussite journalier · 7 jours/);
+ assert.match(weekly,/80 %/);
+ assert.match(weekly,/4 journées sans incident \/ 5 journées contrôlées/);
+ assert.match(weekly,/1 journée avec incident · 4 tentatives échouées au total/);
+ assert.match(weekly,/Tentatives en échec<\/span><strong>4<\/strong>/);
+ assert.match(weekly,/Supabase ne sont pas incluses/);
  const monthly=renderSyncOverviewCard(snapshot,reference,30);
- assert.match(monthly,/Taux de réussite · 30 jours/);
- assert.match(monthly,/60 %/);
- assert.match(monthly,/2 contrôles réussis sur 2/);
+ assert.match(monthly,/Taux de réussite journalier · 30 jours/);
+ assert.match(monthly,/80 %/);
+ assert.match(monthly,/2 journées sans incident sur 2 journées contrôlées/);
 });
 
 test('Contrôles sans transfert, absence de rapports et incidents récents restent exacts',()=>{
  const reference=Date.parse('2026-11-12T21:00:00Z');
  const base={loaded:true,historyLoaded:true,status:{installed:true,lastSeenAt:'2026-11-12T20:00:00Z'}};
  const noChanges=renderSyncOverviewCard({...base,history:[{date:'2026-11-12',success:3,errors:0,transfers:0}]},reference);
- assert.match(noChanges,/3 contrôles réussis \/ 3 vérifications/);
+ assert.match(noChanges,/1 journée sans incident \/ 1 journée contrôlée/);
  assert.match(noChanges,/Réussites sans transfert<\/span><strong>3<\/strong>/);
- assert.match(noChanges,/Taux de réussite · 7 jours/);
+ assert.match(noChanges,/Taux de réussite journalier · 7 jours/);
  assert.match(noChanges,/100 %/);
  const incident=renderSyncOverviewCard({...base,history:[{date:'2026-11-12',success:1,errors:1,transfers:0}]},reference);
  assert.match(incident,/data-state="attention"/);
- assert.match(incident,/50 %/);
- assert.match(incident,/1 échec conservé dans ce calcul/);
+ assert.match(incident,/0 %/);
+ assert.match(incident,/1 journée avec incident · 1 tentative échouée au total/);
  const oldOnly=renderSyncOverviewCard({...base,history:[{date:'2026-11-08',success:1,errors:0,transfers:0}]},reference);
  assert.match(oldOnly,/data-state="empty"/);
  assert.match(oldOnly,/Aucun contrôle Windows enregistré sur ces trois jours/);
