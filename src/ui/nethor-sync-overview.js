@@ -148,11 +148,27 @@ export function prepareSyncChart(history,now=Date.now(),period=7){
   transfers:rows.reduce((n,d)=>n+d.transfers,0)};
 }
 
+// Les taux de fiabilité sont journaliers : une journée avec plusieurs
+// tentatives en échec compte pour une seule journée avec incident.
+// Ne pas compter les journées sans rapport comme des réussites.
+export function summarizeSyncDays(rows=[]){
+ let checkedDays=0,cleanDays=0,incidentDays=0;
+ for(const row of Array.isArray(rows)?rows:[]){
+  const success=Math.max(0,Number(row?.success)||0);
+  const errors=Math.max(0,Number(row?.errors)||0);
+  if(success+errors===0)continue;
+  checkedDays++;
+  if(errors>0)incidentDays++;
+  else cleanDays++;
+ }
+ return {checkedDays,cleanDays,incidentDays,rate:checkedDays?Math.round(cleanDays/checkedDays*100):null};
+}
+
 function renderSyncHistory(snapshot,now,period){
  const loading=!snapshot?.historyLoaded&&!snapshot?.historyError;
  const series=prepareSyncChart(snapshot?.history,now,period);
- const title='<div class="n2sync-history-top"><div><h3>Fiabilité des contrôles</h3>'+
-  '<p>Rapports réels du poste Windows · les vérifications sans transfert comptent aussi</p></div>'+
+ const title='<div class="n2sync-history-top"><div><h3>Fiabilité des synchronisations</h3>'+
+  '<p>Un jour avec plusieurs tentatives en échec compte comme une journée avec incident</p></div>'+
   '<div class="n2sync-period" role="group" aria-label="Période du graphique">'+
   [7,30].map(days=>'<button type="button" data-action="nethor-sync-chart-'+days+'"'+
    (period===days?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+days+' jours</button>').join('')+'</div></div>';
@@ -160,38 +176,39 @@ function renderSyncHistory(snapshot,now,period){
  if(snapshot?.historyError)return wrapper('<p class="n2sync-history-placeholder" role="status">Historique indisponible. Impossible de calculer une fiabilité vérifiée actuellement.</p>');
  if(loading)return wrapper('<p class="n2sync-history-placeholder" role="status">Chargement des contrôles enregistrés…</p>');
  const total=series.success+series.errors;
+ const summary=summarizeSyncDays(series.rows);
+ const recent=summarizeSyncDays(series.rows.slice(-3));
  const withoutTransfer=Math.max(0,series.success-series.transfers);
  const metrics='<div class="n2sync-metrics">'+[
-  ['Vérifications réussies',series.success,'success'],
-  ['Échecs enregistrés',series.errors,'error'],
+  ['Journées sans incident',summary.cleanDays,'success'],
+  ['Journées avec incident',summary.incidentDays,'incident'],
+  ['Contrôles réussis',series.success,'control'],
+  ['Tentatives en échec',series.errors,'error'],
   ['Cycles avec transfert',series.transfers,'transfer'],
   ['Réussites sans transfert',withoutTransfer,'no-transfer']
  ].map(([label,value,kind])=>'<div class="n2sync-metric '+kind+'"><span>'+label+'</span><strong>'+value+'</strong></div>').join('')+'</div>';
  if(total===0)return wrapper(metrics+
-  '<p class="n2sync-history-placeholder">Aucune vérification enregistrée sur cette période. Aucun taux n’est affiché sans résultat confirmé.</p>');
- const recentRows=series.rows.slice(-3);
- const recentSuccess=recentRows.reduce((n,row)=>n+row.success,0);
- const recentErrors=recentRows.reduce((n,row)=>n+row.errors,0);
- const recentTotal=recentSuccess+recentErrors;
- const recentPercent=recentTotal?Math.round(recentSuccess/recentTotal*100):null;
- const percent=Math.round(series.success/total*100);
- const trend=recentTotal===0?'empty':recentErrors===0?'ok':'attention';
- const recentText=recentTotal===0
+  '<p class="n2sync-history-placeholder">Aucune vérification enregistrée sur cette période. Aucun taux n’est affiché sans contrôle confirmé.</p>');
+ const recentText=recent.checkedDays===0
   ? 'Aucun contrôle Windows enregistré sur ces trois jours.'
-  : recentSuccess+' '+(recentSuccess===1?'contrôle réussi':'contrôles réussis')+' sur '+recentTotal+
-    ' · '+recentErrors+' '+(recentErrors===1?'échec':'échecs')+' enregistré'+(recentErrors===1?'':'s')+'.';
+  : recent.cleanDays+' '+(recent.cleanDays===1?'journée sans incident':'journées sans incident')+
+    ' sur '+recent.checkedDays+' '+(recent.checkedDays===1?'journée contrôlée':'journées contrôlées')+'.';
+ const recentState=recent.checkedDays===0?'empty':recent.incidentDays===0?'ok':'attention';
+ const issueText=summary.incidentDays+' '+(summary.incidentDays===1?'journée avec incident':'journées avec incident')+
+   ' · '+series.errors+' '+(series.errors===1?'tentative échouée':'tentatives échouées')+' au total.';
  const reliability='<div class="n2sync-reliability">'+
-  '<div class="n2sync-recent" data-state="'+trend+'">'+
+  '<div class="n2sync-recent" data-state="'+recentState+'">'+
    '<span class="n2sync-reliability-label">Tendance récente · 3 jours calendaires</span>'+
-   '<strong class="n2sync-reliability-number">'+(recentPercent===null?'—':recentPercent+' %')+'</strong>'+
+   '<strong class="n2sync-reliability-number">'+(recent.rate===null?'—':recent.rate+' %')+'</strong>'+
    '<p>'+escapeHtml(recentText)+'</p>'+
   '</div>'+
   '<div class="n2sync-period-summary">'+
-   '<span class="n2sync-reliability-label">Taux de réussite · '+period+' jours</span>'+
-   '<strong class="n2sync-reliability-number">'+percent+' %</strong>'+
-   '<p>'+series.success+' contrôles réussis / '+total+' vérifications</p>'+
-   '<div class="n2sync-chart-progress" role="img" aria-label="'+percent+' % de contrôles réussis sur '+period+' jours"><span style="width:'+percent+'%"></span></div>'+
-   '<small>'+series.errors+' '+(series.errors===1?'échec':'échecs')+' conservé'+(series.errors===1?'':'s')+' dans ce calcul</small>'+
+   '<span class="n2sync-reliability-label">Taux de réussite journalier · '+period+' jours</span>'+
+   '<strong class="n2sync-reliability-number">'+summary.rate+' %</strong>'+
+   '<p>'+summary.cleanDays+' '+(summary.cleanDays===1?'journée sans incident':'journées sans incident')+
+    ' / '+summary.checkedDays+' '+(summary.checkedDays===1?'journée contrôlée':'journées contrôlées')+'</p>'+
+   '<div class="n2sync-chart-progress" role="img" aria-label="'+summary.rate+' % de journées sans incident sur '+summary.checkedDays+' journées contrôlées"><span style="width:'+summary.rate+'%"></span></div>'+
+   '<small>'+escapeHtml(issueText)+'</small>'+
   '</div>'+
  '</div>';
  const lastResultLabels={
@@ -208,14 +225,14 @@ function renderSyncHistory(snapshot,now,period){
   : '';
  const max=Math.max(1,...series.batches.flatMap(d=>[d.success,d.errors,d.transfers]));
  const bars=series.batches.map(d=>{
-  const aria=escapeHtml(d.label+': '+d.success+' réussies, '+d.errors+' échecs, '+d.transfers+' cycles avec transfert');
+  const aria=escapeHtml(d.label+': '+d.success+' contrôles réussis, '+d.errors+' tentatives en échec, '+d.transfers+' cycles avec transfert');
   const columns=[['success',d.success],['error',d.errors],['transfer',d.transfers]]
    .map(([kind,n])=>'<span class="n2sync-chart-bar '+kind+'" style="height:'+(n?Math.max(3,Math.round(n/max*100)):0)+'%"></span>').join('');
   return '<div class="n2sync-chart-group" role="img" aria-label="'+aria+'"><div class="n2sync-chart-bars">'+columns+'</div>'+
     '<small>'+escapeHtml(d.label)+'</small></div>';
  }).join('');
  return wrapper(reliability+lastReport+metrics+
-  '<div class="n2sync-chart-legend"><span><i class="success"></i>Réussites</span><span><i class="error"></i>Échecs</span><span><i class="transfer"></i>Avec transfert (inclus dans les réussites)</span></div>'+
-  '<div class="n2sync-chart" role="group" aria-label="Activité de NethorSync">'+bars+'</div>'+
-  '<p class="n2sync-history-note">Méthode : contrôles Windows confirmés par NethorSync. Un contrôle réussi sans fichier à importer compte comme une réussite. Les transferts font partie des réussites, et les échecs restent comptabilisés sur la période. Les contrôles automatiques de Supabase ne sont pas ajoutés à ce taux.</p>');
+  '<div class="n2sync-chart-legend"><span><i class="success"></i>Contrôles réussis</span><span><i class="error"></i>Tentatives en échec</span><span><i class="transfer"></i>Cycles avec transfert (inclus dans les réussites)</span></div>'+
+  '<div class="n2sync-chart" role="group" aria-label="Tentatives de NethorSync par jour">'+bars+'</div>'+
+  '<p class="n2sync-history-note">Calcul journalier : seules les journées avec un contrôle Windows confirmé entrent dans le taux. Une journée ayant au moins un échec est classée « avec incident », même si une autre tentative réussit ensuite ; plusieurs échecs le même jour ne comptent qu’une seule journée avec incident. Le graphique et les compteurs de tentatives conservent chaque échec réel. Un contrôle réussi sans transfert reste une réussite. Les vérifications automatiques Supabase ne sont pas incluses.</p>');
 }
