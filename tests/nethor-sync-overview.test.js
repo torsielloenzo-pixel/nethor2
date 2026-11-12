@@ -156,6 +156,57 @@ test('Absence de données NethorSync : jamais de chiffres fictifs',()=>{
  assert.match(withData,/Cycles avec transfert/);
  assert.match(withData,/71 %/);
 });
+
+test('Fiabilité récente visible sans masquer le taux de la période et ses échecs',()=>{
+ const reference=Date.parse('2026-11-12T21:00:00Z');
+ const history=[
+  {date:'2026-11-07',success:2,errors:4,transfers:2},
+  {date:'2026-11-08',success:1,errors:0,transfers:1},
+  {date:'2026-11-09',success:1,errors:0,transfers:1},
+  {date:'2026-11-10',success:1,errors:0,transfers:1},
+  {date:'2026-11-12',success:1,errors:0,transfers:1}
+ ];
+ const snapshot={loaded:true,historyLoaded:true,history,status:{installed:true,lastResult:'transferred',lastSeenAt:'2026-11-12T20:00:00Z',lastCheckAt:'2026-11-12T18:00:00Z'}};
+ const weekly=renderSyncOverviewCard(snapshot,reference,7);
+ assert.match(weekly,/Tendance récente · 3 jours calendaires/);
+ assert.match(weekly,/data-state="ok"/);
+ assert.match(weekly,/100 %/);
+ assert.match(weekly,/2 contrôles réussis sur 2/);
+ assert.match(weekly,/Taux de réussite · 7 jours/);
+ assert.match(weekly,/60 %/);
+ assert.match(weekly,/6 contrôles réussis \/ 10 vérifications/);
+ assert.match(weekly,/4 échecs conservés dans ce calcul/);
+ assert.match(weekly,/Supabase ne sont pas ajoutés à ce taux/);
+ const monthly=renderSyncOverviewCard(snapshot,reference,30);
+ assert.match(monthly,/Taux de réussite · 30 jours/);
+ assert.match(monthly,/60 %/);
+ assert.match(monthly,/2 contrôles réussis sur 2/);
+});
+
+test('Contrôles sans transfert, absence de rapports et incidents récents restent exacts',()=>{
+ const reference=Date.parse('2026-11-12T21:00:00Z');
+ const base={loaded:true,historyLoaded:true,status:{installed:true,lastSeenAt:'2026-11-12T20:00:00Z'}};
+ const noChanges=renderSyncOverviewCard({...base,history:[{date:'2026-11-12',success:3,errors:0,transfers:0}]},reference);
+ assert.match(noChanges,/3 contrôles réussis \/ 3 vérifications/);
+ assert.match(noChanges,/Réussites sans transfert<\/span><strong>3<\/strong>/);
+ assert.match(noChanges,/Taux de réussite · 7 jours/);
+ assert.match(noChanges,/100 %/);
+ const incident=renderSyncOverviewCard({...base,history:[{date:'2026-11-12',success:1,errors:1,transfers:0}]},reference);
+ assert.match(incident,/data-state="attention"/);
+ assert.match(incident,/50 %/);
+ assert.match(incident,/1 échec conservé dans ce calcul/);
+ const oldOnly=renderSyncOverviewCard({...base,history:[{date:'2026-11-08',success:1,errors:0,transfers:0}]},reference);
+ assert.match(oldOnly,/data-state="empty"/);
+ assert.match(oldOnly,/Aucun contrôle Windows enregistré sur ces trois jours/);
+ assert.doesNotMatch(oldOnly,/n2sync-recent[^>]*>[\s\S]*?100 %/);
+ const empty=renderSyncOverviewCard({...base,history:[]},reference);
+ assert.match(empty,/Aucune vérification enregistrée sur cette période/);
+ assert.doesNotMatch(empty,/n2sync-reliability-number/);
+ const error=renderSyncOverviewCard({...base,historyError:'indisponible',history:[]},reference);
+ assert.match(error,/Impossible de calculer une fiabilité vérifiée/);
+ assert.doesNotMatch(error,/n2sync-reliability-number/);
+});
+
 test('Connexion historique sécurisée et fonctionnalité limitée au desktop gestionnaire',()=>{
  const live=read('src/ui/live.js');
  const control=read('src/data/nethor-sync-control.js');
