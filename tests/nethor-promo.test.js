@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {canNavigate} from '../src/ui/team-access.js';
 import {renderNethorPromo} from '../src/ui/nethor-promo.js';
 
-test('Nethor Promo réservé aux administrateurs en Desktop et PWA Desktop',()=>{
+test('NETHOR Promo réservé aux administrateurs en Desktop et PWA Desktop',()=>{
   assert.equal(canNavigate('promo',{role:'admin'},false),true);
   assert.equal(canNavigate('promo',{role:'admin'},true),false,'mobile et PWA mobile');
   for(const role of ['role_point-de-vente','responsable','employe','lecture_seule',undefined]){
@@ -24,7 +24,7 @@ test('Le module affiche honnêtement son état sans annoncer un collecteur actif
 
 test('La navigation Desktop expose uniquement l’onglet autorisé et le masque au changement de largeur',()=>{
   const js=readFileSync(new URL('../src/ui/live.js',import.meta.url),'utf8');
-  assert.match(js,/promo:'Nethor Promo'/);
+  assert.match(js,/promo:'NETHOR Promo'/);
   assert.match(js,/key==='promo'&&state\.profile\?\.role==='admin'/);
   assert.match(js,/const promoNav=ROOT\.querySelector\('\[data-nav="promo"\]'\)/);
   assert.match(js,/canNavigate\('promo',state\.profile,smallScreen\(\)\)/);
