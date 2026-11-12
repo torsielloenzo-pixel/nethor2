@@ -1,0 +1,59 @@
+name: Diagnostic ponctuel Netto (2 requêtes)
+on:
+  push:
+    branches:
+      - diag/netto-403-light-20261112
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Examiner les réponses 403 sans parcourir le site
+        run: |
+          python3 - <<'PY'
+          import re
+          import urllib.request
+          import urllib.error
+          from html import unescape
+
+          urls = ("https://www.netto.fr/robots.txt", "https://www.netto.fr/prospectus")
+          headers = {
+            "User-Agent": "NethorPromotionsCollector/1.0 (catalogue metadata; https://nethor.fr/)",
+            "Accept": "text/html,application/xml,text/xml;q=0.9,*/*;q=0.6"
+          }
+          interesting = (
+            "server", "via", "cf-ray", "cf-mitigated", "content-type",
+            "x-cache", "x-amz-cf-id", "x-amzn-waf-action", "x-datadome",
+            "x-akamai-request-id", "x-iinfo", "retry-after",
+            "x-sucuri-id", "x-served-by"
+          )
+          for url in urls:
+            print("\nURL:", url)
+            req = urllib.request.Request(url, headers=headers, method="GET")
+            try:
+              response = urllib.request.urlopen(req, timeout=12)
+            except urllib.error.HTTPError as error:
+              response = error
+            except Exception as error:
+              print("Transport:", type(error).__name__, str(error)[:120])
+              continue
+            with response:
+              print("HTTP:", response.status)
+              print("Final host:", urllib.request.urlparse(response.geturl()).hostname)
+              for name in interesting:
+                if value := response.headers.get(name):
+                  print(name + ":", value[:150])
+              body = response.read(2048).decode("utf-8", errors="replace")
+              title = re.search(r"<title[^>]*>(.*?)</title>", body, flags=re.I|re.S)
+              if title:
+                print("Error page title:", re.sub(r"\s+", " ", unescape(title.group(1)))[:120])
+              signatures = (
+                "access denied", "request blocked", "forbidden", "captcha",
+                "cloudflare", "akamai", "datadome", "incapsula", "just a moment"
+              )
+              found = [token for token in signatures if token in body.lower()]
+              print("Page markers:", ", ".join(found) if found else "none")
+              print("Read bytes (max 2048):", len(body.encode("utf-8")))
+          PY
