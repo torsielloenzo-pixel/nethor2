@@ -151,23 +151,61 @@ export function prepareSyncChart(history,now=Date.now(),period=7){
 function renderSyncHistory(snapshot,now,period){
  const loading=!snapshot?.historyLoaded&&!snapshot?.historyError;
  const series=prepareSyncChart(snapshot?.history,now,period);
- const title='<div class="n2sync-history-top"><div><h3>Historique des synchronisations</h3>'+
-  '<p>Suivi réel des contrôles de NethorSync</p></div>'+
+ const title='<div class="n2sync-history-top"><div><h3>Fiabilité des contrôles</h3>'+
+  '<p>Rapports réels du poste Windows · les vérifications sans transfert comptent aussi</p></div>'+
   '<div class="n2sync-period" role="group" aria-label="Période du graphique">'+
   [7,30].map(days=>'<button type="button" data-action="nethor-sync-chart-'+days+'"'+
    (period===days?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+days+' jours</button>').join('')+'</div></div>';
- if(snapshot?.historyError)return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+
-  '<p class="n2sync-history-placeholder" role="status">Historique indisponible. L’état du poste reste consultable ci-dessus.</p></section>';
- if(loading)return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+
-  '<p class="n2sync-history-placeholder" role="status">Chargement de l’historique…</p></section>';
+ const wrapper=html=>'<section class="n2sync-history" aria-label="Historique NethorSync">'+title+html+'</section>';
+ if(snapshot?.historyError)return wrapper('<p class="n2sync-history-placeholder" role="status">Historique indisponible. Impossible de calculer une fiabilité vérifiée actuellement.</p>');
+ if(loading)return wrapper('<p class="n2sync-history-placeholder" role="status">Chargement des contrôles enregistrés…</p>');
  const total=series.success+series.errors;
+ const withoutTransfer=Math.max(0,series.success-series.transfers);
  const metrics='<div class="n2sync-metrics">'+[
   ['Vérifications réussies',series.success,'success'],
-  ['Échecs',series.errors,'error'],
-  ['Cycles avec transfert',series.transfers,'transfer']
+  ['Échecs enregistrés',series.errors,'error'],
+  ['Cycles avec transfert',series.transfers,'transfer'],
+  ['Réussites sans transfert',withoutTransfer,'no-transfer']
  ].map(([label,value,kind])=>'<div class="n2sync-metric '+kind+'"><span>'+label+'</span><strong>'+value+'</strong></div>').join('')+'</div>';
- if(total===0)return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+metrics+
-  '<p class="n2sync-history-placeholder">Aucune vérification enregistrée sur cette période. Le suivi démarre à compter de son activation.</p></section>';
+ if(total===0)return wrapper(metrics+
+  '<p class="n2sync-history-placeholder">Aucune vérification enregistrée sur cette période. Aucun taux n’est affiché sans résultat confirmé.</p>');
+ const recentRows=series.rows.slice(-3);
+ const recentSuccess=recentRows.reduce((n,row)=>n+row.success,0);
+ const recentErrors=recentRows.reduce((n,row)=>n+row.errors,0);
+ const recentTotal=recentSuccess+recentErrors;
+ const recentPercent=recentTotal?Math.round(recentSuccess/recentTotal*100):null;
+ const percent=Math.round(series.success/total*100);
+ const trend=recentTotal===0?'empty':recentErrors===0?'ok':'attention';
+ const recentText=recentTotal===0
+  ? 'Aucun contrôle Windows enregistré sur ces trois jours.'
+  : recentSuccess+' '+(recentSuccess===1?'contrôle réussi':'contrôles réussis')+' sur '+recentTotal+
+    ' · '+recentErrors+' '+(recentErrors===1?'échec':'échecs')+' enregistré'+(recentErrors===1?'':'s')+'.';
+ const reliability='<div class="n2sync-reliability">'+
+  '<div class="n2sync-recent" data-state="'+trend+'">'+
+   '<span class="n2sync-reliability-label">Tendance récente · 3 jours calendaires</span>'+
+   '<strong class="n2sync-reliability-number">'+(recentPercent===null?'—':recentPercent+' %')+'</strong>'+
+   '<p>'+escapeHtml(recentText)+'</p>'+
+  '</div>'+
+  '<div class="n2sync-period-summary">'+
+   '<span class="n2sync-reliability-label">Taux de réussite · '+period+' jours</span>'+
+   '<strong class="n2sync-reliability-number">'+percent+' %</strong>'+
+   '<p>'+series.success+' contrôles réussis / '+total+' vérifications</p>'+
+   '<div class="n2sync-chart-progress" role="img" aria-label="'+percent+' % de contrôles réussis sur '+period+' jours"><span style="width:'+percent+'%"></span></div>'+
+   '<small>'+series.errors+' '+(series.errors===1?'échec':'échecs')+' conservé'+(series.errors===1?'':'s')+' dans ce calcul</small>'+
+  '</div>'+
+ '</div>';
+ const lastResultLabels={
+  transferred:'Fichier transmis au serveur (publication vérifiée séparément)',
+  unchanged:'Aucun nouveau transfert nécessaire',
+  no_files:'Aucun fichier éligible à transmettre',
+  error:'Échec enregistré'
+ };
+ const lastResult=lastResultLabels[snapshot?.status?.lastResult];
+ const lastCheck=snapshot?.status?.lastCheckAt?formatSyncTimestamp(snapshot.status.lastCheckAt):null;
+ const lastReport=lastResult&&lastCheck
+  ? '<p class="n2sync-last-report" data-state="'+(snapshot.status.lastResult==='error'?'error':'success')+'">'+
+    'Dernier contrôle Windows · '+escapeHtml(lastCheck.date)+' à '+escapeHtml(lastCheck.time)+' : '+escapeHtml(lastResult)+'</p>'
+  : '';
  const max=Math.max(1,...series.batches.flatMap(d=>[d.success,d.errors,d.transfers]));
  const bars=series.batches.map(d=>{
   const aria=escapeHtml(d.label+': '+d.success+' réussies, '+d.errors+' échecs, '+d.transfers+' cycles avec transfert');
@@ -176,12 +214,8 @@ function renderSyncHistory(snapshot,now,period){
   return '<div class="n2sync-chart-group" role="img" aria-label="'+aria+'"><div class="n2sync-chart-bars">'+columns+'</div>'+
     '<small>'+escapeHtml(d.label)+'</small></div>';
  }).join('');
- const percent=Math.round(series.success/total*100);
- return '<section class="n2sync-history" aria-label="Historique NethorSync">'+title+metrics+
-  '<div class="n2sync-chart-legend"><span><i class="success"></i>Réussies</span><span><i class="error"></i>Échecs</span><span><i class="transfer"></i>Avec transfert</span></div>'+
+ return wrapper(reliability+lastReport+metrics+
+  '<div class="n2sync-chart-legend"><span><i class="success"></i>Réussites</span><span><i class="error"></i>Échecs</span><span><i class="transfer"></i>Avec transfert (inclus dans les réussites)</span></div>'+
   '<div class="n2sync-chart" role="group" aria-label="Activité de NethorSync">'+bars+'</div>'+
-  '<div class="n2sync-chart-foot"><span>Taux de réussite</span><strong>'+percent+' %</strong></div>'+
-  '<div class="n2sync-chart-progress"><span style="width:'+percent+'%"></span></div>'+
-  '<p class="n2sync-history-note">Un transfert correspond à un cycle ayant envoyé au moins un fichier, pas au nombre de fichiers envoyés.</p>'+
-  '</section>';
+  '<p class="n2sync-history-note">Méthode : contrôles Windows confirmés par NethorSync. Un contrôle réussi sans fichier à importer compte comme une réussite. Les transferts font partie des réussites, et les échecs restent comptabilisés sur la période. Les contrôles automatiques de Supabase ne sont pas ajoutés à ce taux.</p>');
 }
