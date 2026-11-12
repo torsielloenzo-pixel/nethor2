@@ -156,3 +156,10 @@
  #app .n2dash-follow dl>div{display:grid;gap:4px}
  #app .n2dash-follow dd{max-width:100%;text-align:left}
 }
+
+/* Même fiche sur Planning Jour et Semaine : signaler les lignes cliquables. */
+@media(min-width:761px){
+ #app .live-day-item.n2staff-row{cursor:pointer;transition:background .15s ease}
+ #app .live-day-item.n2staff-row:hover{background:#f3f7fd}
+ #app .live-day-item.n2staff-row:focus-within{outline:2px solid #d5e5fb;outline-offset:-2px}
+}
