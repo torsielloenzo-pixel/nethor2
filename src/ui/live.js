@@ -66,7 +66,7 @@ function closeMobileMenu(){
 }
 
 const DAYS=['Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.','Dim.'];
-const TITLES={home:'Vue d’ensemble',planning:'Planning',anomalies:'Anomalies',import:'Importer',team:'Équipe',history:'Historique',promo:'Nethor Promo',settings:'Paramètres'};
+const TITLES={home:'Vue d’ensemble',planning:'Planning',anomalies:'Anomalies',import:'Importer',team:'Équipe',history:'Historique',promo:'NETHOR Promo',settings:'Paramètres'};
 const MOBILE_PAGE_TITLES={home:'Accueil',planning:'Planning',anomalies:'NethorSync',import:'Importer',team:'Équipe',history:'Historique',settings:'Paramètres'};
 
 // Pictogrammes SVG communs : desktop, mobile et PWA.
@@ -1239,7 +1239,7 @@ function pageHistory(){
 }
 function pagePromo(){
   if(!canNavigate('promo',state.profile,smallScreen()))return '<div class="live-error">Accès réservé aux administrateurs sur ordinateur.</div>';
-  return renderPageHeader('GESTION COMMERCIALE','Nethor Promo','Catalogues Netto et préparation des opérations commerciales.')+renderNethorPromo();
+  return renderPageHeader('GESTION COMMERCIALE','NETHOR Promo','Catalogues Netto et préparation des opérations commerciales.')+renderNethorPromo();
 }
 function render(){
   const screen=ROOT.querySelector('#screen');
