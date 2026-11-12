@@ -32,7 +32,7 @@ function dayInfo(people,index){
  const available=rows.some(r=>Array.isArray(r.cells));
  const label=ranges.length?ranges.map(r=>fmt(r.start)+'–'+fmt(r.end)).join(' · '):leave?'Congés':available?'Repos':'Non renseigné';
  const minutes=ranges.reduce((n,r)=>n+r.end-r.start,0);
- return {label,minutes,ranges,leave};
+ return {label,minutes,ranges,leave,available};
 }
 export function buildDashboardPeople(people=[]){
  const grouped=new Map();
@@ -49,7 +49,7 @@ const serviceKind=day=>day.leave?'leave':!day.ranges.length?'rest':day.ranges[0]
 const serviceText=kind=>({morning:'Matin',afternoon:'Après-midi',leave:'Congés',rest:'Repos'})[kind];
 const humanDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'});
 const modalIcon='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
-export function renderOverviewDashboard({people=[],week='',today='',sync={},open=null,syncPeriod=7,hasPlanning=false}={}){
+export function renderOverviewDashboard({people=[],week='',today='',sync={},open=null,syncPeriod=7,hasPlanning=false,personDetail=null,personIssues=[],personSource='',personRevision=null}={}){
  const currentWeek=monday(today)===week;
  const todayIndex=currentWeek?Math.round((Date.parse(today+'T12:00:00Z')-Date.parse(week+'T12:00:00Z'))/86400000):-1;
  const roster=buildDashboardPeople(people);
@@ -69,18 +69,62 @@ export function renderOverviewDashboard({people=[],week='',today='',sync={},open
  const peopleSection='<section class="card n2dash-section"><div class="n2dash-section-head"><div><h2>Équipe</h2><p>'+roster.length+' collaborateurs · '+esc(currentWeek?humanDate(today):'Semaine du '+humanDate(week))+'</p></div><button type="button" class="n2dash-text-action" data-action="go-planning">Planning complet ↗</button></div><div class="n2dash-roster">'+(cards||'<div class="n2dash-empty">Aucun collaborateur à afficher.</div>')+'</div></section>';
  const syncSummary='<section class="card n2dash-section n2dash-sync"><div class="n2dash-section-head"><div><h2>NethorSync</h2><p>Synchronisation des fichiers Excel</p></div></div><button type="button" class="n2dash-sync-button" data-action="dashboard-sync"><span class="n2dash-sync-dot" data-status="'+esc(currentStatus)+'"></span><span class="n2dash-sync-main"><strong>'+esc(statusLabel)+'</strong><small>'+(sync?.status?.installed?'Poste : '+esc(sync.status.deviceLabel||'Inconnu'):'Poste non lié')+'</small><small>'+(lastCheck?'Dernier contrôle : '+esc(lastCheck.date)+' à '+esc(lastCheck.time):'Aucun contrôle enregistré')+'</small></span><span class="n2dash-chevron" aria-hidden="true">›</span></button><p class="n2dash-footnote">Ouvrir pour consulter les transferts, vérifications et erreurs signalées.</p></section>';
  let modal='';
+
  if(open?.type==='person'){
   const item=roster[Number(open.index)];
   if(item){
-   const aliases=[...new Set(item.people.map(p=>p.name))];
-   const rows=Array.from({length:7},(_,i)=>{
-    const date=plus(week,i),day=dayInfo(item.people,i),kind=serviceKind(day);
-    return '<div class="n2dash-day'+(date===today?' n2dash-today':'')+'"><span class="n2dash-day-date"><strong>'+weekdays[i]+(date===today?' <em>Aujourd’hui</em>':'')+'</strong><small>'+esc(humanDate(date))+'</small></span><span class="n2dash-shift" data-kind="'+kind+'"><span class="n2dash-shift-kind">'+serviceText(kind)+'</span><b>'+esc(kind==='rest'?'':day.label)+'</b></span></div>';
-   }).join('');
-   const totalMinutes=Array.from({length:7},(_,i)=>dayInfo(item.people,i).minutes).reduce((a,b)=>a+b,0);
-   const workedDays=Array.from({length:7},(_,i)=>dayInfo(item.people,i).minutes>0).filter(Boolean).length;
-   modal='<div class="n2dash-overlay" data-dashboard-backdrop><section class="n2dash-modal n2dash-person-modal" role="dialog" aria-modal="true" aria-label="Semaine de '+esc(item.name)+'"><header class="n2dash-modal-head"><div class="n2dash-person-heading"><span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span><span><h2>'+esc(item.name)+'</h2><small>'+esc(humanDate(week))+' – '+esc(humanDate(plus(week,6)))+'</small></span></div><button type="button" class="n2dash-close" data-action="dashboard-close" aria-label="Fermer">'+modalIcon+'</button></header><div class="n2dash-modal-body">'+(aliases.length>1?'<p class="n2dash-alias-label">Noms reconnus : '+esc(aliases.join(' · '))+'</p>':'')+'<div class="n2dash-person-stats"><div><small>Temps de travail</small><strong>'+(totalMinutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})+' h</strong></div><div><small>Jours travaillés</small><strong>'+workedDays+' / 7</strong></div></div><div class="n2dash-days">'+rows+'</div></div><footer><button type="button" class="btn primary" data-action="dashboard-open-planning">Ouvrir le planning complet ↗</button></footer></section></div>';
-
+   const focus=personDetail?.week&&personDetail.week!==week?personDetail:null;
+   const focusedWeek=focus?.week||week;
+   const selected=focus?focus.people?.find(p=>p.id===item.id):item;
+   const published=focus?Boolean(focus.published):Boolean(hasPlanning);
+   const loading=Boolean(focus?.loading);
+   const failure=String(focus?.error||'');
+   const tab=open.tab==='suivi'?'suivi':'planning';
+   const days=published&&!loading&&!failure&&selected?Array.from({length:7},(_,i)=>dayInfo(selected.people,i)):null;
+   const totalMinutes=days?.reduce((sum,day)=>sum+day.minutes,0);
+   const workedDays=days?.filter(day=>day.minutes>0).length;
+   const restDays=days?.filter(day=>day.available&&!day.leave&&day.minutes===0).length;
+   const issues=focus?focus.issues||[]:personIssues;
+   const aliases=[...new Set(item.people.map(p=>p.name).concat(selected?.people?.map(p=>p.name)||[]))];
+   const rangeText=humanDate(focusedWeek)+' – '+humanDate(plus(focusedWeek,6));
+   const stats='<div class="n2dash-person-stats n2dash-person-stats-three">'+
+    '<div><small>Heures planifiées</small><strong>'+(totalMinutes==null?'—':(totalMinutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})+' h')+'</strong></div>'+
+    '<div><small>Jours travaillés</small><strong>'+(workedDays==null?'—':workedDays+' / 7')+'</strong></div>'+
+    '<div><small>Jours de repos</small><strong>'+(restDays==null?'—':restDays)+'</strong></div></div>';
+   const rows=days?days.map((day,i)=>{
+     const date=plus(focusedWeek,i),kind=day.available?serviceKind(day):'unknown';
+     return '<div class="n2dash-day'+(date===today?' n2dash-today':'')+'"><span class="n2dash-day-date"><strong>'+weekdays[i]+(date===today?' <em>Aujourd’hui</em>':'')+'</strong><small>'+esc(humanDate(date))+'</small></span><span class="n2dash-shift" data-kind="'+kind+'"><span class="n2dash-shift-kind">'+esc(serviceText(kind)||'Non renseigné')+'</span><b>'+esc(kind==='rest'||kind==='unknown'?'':day.label)+'</b></span></div>';
+   }).join(''):'';
+   const availability=loading?'<div class="n2dash-detail-empty" role="status">Chargement du planning de la semaine…</div>':
+    failure?'<div class="n2dash-detail-empty" role="alert">'+esc(failure)+'</div>':
+    !published?'<div class="n2dash-detail-empty">Aucun planning publié pour cette semaine. Les journées ne sont pas considérées comme des repos.</div>':
+    !selected?'<div class="n2dash-detail-empty">Ce collaborateur n’apparaît pas sur le planning de cette semaine.</div>':'';
+   const nav='<div class="n2dash-period"><div><strong>Planning hebdomadaire</strong><small>'+esc(rangeText)+'</small></div><div class="n2dash-period-controls">'+
+    '<button type="button" data-action="dashboard-week-prev" aria-label="Semaine précédente"'+(plus(focusedWeek,-7)<'2025-01-01'?' disabled':'')+'>‹</button>'+
+    '<button type="button" data-action="dashboard-week-today" aria-label="Retour à la semaine actuelle">Aujourd’hui</button>'+
+    '<button type="button" data-action="dashboard-week-next" aria-label="Semaine suivante">›</button></div></div>';
+   const source=focus?focus.sourceFile:personSource;
+   const revision=focus?focus.revision:personRevision;
+   const formattedRevision=revision&&!Number.isNaN(Date.parse(revision))?new Date(revision).toLocaleString('fr-FR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'}):null;
+   const issuesHtml=published&&!loading&&!failure&&selected?
+    (issues.length?'<div class="n2dash-follow-issues">'+issues.map(issue=>{
+      const label=({SHORT_SHIFT:'Créneau très court',LONG_BREAK:'Longue coupure',LONG_DAY:'Journée longue',INVALID_ROW:'Données incohérentes',CONTRACT_DIFFERENCE:'Écart avec le volume contractuel',ABSENCE_CONFLICT:'Conflit avec une absence'})[issue.code]||'Point à vérifier';
+      return '<div class="n2dash-follow-issue"><strong>'+esc(label)+'</strong><small>'+(issue.date?esc(humanDate(issue.date)):'Sur la semaine')+(issue.difference!=null?' · '+esc(Number(issue.difference).toLocaleString('fr-FR',{maximumFractionDigits:2}))+' h':'')+'</small></div>';
+     }).join('')+'</div>':'<div class="n2dash-follow-ok">Aucune anomalie individuelle détectée sur cette semaine.</div>'):
+    '<p class="n2dash-follow-muted">Les alertes seront visibles lorsqu’un planning publié est disponible.</p>';
+   const follow='<div class="n2dash-follow"><section><h3>Informations du collaborateur</h3><dl>'+
+    '<div><dt>Compte NETHOR</dt><dd>'+(item.linked?'Associé':'Aucun compte associé')+'</dd></div>'+
+    '<div><dt>Nom de planning</dt><dd>'+esc(item.people[0]?.name||item.name)+'</dd></div>'+
+    '<div><dt>Noms reconnus</dt><dd>'+esc(aliases.join(' · '))+'</dd></div></dl></section>'+
+    '<section><h3>Contrôle de la semaine</h3>'+issuesHtml+'</section>'+
+    '<section><h3>Traçabilité du planning</h3><dl>'+
+    '<div><dt>Fichier source</dt><dd>'+esc(source||'Non renseigné')+'</dd></div>'+
+    '<div><dt>Dernière publication connue</dt><dd>'+esc(formattedRevision||'Non renseignée')+'</dd></div></dl>'+
+    '<p class="n2dash-follow-muted">Les heures indiquées sont planifiées, et non pointées. L’historique des changements individuels nécessite des versions archivées et une autorisation serveur adaptée ; aucune modification passée n’est déduite de ce seul planning.</p></section></div>';
+   modal='<div class="n2dash-overlay" data-dashboard-backdrop><section class="n2dash-modal n2dash-person-modal n2dash-person-sheet" role="dialog" aria-modal="true" aria-label="Fiche de '+esc(item.name)+'"><header class="n2dash-modal-head"><div class="n2dash-person-heading"><span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span><span><h2>'+esc(item.name)+'</h2><small>Collaborateur · Netto Le Thor</small></span></div><button type="button" class="n2dash-close" data-action="dashboard-close" aria-label="Fermer">'+modalIcon+'</button></header>'+
+    '<div class="n2dash-person-tabs" role="tablist" aria-label="Sections de la fiche"><button type="button" role="tab" aria-selected="'+(tab==='planning')+'" class="'+(tab==='planning'?'active':'')+'" data-action="dashboard-tab-planning">Planning</button><button type="button" role="tab" aria-selected="'+(tab==='suivi')+'" class="'+(tab==='suivi'?'active':'')+'" data-action="dashboard-tab-suivi">Suivi</button></div>'+
+    '<div class="n2dash-modal-body">'+nav+(tab==='planning'?availability+((days&&selected)?stats+'<div class="n2dash-days">'+rows+'</div>':''):follow)+'</div>'+
+    '<footer><button type="button" class="btn primary" data-action="dashboard-open-planning">Ouvrir le planning mensuel ↗</button></footer></section></div>';
   }
  }
  if(open?.type==='sync'){
