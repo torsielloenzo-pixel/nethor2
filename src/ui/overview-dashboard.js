@@ -55,7 +55,9 @@ export function renderCollaboratorSheet({item,week='',today='',open=null,hasPlan
  let modal='';
    const focus=personDetail?.week&&personDetail.week!==week?personDetail:null;
    const focusedWeek=focus?.week||week;
-   const selected=focus?focus.people?.find(p=>p.id===item.id):item;
+   const knownNames=new Set(item.people.map(p=>String(p.name||'').trim().toLocaleLowerCase('fr')));
+   const selected=focus?(focus.people?.find(p=>p.id===item.id)||
+     focus.people?.find(p=>p.people?.some(entry=>knownNames.has(String(entry.name||'').trim().toLocaleLowerCase('fr'))))):item;
    const published=focus?Boolean(focus.published):Boolean(hasPlanning);
    const loading=Boolean(focus?.loading);
    const failure=String(focus?.error||'');
