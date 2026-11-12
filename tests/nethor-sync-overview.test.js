@@ -198,7 +198,7 @@ test('Contrôles sans transfert, absence de rapports et incidents récents reste
  const oldOnly=renderSyncOverviewCard({...base,history:[{date:'2026-11-08',success:1,errors:0,transfers:0}]},reference);
  assert.match(oldOnly,/data-state="empty"/);
  assert.match(oldOnly,/Aucun contrôle Windows enregistré sur ces trois jours/);
- assert.doesNotMatch(oldOnly,/n2sync-recent[^>]*>[\s\S]*?100 %/);
+ assert.match(oldOnly,/n2sync-reliability-number">—<\/strong>/);
  const empty=renderSyncOverviewCard({...base,history:[]},reference);
  assert.match(empty,/Aucune vérification enregistrée sur cette période/);
  assert.doesNotMatch(empty,/n2sync-reliability-number/);
