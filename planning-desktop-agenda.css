@@ -110,3 +110,40 @@
   #app .n2-agenda-team{grid-column:1;grid-row:2}
   #app .n2-agenda-search{grid-column:2;grid-row:2}
 }
+
+
+/* Éditeur administrateur : Desktop et PWA Desktop uniquement. */
+@media (min-width:761px){
+  #app .n2-agenda-admin-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+  #app .n2-agenda-admin-actions .btn{min-height:34px;padding:7px 10px;font-size:10px}
+  #app .n2-agenda-lock-badge,#app .n2-agenda-edit-badge{display:inline-flex;align-items:center;min-height:32px;padding:6px 9px;border-radius:8px;font-size:10px;font-weight:750}
+  #app .n2-agenda-lock-badge{background:#fff3d8;color:#835b10;border:1px solid #f0d59c}
+  #app .n2-agenda-edit-badge{background:#eaf2ff;color:#255a9f;border:1px solid #cddfff}
+  #app .n2-agenda-editor-message{margin:0 20px 14px;padding:10px 12px;border-radius:9px;background:#f3f7fd;border:1px solid #dae6f5;color:#456384;font-size:10.5px}
+  #app .n2-agenda-editor-message[data-kind=success]{background:#eef9f2;border-color:#ccebd7;color:#2f7047}
+  #app .n2-agenda-editor-message[data-kind=error]{background:#fff0f0;border-color:#f3cccc;color:#9a3d3d}
+  #app .n2-agenda-editable{padding:3px!important;background:#fbfdff}
+  #app .n2-agenda-edit-cell{width:100%;min-height:38px;border:1px dashed transparent;border-radius:7px;background:transparent;padding:2px;cursor:pointer}
+  #app .n2-agenda-edit-cell:hover,#app .n2-agenda-edit-cell:focus-visible{border-color:#6b9de6;background:#eef5ff;outline:none}
+  #app .n2-agenda-edit-cell>small{display:block;margin-top:2px;color:#5b7ba8;font-size:8px;font-weight:650}
+  #app .n2-planedit-backdrop{position:fixed;inset:0;z-index:180;background:#10213b4a;backdrop-filter:blur(2px)}
+  #app .n2-planedit-dialog{position:fixed;z-index:181;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 42px));max-height:calc(100vh - 42px);overflow:auto;border:1px solid #dbe4f0;border-radius:16px;background:#fff;box-shadow:0 24px 70px #18305238}
+  #app .n2-planedit-dialog form{padding:20px}
+  #app .n2-planedit-dialog header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+  #app .n2-planedit-dialog header small{font-size:9px;letter-spacing:.08em;color:#7690b3;font-weight:800}
+  #app .n2-planedit-dialog h3{margin:4px 0 2px;color:#18375f;font-size:18px}
+  #app .n2-planedit-dialog header p{margin:0;color:#73839a;font-size:11px;text-transform:capitalize}
+  #app .n2-planedit-close{border:0;background:#f1f5fa;color:#4e6483;width:32px;height:32px;border-radius:9px;font-size:22px;line-height:1}
+  #app .n2-planedit-dialog label{display:grid;gap:6px;color:#4c617f;font-size:10px;font-weight:700}
+  #app .n2-planedit-dialog input,#app .n2-planedit-dialog select{width:100%;border:1px solid #dce5f0;border-radius:9px;background:#fff;color:#263f60;padding:10px 11px;font-size:12px;outline:none}
+  #app .n2-planedit-dialog input:focus,#app .n2-planedit-dialog select:focus{border-color:#6a9ce5;box-shadow:0 0 0 2px #6a9ce522}
+  #app .n2-planedit-status{margin-bottom:15px}
+  #app .n2-planedit-times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  #app .n2-planedit-times[hidden]{display:none}
+  #app .n2-planedit-range{padding:13px;border:1px solid #e4eaf2;border-radius:11px;background:#fafcff;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #app .n2-planedit-range>strong{grid-column:1/-1;color:#25466f;font-size:10px}
+  #app .n2-planedit-range label small{font-weight:500;color:#8a99ad}
+  #app .n2-planedit-help{margin:14px 0 0;color:#7e8ca0;font-size:9.5px;line-height:1.45}
+  #app .n2-planedit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid #edf1f6}
+}
+@media (min-width:761px) and (max-width:900px){#app .n2-planedit-times{grid-template-columns:1fr}}
