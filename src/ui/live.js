@@ -100,6 +100,7 @@ const accountAdmin={users:[],loading:false,error:'',notice:'',selected:'',planni
 let syncChartPeriod=7;
 const promoCatalogState={loaded:false,loading:false,data:null,error:''};
 let dashboardOpen=null;
+let dashboardShowAll=false;
 let dashboardPersonDetail=null;
 let dashboardPersonRequest=0;
 let planningEditor={editing:false,week:null,draft:null,active:null,dirty:false,busy:false,message:'',messageKind:'info'};
@@ -944,15 +945,14 @@ function pageHome(metrics){
   let personal='';
   if(mine)personal='<div class="live-message ok">Mon planning cette semaine : <strong>'+hours(mine.total)+'</strong> · '+escapeHtml(mine.name)+'</div>';
   if(isSyncOverviewRole(state.profile?.role,!smallScreen())){
-    const top=renderPageHeader('NETTO LE THOR','Bonjour '+(state.profile.display_name||'')+',',
-      'Le planning de la semaine et l’état de synchronisation NethorSync.',
-      state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true));
-    // Vue d'ensemble : tableau de bord à cartes, planning détaillé uniquement sur clic.
+    // Vue d'ensemble de gestion : mêmes blocs pour Admin et Point de vente sur Desktop/PWA Desktop.
+    // L'import reste accessible depuis son onglet aux seuls rôles autorisés.
     return renderPageHeader('NETTO LE THOR','Vue d’ensemble',
-      'Équipe, horaires du jour et synchronisation des plannings.',
-      state.access==='manage'?button('Importer un planning','go-import',true):button('Voir le planning','go-planning',true))+
+      'Équipe, couverture horaire et points à surveiller.',
+      button('Ouvrir le planning','go-planning',true))+
       renderOverviewDashboard({people:metrics.people,week:state.week,today:dateInParis(),
         sync:state.nethorSync,open:dashboardOpen,syncPeriod:syncChartPeriod,hasPlanning:!!state.weekData,
+        expanded:dashboardShowAll,issues:metrics.issues,
         personDetail:dashboardPersonDetail,personSource:state.weekData?.sourceFile||'',
         personRevision:state.weekData?.revision||null,
         personIssues:dashboardIssuesFor(metrics.issues,
@@ -1425,6 +1425,7 @@ function go(page){
   if(!(page in TITLES)||!canNavigate(page,state.profile,smallScreen()))return;
   const previousPage=state.page;
   state.page=page;state.notice='';state.error='';
+  if(page!==previousPage)dashboardShowAll=false;
   if(page!==previousPage||!['home','planning'].includes(page)){dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;}
   const dashboardToday=page==='home'&&isSyncOverviewRole(state.profile?.role,!smallScreen())?dateInParis():null;
   const dashboardWeekChanged=Boolean(dashboardToday)&&state.week!==mondayOf(dashboardToday);
@@ -1787,6 +1788,12 @@ ROOT.addEventListener('click',async event=>{
   if(dash&&['home','planning'].includes(state.page)&&staffPlanningRole()){
     const action=dash.dataset.action;
     if(action==='dashboard-person'){dashboardPersonRequest++;dashboardPersonDetail=null;dashboardOpen={type:'person',index:Number(dash.dataset.dashboardPerson),week:state.week,tab:'planning'};render();return;}
+    if(action==='dashboard-toggle-roster'&&state.page==='home'){dashboardShowAll=!dashboardShowAll;render();return;}
+    if(action==='dashboard-open-day'&&state.page==='home'){
+      const date=dash.dataset.dashboardDate;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')||mondayOf(date)!==state.week)return;
+      go('planning');state.day=date;state.view='day';render();return;
+    }
     if(action==='dashboard-sync'&&state.page==='home'){dashboardOpen={type:'sync'};render();return;}
     if(action==='dashboard-close'){dashboardOpen=null;dashboardPersonDetail=null;dashboardPersonRequest++;render();return;}
     if(action==='dashboard-tab-planning'||action==='dashboard-tab-suivi'){
