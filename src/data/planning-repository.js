@@ -13,11 +13,13 @@ function checkWeekKey(value) {
 export async function getPlanningWeek(client, weekStart) {
   checkWeekKey(weekStart);
   const {data,error} = await client.from('planning_weeks')
-    .select('week_start,data,week_label,source_file,updated_at')
+    .select('week_start,data,week_label,source_file,updated_at,editor_locked,editor_locked_at,editor_locked_by,editor_edited_at,editor_edited_by')
     .eq('week_start',weekStart).maybeSingle();
   if(error) throw error;
   return data ? {weekStart:data.week_start,model:data.data,revision:data.updated_at,
-    label:data.week_label,sourceFile:data.source_file} : null;
+    label:data.week_label,sourceFile:data.source_file,locked:data.editor_locked===true,
+    lockedAt:data.editor_locked_at||null,lockedBy:data.editor_locked_by||null,
+    editedAt:data.editor_edited_at||null,editedBy:data.editor_edited_by||null} : null;
 }
 export async function getImportHistory(client,{limit=100}={}) {
   if(!Number.isInteger(limit)||limit<1||limit>500) throw new RangeError('Limite invalide');
@@ -40,11 +42,41 @@ export async function publishPlanningWeek(client,{weekStart,expectedRevision=nul
   const {data,error}=await client.rpc('planning_save_week_if_revision',params);
   if(error) throw error;
   if(data?.status==='conflict') return {status:'conflict',revision:null};
+  if(data?.status==='locked') return {status:'locked',revision:data?.revision?String(data.revision):null};
   if(data?.status==='unchanged'&&data.revision)
     return {status:'unchanged',revision:String(data.revision)};
   if(data?.status!=='ok'||!data.revision) throw new Error('Publication non confirmée');
   return {status:'accepted-pending-verification',revision:String(data.revision)};
 }
+export async function saveAdminPlanningWeek(client,{weekStart,expectedRevision,model,lockAfter=false}) {
+  checkWeekKey(weekStart);
+  if(!model || model.weekStart!==weekStart || !Array.isArray(model.employees) || !model.days)
+    throw new TypeError('Planning incohérent avec la semaine éditée');
+  if(typeof expectedRevision!=='string'||!expectedRevision)throw new TypeError('Révision requise');
+  const {data,error}=await client.rpc('planning_admin_save_week',{
+    p_week_start:weekStart,p_expected_revision:expectedRevision,p_data:model,
+    p_employee_order:model.employees.map(x=>x.name),p_lock_after:lockAfter===true
+  });
+  if(error)throw error;
+  const status=String(data?.status||'');
+  if(!['ok','unchanged','conflict','locked','forbidden','invalid','not_found'].includes(status))
+    throw new Error('Enregistrement administrateur non confirmé');
+  return {status,revision:data?.revision?String(data.revision):null,locked:data?.locked===true};
+}
+
+export async function setAdminPlanningWeekLock(client,{weekStart,expectedRevision,locked}) {
+  checkWeekKey(weekStart);
+  if(typeof expectedRevision!=='string'||!expectedRevision)throw new TypeError('Révision requise');
+  const {data,error}=await client.rpc('planning_admin_set_week_lock',{
+    p_week_start:weekStart,p_expected_revision:expectedRevision,p_locked:locked===true
+  });
+  if(error)throw error;
+  const status=String(data?.status||'');
+  if(!['ok','unchanged','conflict','forbidden','not_found'].includes(status))
+    throw new Error('Verrouillage administrateur non confirmé');
+  return {status,revision:data?.revision?String(data.revision):null,locked:data?.locked===true};
+}
+
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export async function verifyPublishedWeek(client,weekStart,expectedRevision,{attempts=4,delayMs=150}={}) {
   if(!Number.isInteger(attempts)||attempts<1||attempts>8)throw new RangeError('Nombre de vérifications invalide');
