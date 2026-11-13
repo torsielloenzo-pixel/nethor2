@@ -125,9 +125,6 @@ $$;
 revoke all on function private.planning_save_week_if_revision(
   date,timestamptz,jsonb,jsonb,text,text,text,timestamptz
 ) from public,anon,authenticated;
-grant execute on function private.planning_save_week_if_revision(
-  date,timestamptz,jsonb,jsonb,text,text,text,timestamptz
-) to authenticated;
 
 -- Publication depuis l'éditeur : exclusivement un compte Administrateur actif.
 create or replace function private.planning_admin_save_week(
@@ -242,9 +239,6 @@ $$;
 revoke all on function private.planning_admin_save_week(
   date,timestamptz,jsonb,jsonb,boolean
 ) from public,anon,authenticated;
-grant execute on function private.planning_admin_save_week(
-  date,timestamptz,jsonb,jsonb,boolean
-) to authenticated;
 
 create or replace function public.planning_admin_save_week(
   p_week_start date,
@@ -341,9 +335,6 @@ $$;
 revoke all on function private.planning_admin_set_week_lock(
   date,timestamptz,boolean
 ) from public,anon,authenticated;
-grant execute on function private.planning_admin_set_week_lock(
-  date,timestamptz,boolean
-) to authenticated;
 
 create or replace function public.planning_admin_set_week_lock(
   p_week_start date,
