@@ -162,9 +162,9 @@ function dashboardIssueLabel(issue){
  })[issue?.code]||'Point à vérifier';
 }
 function dashboardPersonButton(entry,index){
- const kind=entry.day.available?serviceKind(entry.day):'unknown';
- const label=entry.day.available?entry.day.label:'Non renseigné';
- const note=kind==='rest'?'Repos':kind==='leave'?'Congés':kind==='morning'?'Service du matin':kind==='afternoon'?'Service de l’après-midi':'Horaire non renseigné';
+ const kind=entry.day?.available?serviceKind(entry.day):'unknown';
+ const label=!entry.day?'Consulter la semaine':entry.day.available?entry.day.label:'Non renseigné';
+ const note=!entry.day?'Horaires de la semaine':kind==='rest'?'Repos':kind==='leave'?'Congés':kind==='morning'?'Service du matin':kind==='afternoon'?'Service de l’après-midi':'Horaire non renseigné';
  const item=entry.item;
  return '<button type="button" class="n2dash-person" data-action="dashboard-person" data-dashboard-person="'+index+'">'+
   '<span class="n2dash-avatar" aria-hidden="true">'+esc(item.name.slice(0,1).toLocaleUpperCase('fr'))+'</span>'+
@@ -184,11 +184,13 @@ export function renderOverviewDashboard({
   'not-configured':'Non configuré',loading:'Vérification…',error:'Indisponible'
  }[currentStatus]||'Non vérifié';
  const lastCheck=sync?.status?.lastCheckAt?formatSyncTimestamp(sync.status.lastCheckAt):null;
- const dateLabel=today?new Date(today+'T12:00:00Z').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}):'Semaine en cours';
+ const dateLabel=data.todayIndex>=0
+  ?new Date(today+'T12:00:00Z').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})
+  :'Semaine du '+humanDate(week);
  const kpi=(title,value,note,kind='')=>'<article class="n2dash-kpi"'+(kind?' data-kind="'+kind+'"':'')+'><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(note)+'</span></article>';
  const totals='<div class="n2dash-kpis" aria-label="Indicateurs du planning">'+
   kpi('Équipe planifiée aujourd’hui',hasPlanning&&todayDay?String(todayDay.count):'—',
-    hasPlanning&&todayDay?'Sur '+roster.length+' collaborateurs du planning':'Planning non disponible')+
+    hasPlanning?(todayDay?'Sur '+roster.length+' collaborateurs du planning':'Horaires de la semaine consultée'):'Planning non disponible')+
   kpi('Heures planifiées cette semaine',hasPlanning?dashboardHours(weeklyMinutes):'—',
     hasPlanning?'Total des créneaux publiés':'Planning non disponible')+
   kpi('Points à vérifier',data.issueCount===null?'—':String(data.issueCount),
@@ -203,14 +205,14 @@ export function renderOverviewDashboard({
   const pa=a.day.minutes>0?0:a.day.leave?1:2,pb=b.day.minutes>0?0:b.day.leave?1:2;
   return pa-pb||(a.day.ranges[0]?.start??1440)-(b.day.ranges[0]?.start??1440)||
     a.item.name.localeCompare(b.item.name,'fr');
- }):[];
+ }):hasPlanning?roster.map(item=>({item,day:null})):[];
  const peopleRows=sortedEntries.slice(0,expanded?sortedEntries.length:6).map(entry=>{
   const index=roster.indexOf(entry.item);
   return dashboardPersonButton(entry,index);
  }).join('');
  const rosterSection='<section class="card n2dash-section n2dash-team">'+
-  '<div class="n2dash-section-head"><div><h2>Équipe aujourd’hui</h2><p>'+
-  (hasPlanning?'Horaires prévus · '+roster.length+' collaborateurs au planning':'Planning de la semaine non publié')+
+  '<div class="n2dash-section-head"><div><h2>'+(todayDay?'Équipe aujourd’hui':'Équipe de la semaine')+'</h2><p>'+
+  (hasPlanning?(todayDay?'Horaires prévus':'Horaires de la semaine')+' · '+roster.length+' collaborateurs au planning':'Planning de la semaine non publié')+
   '</p></div><button type="button" class="n2dash-text-action" data-action="go-planning">Planning complet ↗</button></div>'+
   '<div class="n2dash-roster">'+(hasPlanning?(peopleRows||'<div class="n2dash-empty">Aucun collaborateur renseigné.</div>'):
   '<div class="n2dash-empty">Aucun planning publié pour cette semaine. Les journées ne sont pas considérées comme des repos.</div>')+
@@ -227,7 +229,7 @@ export function renderOverviewDashboard({
     '<strong>'+item.count+'</strong><div class="n2dash-coverage-track"><span style="height:'+height+'%"></span></div>'+
     '<small>'+String(item.hour).padStart(2,'0')+'h</small></div>';
   }).join('')+'</div>':
-  '<p class="n2dash-empty n2dash-coverage-empty">'+(hasPlanning?'Aucun créneau de travail prévu aujourd’hui.':'Graphique disponible après publication du planning.')+'</p>';
+  '<p class="n2dash-empty n2dash-coverage-empty">'+(hasPlanning?(todayDay?'Aucun créneau de travail prévu aujourd’hui.':'La semaine consultée ne correspond pas à la date du jour.'):'Graphique disponible après publication du planning.')+'</p>';
  const coverageSection='<section class="card n2dash-section n2dash-coverage">'+
   '<div class="n2dash-section-head"><div><h2>Couverture horaire</h2><p>Collaborateurs planifiés par heure · aujourd’hui</p></div></div>'+
   '<div class="n2dash-coverage-content">'+chart+
@@ -240,7 +242,7 @@ export function renderOverviewDashboard({
    '<em>'+esc(hasPlanning?dashboardHours(day.minutes):'—')+'</em></button>';
  }).join('');
  const weekSection='<section class="card n2dash-section n2dash-week">'+
-  '<div class="n2dash-section-head"><div><h2>Semaine en cours</h2><p>'+esc(humanDate(week))+' – '+esc(humanDate(plus(week,6)))+' · effectifs et heures planifiés</p></div>'+
+  '<div class="n2dash-section-head"><div><h2>'+(data.todayIndex>=0?'Semaine en cours':'Semaine consultée')+'</h2><p>'+esc(humanDate(week))+' – '+esc(humanDate(plus(week,6)))+' · effectifs et heures planifiés</p></div>'+
   '<button type="button" class="n2dash-text-action" data-action="go-planning">Ouvrir ↗</button></div>'+
   '<div class="n2dash-week-days">'+weekCards+'</div>'+
   '<p class="n2dash-footnote">Sélectionner un jour ouvre le planning détaillé. Les heures sont calculées sur les créneaux publiés.</p></section>';
