@@ -68,9 +68,9 @@ test('navigation desktop : icônes SVG modernes sans anciens glyphes',()=>{
   const html=renderDesktopPlanningAgenda({...common,view:'week'});
   assert.match(html,/class="n2-agenda-tab-icon"/);
   assert.match(html,/class="n2-agenda-team-icon"/);
-  assert.match(html,/>Semaine</span>/);
-  assert.match(html,/>Jour</span>/);
-  assert.match(html,/>Année</span>/);
+  assert.ok(html.includes('>Semaine</span>'));
+  assert.ok(html.includes('>Jour</span>'));
+  assert.ok(html.includes('>Année</span>'));
   assert.match(html,/Toute l’équipe/);
   assert.doesNotMatch(html,/▦|▣|▤|♧/);
 });
