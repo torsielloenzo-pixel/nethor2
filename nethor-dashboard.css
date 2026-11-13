@@ -163,3 +163,81 @@
  #app .live-day-item.n2staff-row:hover{background:#f3f7fd}
  #app .live-day-item.n2staff-row:focus-within{outline:2px solid #d5e5fb;outline-offset:-2px}
 }
+
+
+/* Tableau de bord manager — Administrateur / Point de vente · Desktop & PWA Desktop.
+   Les styles sont strictement encapsulés pour préserver les fiches et l'accueil mobile. */
+@media (min-width:761px){
+ #app .live-workspace main#screen:has(.n2dash-manager){width:min(100%,1550px);max-width:1550px;padding:28px clamp(22px,3vw,48px)}
+}
+#app .n2dash-manager{display:grid;gap:18px;min-width:0}
+#app .n2dash-manager .n2dash-topline{display:flex;justify-content:space-between;align-items:center;gap:14px;min-width:0}
+#app .n2dash-manager .n2dash-topline p{margin:5px 0 0;color:#667b99;font-size:12px;text-transform:capitalize}
+#app .n2dash-manager .n2dash-overline{font-size:10px;letter-spacing:1.5px;color:#5980b5;font-weight:800}
+#app .n2dash-manager .n2dash-readonly{font-size:11px;color:#7285a0;background:#edf3fc;border:1px solid #dfe8f5;border-radius:99px;padding:8px 12px;white-space:nowrap}
+#app .n2dash-manager .n2dash-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+#app .n2dash-manager .n2dash-kpi{display:grid;gap:6px;background:#fff;border:1px solid #e4eaf3;border-radius:16px;padding:17px 19px;box-shadow:0 4px 15px rgba(32,59,104,.025);min-width:0}
+#app .n2dash-manager .n2dash-kpi small{font-size:11px;line-height:1.5;color:#7d8da5;font-weight:650}
+#app .n2dash-manager .n2dash-kpi strong{font-size:25px;color:#23395d;line-height:1.2;font-weight:790;overflow-wrap:anywhere}
+#app .n2dash-manager .n2dash-kpi span{color:#8696ac;font-size:10px;line-height:1.5}
+#app .n2dash-manager .n2dash-kpi[data-kind=attention] strong{color:#ad6940}
+#app .n2dash-manager .n2dash-kpi[data-kind=ok] strong{color:#27785d}
+#app .n2dash-manager .n2dash-main-grid{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(0,1fr);gap:17px;align-items:start}
+#app .n2dash-manager .n2dash-stack{display:grid;gap:17px;min-width:0}
+#app .n2dash-manager .n2dash-section{border:1px solid #e4eaf3;border-radius:17px;box-shadow:0 5px 20px rgba(32,59,104,.025)}
+#app .n2dash-manager .n2dash-section-head{padding:19px 21px 16px;gap:10px}
+#app .n2dash-manager .n2dash-section-head h2{font-size:16px;letter-spacing:-.24px;line-height:1.25;margin:0 0 5px}
+#app .n2dash-manager .n2dash-section-head p{font-size:11px;color:#8797ac}
+#app .n2dash-manager .n2dash-text-action{font-size:11px;padding:9px 11px;flex:none}
+#app .n2dash-manager .n2dash-roster{display:grid;max-height:none;overflow:visible;padding:5px 12px 8px}
+#app .n2dash-manager .n2dash-person{padding:9px 12px;min-height:60px}
+#app .n2dash-manager .n2dash-person-main strong{font-size:12px;font-weight:680}
+#app .n2dash-manager .n2dash-person-main small{font-size:10px}
+#app .n2dash-manager .n2dash-person-time{font-size:11px}
+#app .n2dash-manager .n2dash-expand{border:0;border-top:1px solid #edf1f7;color:#315c9c;background:#fff;display:flex;justify-content:center;gap:8px;align-items:center;padding:13px 20px;width:100%;font-size:12px;font-weight:720;cursor:pointer}
+#app .n2dash-manager .n2dash-expand:hover{background:#f3f7ff}
+#app .n2dash-manager .n2dash-coverage-content{padding:18px 22px 17px}
+#app .n2dash-manager .n2dash-coverage-chart{display:flex;align-items:stretch;gap:6px;height:168px;overflow-x:auto;padding:2px 0 6px}
+#app .n2dash-manager .n2dash-coverage-bar{display:flex;flex:1 0 25px;min-width:24px;flex-direction:column;align-items:center;gap:7px;color:#48607f}
+#app .n2dash-manager .n2dash-coverage-bar strong{font-size:10px;font-variant-numeric:tabular-nums;font-weight:700;line-height:1}
+#app .n2dash-manager .n2dash-coverage-track{width:100%;flex:1;min-height:0;display:flex;align-items:end;background:#f0f4fb;border-radius:6px 6px 3px 3px;overflow:hidden}
+#app .n2dash-manager .n2dash-coverage-track span{width:100%;background:linear-gradient(180deg,#477bdc,#a7c7f6);border-radius:5px 5px 2px 2px;display:block}
+#app .n2dash-manager .n2dash-coverage-bar small{font-size:10px;color:#8899b0}
+#app .n2dash-manager .n2dash-footnote{padding:0;margin:12px 0 0;font-size:10px;line-height:1.65;color:#8a9aaf}
+#app .n2dash-manager .n2dash-coverage-empty{margin:4px 0 0;background:#f6f8fc;border-radius:12px}
+#app .n2dash-manager .n2dash-week-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:17px 17px 0}
+#app .n2dash-manager .n2dash-weekday{display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:start;background:#f6f8fc;border:1px solid #edf1f7;border-radius:11px;padding:12px 3px;min-width:0;cursor:pointer;color:#526580}
+#app .n2dash-manager .n2dash-weekday:hover{background:#edf3ff;border-color:#cbdcf5}
+#app .n2dash-manager .n2dash-weekday.is-today{background:#e9f1ff;border-color:#7fa9ed}
+#app .n2dash-manager .n2dash-weekday small{font-size:10px;text-transform:uppercase;color:#7387a2}
+#app .n2dash-manager .n2dash-weekday strong{font-size:17px;color:#263f66}
+#app .n2dash-manager .n2dash-weekday span{font-size:10px;white-space:nowrap;color:#47678f}
+#app .n2dash-manager .n2dash-weekday em{font-size:10px;font-style:normal;color:#8598b0;white-space:nowrap}
+#app .n2dash-manager .n2dash-week>.n2dash-footnote{padding:0 19px 17px}
+#app .n2dash-manager .n2dash-count{display:grid;place-items:center;width:26px;height:26px;background:#fff0e4;border-radius:9px;color:#ad6940;font-size:12px;font-weight:800}
+#app .n2dash-manager .n2dash-action-list{padding:4px 20px 14px}
+#app .n2dash-manager .n2dash-action-item{display:flex;align-items:flex-start;gap:13px;justify-content:space-between;padding:13px 0;min-width:0}
+#app .n2dash-manager .n2dash-action-item+.n2dash-action-item{border-top:1px solid #edf1f6}
+#app .n2dash-manager .n2dash-action-item strong{font-size:12px;line-height:1.4;color:#38506e}
+#app .n2dash-manager .n2dash-action-item[data-kind=warning] strong{color:#a26c43}
+#app .n2dash-manager .n2dash-action-item p{font-size:11px;color:#8494aa;line-height:1.55;margin:5px 0 0;overflow-wrap:anywhere}
+#app .n2dash-manager .n2dash-action-item button{align-self:center;border:1px solid #d6e2f2;background:#f6f9ff;color:#315d9b;padding:8px 9px;border-radius:9px;font-size:10px;font-weight:750;flex:none;cursor:pointer}
+#app .n2dash-manager .n2dash-action-item button:hover{background:#e9f1ff}
+#app .n2dash-manager .n2dash-sync-mini .n2dash-sync-button{padding:16px 20px}
+#app .n2dash-manager .n2dash-sync-mini .n2dash-sync-main{gap:5px}
+#app .n2dash-manager .n2dash-sync-mini .n2dash-sync-main strong{font-size:12px}
+#app .n2dash-manager .n2dash-sync-mini .n2dash-sync-main small{font-size:10px;line-height:1.5}
+#app .n2dash-manager .n2dash-sync-state{font-weight:650;color:#7188a3}
+#app .n2dash-manager button:focus-visible{outline:2px solid #4e7bd0;outline-offset:2px}
+@media(max-width:1180px){
+ #app .n2dash-manager .n2dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #app .n2dash-manager .n2dash-main-grid{grid-template-columns:1fr}
+ #app .n2dash-manager .n2dash-roster{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+ #app .n2dash-manager .n2dash-readonly{display:none}
+ #app .n2dash-manager .n2dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #app .n2dash-manager .n2dash-main-grid{grid-template-columns:1fr}
+ #app .n2dash-manager .n2dash-week-days{grid-template-columns:repeat(7,minmax(56px,1fr));overflow-x:auto}
+ #app .n2dash-manager .n2dash-action-item{flex-wrap:wrap}
+}
