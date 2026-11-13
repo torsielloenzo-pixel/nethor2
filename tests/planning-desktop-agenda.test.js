@@ -62,3 +62,49 @@ test('aucun planning publié : message explicite, sans faux horaires',()=>{
   assert.match(html,/Aucun planning publié/);
   assert.doesNotMatch(html,/n2-agenda-week-table/);
 });
+
+
+test('navigation desktop : icônes SVG modernes sans anciens glyphes',()=>{
+  const html=renderDesktopPlanningAgenda({...common,view:'week'});
+  assert.match(html,/class="n2-agenda-tab-icon"/);
+  assert.match(html,/class="n2-agenda-team-icon"/);
+  assert.match(html,/>Semaine</span>/);
+  assert.match(html,/>Jour</span>/);
+  assert.match(html,/>Année</span>/);
+  assert.match(html,/Toute l’équipe/);
+  assert.doesNotMatch(html,/▦|▣|▤|♧/);
+});
+
+test('Point de vente : édition disponible sans aucun contrôle de verrouillage',()=>{
+  const idle=renderDesktopPlanningAgenda({...common,view:'week',editor:{
+    available:true,editing:false,locked:false,canLock:false,busy:false
+  }});
+  assert.match(idle,/data-action="planning-edit-start"/);
+  assert.doesNotMatch(idle,/data-action="planning-edit-lock"/);
+  assert.doesNotMatch(idle,/data-action="planning-edit-unlock"/);
+
+  const editing=renderDesktopPlanningAgenda({...common,view:'week',editor:{
+    available:true,editing:true,locked:false,canLock:false,busy:false
+  }});
+  assert.match(editing,/data-action="planning-edit-save"/);
+  assert.doesNotMatch(editing,/data-action="planning-edit-save-lock"/);
+
+  const locked=renderDesktopPlanningAgenda({...common,view:'week',editor:{
+    available:true,editing:false,locked:true,canLock:false,busy:false
+  }});
+  assert.match(locked,/Semaine verrouillée/);
+  assert.doesNotMatch(locked,/data-action="planning-edit-start"/);
+  assert.doesNotMatch(locked,/data-action="planning-edit-unlock"/);
+});
+
+test('Administrateur : conserve les actions de verrouillage',()=>{
+  const idle=renderDesktopPlanningAgenda({...common,view:'week',editor:{
+    available:true,editing:false,locked:false,canLock:true,busy:false
+  }});
+  assert.match(idle,/data-action="planning-edit-lock"/);
+
+  const editing=renderDesktopPlanningAgenda({...common,view:'week',editor:{
+    available:true,editing:true,locked:false,canLock:true,busy:false
+  }});
+  assert.match(editing,/data-action="planning-edit-save-lock"/);
+});
