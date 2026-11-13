@@ -25,7 +25,7 @@ test('planning: une seule région défile sous le vrai en-tête du site',()=>{
  assert.match(shell,/<header class="topbar">/);
  assert.match(shell,/<main id="screen" tabindex="-1" aria-live="polite"><\/main>/);
  assert.ok(shell.indexOf('<header class="topbar">')<shell.indexOf('<main id="screen"'));
- assert.match(js,/ROOT\.classList\.toggle\('mobile-planning-active',state\.page==='planning'&&isMobileHome\(\)\)/);
+ assert.match(js,/ROOT\.classList\.toggle\('mobile-planning-active',state\.page==='planning'&&smallScreen\(\)\)/);
  const css=read('mobile.css');
  assert.match(css,/#app\.menu-open #sidebar\{position:fixed;z-index:1001;/);
 });
