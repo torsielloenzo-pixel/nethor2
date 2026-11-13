@@ -9,7 +9,7 @@ import {renderAccountAdmin} from './account-admin.js';
 import {renderNethorPromo} from './nethor-promo.js';
 import {shouldOfferRecoveryPrompt,renderRecoveryPrompt} from './recovery-prompt.js';
 import {installMobileZoomLock} from './mobile-zoom.js';
-import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek,getPublishedWeeksForYear,MIN_PLANNING_DATE,MIN_PLANNING_YEAR} from '../data/planning-repository.js';
+import {getPlanningWeek,getImportHistory,publishPlanningWeek,verifyPublishedWeek,getPublishedWeeksForYear,saveAdminPlanningWeek,setAdminPlanningWeekLock,MIN_PLANNING_DATE,MIN_PLANNING_YEAR} from '../data/planning-repository.js';
 import {analyzeEmployeeDay,compareContractHours} from '../domain/planning-core.js';
 import {normalizeName} from '../domain/employee-linker.js';
 import {dateInParis,moveDate,mondayFor,personalOverview} from '../domain/personal-overview.js';
@@ -18,6 +18,7 @@ import {readCalendarSubscription} from '../data/calendar-subscription.js';
 import {renderPlanningYear} from './planning-year.js';
 import {renderDesktopPlanningDay,renderDesktopPlanningLegend} from './planning-desktop-colors.js';
 import {renderDesktopPlanningAgenda} from './planning-desktop-agenda.js';
+import {applyPlanningDayEdit,clonePlanningModel,renderPlanningEditorDialog} from './planning-desktop-editor.js';
 import {readSyncStatus,readSyncHistory,readSyncFileChanges,readSyncAutoPublications,readSyncDiagnostics,readSyncHistoricalSummary} from '../data/nethor-sync-control.js';
 import {importSyncHealth,renderImportSyncGuide,confirmImportManually} from './nethor-sync-import-guide.js';
 import {mergeImportHistory,renderHistoryBrowser} from './import-history.js';
@@ -101,6 +102,7 @@ const promoCatalogState={loaded:false,loading:false,data:null,error:''};
 let dashboardOpen=null;
 let dashboardPersonDetail=null;
 let dashboardPersonRequest=0;
+let planningEditor={editing:false,week:null,draft:null,active:null,dirty:false,busy:false,message:'',messageKind:'info'};
 function dashboardIssuesFor(issues,person){
  if(!person)return [];
  const names=new Set(person.people.map(p=>normalizeName(p.name)));
@@ -584,6 +586,61 @@ function shift(ranges){
   return '<div class="shift">'+ranges.map(r=>hhmm(r.startMinutes)+'–'+hhmm(r.endMinutes)).join('<i>puis</i>')+'</div>';
 }
 const adminPlanningDesktop=()=>!smallScreen()&&state.page==='planning'&&state.profile?.role==='admin';
+function clearPlanningEditor(message='',messageKind='info'){
+  planningEditor={editing:false,week:null,draft:null,active:null,dirty:false,busy:false,message,messageKind};
+}
+function startPlanningEditor(){
+  if(!adminPlanningDesktop()||!state.weekData?.model||state.weekData.locked||planningEditor.busy)return;
+  planningEditor={editing:true,week:state.week,draft:clonePlanningModel(state.weekData.model),active:null,dirty:false,busy:false,message:'Clique sur une journée pour modifier ses horaires.',messageKind:'info'};
+  state.view='week';
+  render();
+}
+function cancelPlanningEditor(){
+  if(!planningEditor.editing)return;
+  clearPlanningEditor('Modifications annulées.','info');
+  render();
+}
+async function savePlanningEditor(lockAfter=false){
+  if(!adminPlanningDesktop()||!planningEditor.editing||!planningEditor.draft||planningEditor.busy)return;
+  planningEditor.busy=true;planningEditor.message='Enregistrement du planning…';planningEditor.messageKind='info';render();
+  try{
+    const gate=await checkSession();
+    if(!gate||gate.gate.profile?.role!=='admin')throw Error('Droits administrateur requis.');
+    if(state.week!==planningEditor.week)throw Error('La semaine affichée a changé. Modifications non publiées.');
+    const outcome=await saveAdminPlanningWeek(client,{
+      weekStart:state.week,expectedRevision:state.weekData?.revision,model:planningEditor.draft,lockAfter
+    });
+    if(outcome.status==='conflict')throw Error('Le planning a changé depuis le début de l’édition. Recharge la semaine avant de recommencer.');
+    if(outcome.status==='locked')throw Error('Cette semaine a été verrouillée entre-temps.');
+    if(outcome.status==='forbidden')throw Error('Les droits administrateur ne sont plus actifs.');
+    if(outcome.status==='invalid')throw Error('Le brouillon ne respecte pas la structure du planning.');
+    if(outcome.status==='not_found')throw Error('Cette semaine n’existe plus dans le planning publié.');
+    const message=lockAfter?'Planning enregistré et semaine verrouillée.':'Planning enregistré.';
+    clearPlanningEditor(message,'success');
+    await loadWeek();
+    planningEditor.message=message;planningEditor.messageKind='success';render();
+  }catch(error){
+    planningEditor.busy=false;planningEditor.message=String(error?.message||error);planningEditor.messageKind='error';render();
+  }
+}
+async function changePlanningWeekLock(locked){
+  if(!adminPlanningDesktop()||!state.weekData?.revision||planningEditor.busy)return;
+  planningEditor.busy=true;planningEditor.message=locked?'Verrouillage de la semaine…':'Déverrouillage de la semaine…';planningEditor.messageKind='info';render();
+  try{
+    const gate=await checkSession();
+    if(!gate||gate.gate.profile?.role!=='admin')throw Error('Droits administrateur requis.');
+    const outcome=await setAdminPlanningWeekLock(client,{weekStart:state.week,expectedRevision:state.weekData.revision,locked});
+    if(outcome.status==='conflict')throw Error('Le planning a changé. Actualise la semaine avant de réessayer.');
+    if(outcome.status==='forbidden')throw Error('Les droits administrateur ne sont plus actifs.');
+    if(outcome.status==='not_found')throw Error('Cette semaine n’existe plus.');
+    const message=locked?'Semaine verrouillée : NethorSync ne peut plus la remplacer.':'Semaine déverrouillée : NethorSync peut de nouveau la mettre à jour.';
+    clearPlanningEditor(message,'success');
+    await loadWeek();
+    planningEditor.message=message;planningEditor.messageKind='success';render();
+  }catch(error){
+    planningEditor.busy=false;planningEditor.message=String(error?.message||error);planningEditor.messageKind='error';render();
+  }
+}
 async function loadCollaboratorHistory(){
  if(!adminPlanningDesktop()||collaboratorHistory.loading||collaboratorHistory.loaded)return;
  const request=++collaboratorsRequestId;
@@ -941,6 +998,7 @@ function subscribePlanningCalendar(){
   }
 }
 function pagePlanning(metrics){
+  const planningModel=planningEditor.editing?visibleModel(planningEditor.draft):visibleModel();
   if(annualAllowed()&&state.view==='year'){
     return renderPlanningYear({...state.mobilePlanning.annual,year:state.mobilePlanning.year,
       today:dateInParis(),selectedDay:state.day});
@@ -963,9 +1021,12 @@ function pagePlanning(metrics){
     personIssues:dashboardIssuesFor(metrics.issues,person)
   }):'';
   return renderPageHeader('PLANNING','Planning du personnel','Horaires et planning de l’équipe.',button('Historique personnel','personal-history-toggle')+(staffPlanningRole()?'':state.access==='manage'?button('Importer Excel','go-import',true):''))+collaboratorPanel()+
-    renderDesktopPlanningAgenda({model:visibleModel(),people:metrics.people,week:state.week,day:state.day,view:state.view,
+    renderDesktopPlanningAgenda({model:planningModel,people:metrics.people,week:state.week,day:state.day,view:state.view,
       sourceFile:state.weekData?.sourceFile||'',renderPerson:personWithAccountLink,formatHours:hours,
-      canYear:desktopAnnualAllowed(),loading:state.loading,query:desktopAgendaQuery})+
+      canYear:desktopAnnualAllowed(),loading:state.loading,query:desktopAgendaQuery,
+      editor:adminPlanningDesktop()?{available:true,editing:planningEditor.editing,locked:state.weekData?.locked===true,
+        dirty:planningEditor.dirty,busy:planningEditor.busy,message:planningEditor.message,messageKind:planningEditor.messageKind}:null})+
+    (adminPlanningDesktop()?renderPlanningEditorDialog({model:planningEditor.draft,active:planningEditor.active}):'')+
     (staffPlanningRole()?(staffDetail.showMonth?renderStaffDetail(metrics):sheet):'');
 }
 
@@ -1341,7 +1402,7 @@ function render(){
     el.classList.toggle('active',el.dataset.page===state.page);
     if(el.dataset.page===state.page)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
   });
-  const model=visibleModel(),metrics=analyze(model);
+  const model=state.page==='planning'&&planningEditor.editing?visibleModel(planningEditor.draft):visibleModel(),metrics=analyze(model);
   const pages={home:()=>pageHome(metrics),planning:()=>pagePlanning(metrics),anomalies:()=>pageAnomalies(metrics),import:pageImport,team:()=>pageTeam(metrics),history:pageHistory,promo:pagePromo,settings:pageSettings};
   let top='';
   // Sur le planning desktop des gestionnaires, garder les menus immobiles pendant le changement de semaine.
@@ -1499,6 +1560,7 @@ async function publish(){
     if(!gate||gate.access!=='manage')throw Error('Vos autorisations ont changé. Publication refusée.');
     const model=state.importModel;
     const latest=await getPlanningWeek(client,model.weekStart);
+    if(latest?.locked)throw Error('Cette semaine est verrouillée par l’administrateur. Déverrouille-la dans Planning avant de l’importer.');
     if((latest?.revision||null)!==(state.importExisting?.revision||null))throw Error('Le planning a changé depuis la prévisualisation. Rechargez le fichier avant publication.');
     const safe=state.importFile.name.replace(/[^a-zA-Z0-9_.-]/g,'_').slice(0,96);
     const sourceSha256=await sha256File(state.importFile);
@@ -1512,6 +1574,7 @@ async function publish(){
     publicationAttempted=true;
     const outcome=await publishPlanningWeek(client,{weekStart:model.weekStart,expectedRevision:latest?.revision||null,model:data});
     if(outcome.status==='conflict')throw Error('Une autre publication a eu lieu. Rien n’a été écrasé.');
+    if(outcome.status==='locked')throw Error('Cette semaine est verrouillée par l’administrateur. Aucune importation n’a été appliquée.');
     if(outcome.status==='unchanged'){
       if(uploadedNew){
         try{await client.storage.from('planning-files').remove([path]);}catch(e){console.warn('Archive identique à nettoyer',e);}
@@ -1639,6 +1702,22 @@ document.addEventListener('click',event=>{
 });
 
 ROOT.addEventListener('submit',async event=>{
+  if(event.target.id==='planningEditorForm'){
+    event.preventDefault();
+    if(!adminPlanningDesktop()||!planningEditor.editing||!planningEditor.draft)return;
+    const values=Object.fromEntries(new FormData(event.target).entries());
+    try{
+      applyPlanningDayEdit(planningEditor.draft,{
+        employeeIndex:Number(values.employeeIndex),date:values.date,status:values.status,
+        firstStart:values.firstStart||'',firstEnd:values.firstEnd||'',
+        secondStart:values.secondStart||'',secondEnd:values.secondEnd||''
+      });
+      planningEditor.active=null;planningEditor.dirty=true;
+      planningEditor.message='Modification ajoutée au brouillon. Enregistre la semaine pour la publier.';
+      planningEditor.messageKind='info';render();
+    }catch(error){window.alert(String(error?.message||error));}
+    return;
+  }
   if(event.target.id==='adminAliasesForm'){event.preventDefault();await saveAdminAliases(event.target);return;}
   if(event.target.id==='adminAccountForm'){event.preventDefault();await submitAdminAccount(event.target);return;}
   if(event.target.id==='recoveryEmailForm'){
@@ -1664,6 +1743,17 @@ ROOT.addEventListener('submit',async event=>{
   }catch(err){showMessage(String(err.message||err));if(submit){submit.disabled=false;submit.textContent='Se connecter';}}
 });
 ROOT.addEventListener('click',async event=>{
+ const editCell=event.target.closest('[data-planning-edit-person][data-planning-edit-day]');
+ if(editCell&&adminPlanningDesktop()&&planningEditor.editing){
+   const visible=visibleModel(planningEditor.draft);
+   const shownIndex=Number(editCell.dataset.planningEditPerson);
+   const name=visible?.employees?.[shownIndex]?.name;
+   const employeeIndex=(planningEditor.draft?.employees||[]).findIndex(item=>item?.name===name);
+   if(employeeIndex>=0){
+     planningEditor.active={employeeIndex,date:editCell.dataset.planningEditDay};render();
+   }
+   return;
+ }
  if(staffPlanningRole()&&state.page==='planning'){
   if(event.target.matches('[data-staff-backdrop]')){staffDetail.name=null;staffDetail.request++;render();return;}
   const act=event.target.closest('[data-action^="staff-"]');
@@ -1768,7 +1858,10 @@ ROOT.addEventListener('click',async event=>{
     return;
   }
   const day=event.target.closest('[data-day]');
-  if(day){state.day=day.dataset.day;state.view='day';render();return;}
+  if(day){
+    if(planningEditor.editing&&adminPlanningDesktop()){window.alert('Enregistre ou annule les modifications avant de changer de vue.');return;}
+    state.day=day.dataset.day;state.view='day';render();return;
+  }
   const createFor=event.target.closest('[data-account-create-for]');
   if(createFor){openAccountsFor(createFor.dataset.accountCreateFor);return;}
   const link=event.target.closest('[data-link-save]');
@@ -1778,6 +1871,16 @@ ROOT.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');
   if(!b)return;
   const action=b.dataset.action;
+  if(action==='planning-edit-start'){startPlanningEditor();return;}
+  if(action==='planning-edit-cancel'){cancelPlanningEditor();return;}
+  if(action==='planning-edit-save'){await savePlanningEditor(false);return;}
+  if(action==='planning-edit-save-lock'){await savePlanningEditor(true);return;}
+  if(action==='planning-edit-lock'){await changePlanningWeekLock(true);return;}
+  if(action==='planning-edit-unlock'){await changePlanningWeekLock(false);return;}
+  if(action==='planning-editor-close'){planningEditor.active=null;render();return;}
+  if(planningEditor.editing&&adminPlanningDesktop()&&['prev','next','today','refresh','agenda-prev-day','agenda-next-day','day-view','year-view','go-import'].includes(action)){
+    window.alert('Enregistre ou annule les modifications avant de quitter cette semaine.');return;
+  }
   if(action==='promo-refresh'&&state.page==='promo'&&canNavigate('promo',state.profile,smallScreen())){
     await loadPromoCatalogs();return;
   }
@@ -1973,6 +2076,7 @@ ROOT.addEventListener('toggle',event=>{
  panel.style.left=left+'px';panel.style.top=Math.max(8,top)+'px';
 },true);
 ROOT.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&planningEditor.active){planningEditor.active=null;render();return;}
  if(event.key==='Escape'&&state.personalHistory.open){state.personalHistory.open=false;paintPersonalPlanningHistory();return;}
  if(event.key==='Escape'&&state.page==='planning'&&staffDetail.name){staffDetail.name=null;staffDetail.request++;render();return;}
  if(event.key==='Escape'&&['home','planning'].includes(state.page)&&dashboardOpen){
@@ -1980,6 +2084,11 @@ ROOT.addEventListener('keydown',event=>{
  }
 });
 ROOT.addEventListener('change',event=>{
+ if(event.target.id==='planningEditorStatus'&&planningEditor.active){
+   const times=ROOT.querySelector('[data-editor-times]');
+   if(times)times.hidden=event.target.value!=='work';
+   return;
+ }
  if(state.page==='history'&&state.profile?.role==='admin'&&['historySource','historyYear','historySort'].includes(event.target.id)){
   const field={historySource:'source',historyYear:'year',historySort:'sort'}[event.target.id];
   historyBrowser[field]=event.target.value;historyBrowser.openMonths=[];render();return;
