@@ -102,7 +102,7 @@ export function renderPlanningEditorDialog({model,active}){
   const dateLabel=new Date(active.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   return '<div class="n2-planedit-backdrop" data-action="planning-editor-close"></div>'+
     '<section class="n2-planedit-dialog" role="dialog" aria-modal="true" aria-labelledby="n2PlanEditTitle">'+
-      '<form id="planningEditorForm">'+
+      '<form id="planningEditorForm" novalidate>'+
         '<header><div><small>MODIFIER LA JOURNÉE</small><h3 id="n2PlanEditTitle">'+esc(employee.name)+'</h3><p>'+esc(dateLabel)+'</p></div>'+
         '<button type="button" class="n2-planedit-close" data-action="planning-editor-close" aria-label="Fermer">×</button></header>'+
         '<input type="hidden" name="employeeIndex" value="'+seed.employeeIndex+'">'+
