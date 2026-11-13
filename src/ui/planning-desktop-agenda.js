@@ -7,6 +7,17 @@ const STATUS={leave:'Congés',rest:'Repos',unavailable:'Indisponible',empty:'—
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
 const clock=minutes=>pad(Math.floor(minutes/60))+':'+pad(Math.round(minutes%60));
+const PLANNING_ICONS=Object.freeze({
+  week:'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M8 13h2M14 13h2M8 17h2M14 17h2"/>',
+  day:'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/><rect x="7" y="12" width="10" height="5" rx="1.5"/>',
+  year:'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M7 12h3v2H7zM14 12h3v2h-3zM7 17h3v1H7zM14 17h3v1h-3z"/>',
+  team:'<path d="M16 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-5A4.5 4.5 0 0 0 2 18.5V20"/><circle cx="9" cy="7" r="3.5"/><path d="M22 20v-1.5a4.5 4.5 0 0 0-3.5-4.38M15.5 3.65a3.5 3.5 0 0 1 0 6.7"/>'
+});
+function planningIcon(name,className='n2-agenda-tab-icon'){
+  const paths=PLANNING_ICONS[name];
+  if(!paths)return '';
+  return '<svg class="'+className+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+paths+'</svg>';
+}
 function plusDays(date,days){
   const d=new Date(date+'T12:00:00');
   d.setDate(d.getDate()+days);
@@ -29,16 +40,17 @@ function statusMarkup(day){
 function editorControls(editor){
   const refresh='<button class="n2-agenda-refresh" type="button" data-action="refresh">Actualiser ↻</button>';
   if(!editor?.available)return refresh;
+  const canLock=editor.canLock===true;
   const badge=editor.locked?'<span class="n2-agenda-lock-badge">🔒 Semaine verrouillée</span>':
     editor.editing?'<span class="n2-agenda-edit-badge">✎ Mode édition</span>':'';
   const actions=editor.editing
     ?'<button class="btn" type="button" data-action="planning-edit-cancel" '+(editor.busy?'disabled':'')+'>Annuler</button>'+
       '<button class="btn" type="button" data-action="planning-edit-save" '+(editor.busy?'disabled':'')+'>Enregistrer</button>'+
-      '<button class="btn primary" type="button" data-action="planning-edit-save-lock" '+(editor.busy?'disabled':'')+'>Enregistrer et verrouiller</button>'
+      (canLock?'<button class="btn primary" type="button" data-action="planning-edit-save-lock" '+(editor.busy?'disabled':'')+'>Enregistrer et verrouiller</button>':'')
     :editor.locked
-      ?'<button class="btn" type="button" data-action="planning-edit-unlock" '+(editor.busy?'disabled':'')+'>Déverrouiller</button>'
+      ?(canLock?'<button class="btn" type="button" data-action="planning-edit-unlock" '+(editor.busy?'disabled':'')+'>Déverrouiller</button>':'')
       :'<button class="btn" type="button" data-action="planning-edit-start">Modifier</button>'+
-       '<button class="btn" type="button" data-action="planning-edit-lock">🔒 Verrouiller</button>';
+       (canLock?'<button class="btn" type="button" data-action="planning-edit-lock">🔒 Verrouiller</button>':'');
   return '<div class="n2-agenda-admin-actions">'+badge+actions+(editor.editing?'':refresh)+'</div>';
 }
 function editableWeekCell(day,model,editor,person,date){
@@ -62,11 +74,11 @@ function nav(view,week,day,canYear,query){
   const datestring=view==='day'?label(day,{weekday:'long',day:'numeric',month:'long',year:'numeric'}):
     'Semaine du '+label(week,{day:'numeric',month:'short'})+' au '+label(plusDays(week,6),{day:'numeric',month:'short',year:'numeric'});
   return '<div class="n2-agenda-tabs" style="--agenda-tabs:'+(canYear?3:2)+'" role="group" aria-label="Affichage du planning">'+
-    '<button type="button" data-action="week-view" class="'+(view==='week'?'active':'')+'" aria-pressed="'+(view==='week')+'">▦ <span>Semaine</span></button>'+
-    '<button type="button" data-action="day-view" class="'+(view==='day'?'active':'')+'" aria-pressed="'+(view==='day')+'">▣ <span>Jour</span></button>'+
-    (canYear?'<button type="button" data-action="year-view" aria-pressed="false">▤ <span>Année</span></button>':'')+
+    '<button type="button" data-action="week-view" class="'+(view==='week'?'active':'')+'" aria-pressed="'+(view==='week')+'">'+planningIcon('week')+'<span>Semaine</span></button>'+
+    '<button type="button" data-action="day-view" class="'+(view==='day'?'active':'')+'" aria-pressed="'+(view==='day')+'">'+planningIcon('day')+'<span>Jour</span></button>'+
+    (canYear?'<button type="button" data-action="year-view" aria-pressed="false">'+planningIcon('year')+'<span>Année</span></button>':'')+
     '</div><div class="n2-agenda-toolbar">'+
-      '<div class="n2-agenda-team"><small>Équipe</small><span>♧&nbsp; Toute l’équipe</span></div>'+
+      '<div class="n2-agenda-team"><small>Équipe</small><span>'+planningIcon('team','n2-agenda-team-icon')+'Toute l’équipe</span></div>'+
       '<div class="n2-agenda-nav">'+
         '<button class="n2-agenda-icon" type="button" data-action="'+(view==='day'?'agenda-prev-day':'prev')+'" aria-label="'+(view==='day'?'Jour précédent':'Semaine précédente')+'">‹</button>'+
         '<div><strong>'+esc(datestring)+'</strong>'+(view==='week'?'<small>7 jours</small>':'')+'</div>'+
@@ -109,7 +121,7 @@ function dayGrid(people,day,week,model,renderPerson){
 function summary(people,day,week,model,view){
   const index=Math.max(0,Math.min(6,Math.round((new Date(day+'T12:00:00')-new Date(week+'T12:00:00'))/86400000)));
   const active=people.filter(p=>p.days[index]?.ranges?.length).length;
-  return '<div class="n2-agenda-footer"><span>♧ <strong>'+people.length+'</strong> collaborateurs</span>'+
+  return '<div class="n2-agenda-footer"><span class="n2-agenda-footer-team">'+planningIcon('team','n2-agenda-footer-icon')+'<strong>'+people.length+'</strong> collaborateurs</span>'+
     (view==='day'?'<span>'+esc(label(day,{weekday:'long',day:'numeric',month:'long'}))+' · <strong>'+active+'</strong> planifiés</span>':'<span>Horaires de la semaine publiée</span>')+
     '<div class="n2-agenda-legend" aria-label="Légende">'+
       '<span><i data-tone="morning"></i>Matin</span><span><i data-tone="afternoon"></i>Après-midi</span>'+
