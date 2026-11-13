@@ -121,6 +121,7 @@
 @media (min-width:761px){
   #app .n2-agenda-admin-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
   #app .n2-agenda-admin-actions .btn{min-height:34px;padding:7px 10px;font-size:10px}
+  #app .n2-agenda-readonly{display:inline-flex;align-items:center;min-height:32px;padding:6px 10px;border:1px solid #e1e7f1;border-radius:8px;background:#f7f9fc;color:#5e718f;font-size:10px;font-weight:650}
   #app .n2-agenda-lock-badge,#app .n2-agenda-edit-badge{display:inline-flex;align-items:center;min-height:32px;padding:6px 9px;border-radius:8px;font-size:10px;font-weight:750}
   #app .n2-agenda-lock-badge{background:#fff3d8;color:#835b10;border:1px solid #f0d59c}
   #app .n2-agenda-edit-badge{background:#eaf2ff;color:#255a9f;border:1px solid #cddfff}

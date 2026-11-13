@@ -134,7 +134,7 @@ async function loadDashboardPersonWeek(week){
  }
 }
 const staffDetail={name:null,month:null,weeks:[],loading:false,error:'',request:0,showMonth:false};
-const staffPlanningRole=()=>!smallScreen()&&['admin','role_point-de-vente'].includes(state.profile?.role);
+const staffPlanningRole=()=>!smallScreen()&&['admin','role_point-de-vente','responsable','employe'].includes(state.profile?.role);
 
 const historyBrowser={query:'',source:'all',year:'all',sort:'newest',openMonths:[],expandedAll:false};
 let booted=false;
@@ -198,8 +198,8 @@ function clearRecoveryDismissed(userId){
  try{sessionStorage.removeItem(recoveryDismissKey(userId));}catch(_){/* stockage optionnel */}
 }
 
-// Le même contenu personnel et la même logique Jour/Semaine sur desktop
-// pour Responsable et Employé seulement, sans toucher aux administrateurs/PDV.
+// Accueil personnel compact conservé pour Responsable et Employé.
+// Sur Desktop/PWA Desktop, leur page Planning réutilise l'agenda de l'équipe.
 const smallScreen=()=>window.matchMedia('(max-width:760px)').matches;
 const isMobileHome=()=>usesCompactLayout(state.profile?.role,smallScreen());
 const isStaffDesktop=()=>isStaffDesktopLayout(state.profile?.role,smallScreen());
@@ -1006,7 +1006,7 @@ function pagePlanning(metrics){
     return renderPlanningYear({...state.mobilePlanning.annual,year:state.mobilePlanning.year,
       today:dateInParis(),selectedDay:state.day});
   }
-  if(isMobileHome())return renderMobilePlanning({
+  if(smallScreen())return renderMobilePlanning({
     weekStart:state.week,selectedDay:state.day,view:state.view,
     model:visibleModel(),profiles:state.profiles,
     currentProfile:state.profile,allowYear:annualAllowed(),filter:state.mobilePlanning.dayFilter,
@@ -1027,6 +1027,7 @@ function pagePlanning(metrics){
     renderDesktopPlanningAgenda({model:planningModel,people:metrics.people,week:state.week,day:state.day,view:state.view,
       sourceFile:state.weekData?.sourceFile||'',renderPerson:personWithAccountLink,formatHours:hours,
       canYear:desktopAnnualAllowed(),loading:state.loading,query:desktopAgendaQuery,
+      readOnly:['responsable','employe'].includes(state.profile?.role),
       editor:planningEditorDesktopAllowed()?{available:true,editing:planningEditor.editing,locked:state.weekData?.locked===true,
         canLock:state.profile?.role==='admin',dirty:planningEditor.dirty,busy:planningEditor.busy,
         message:planningEditor.message,messageKind:planningEditor.messageKind}:null})+
@@ -1371,7 +1372,7 @@ function render(){
   if(!canNavigate(state.page,state.profile,smallScreen()))state.page='planning';
   ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop());
   ROOT.classList.toggle('personal-home-active',state.page==='home'&&isMobileHome());
-  ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&isMobileHome());
+  ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&smallScreen());
   ROOT.classList.toggle('desktop-year-active',state.page==='planning'&&state.view==='year'&&desktopAnnualAllowed());
   ROOT.classList.toggle('mobile-sync-active',state.page==='anomalies'&&smallScreen());
   // Mobile / PWA : entête NETHOR hors défilement pour les autres écrans.

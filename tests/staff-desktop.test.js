@@ -5,12 +5,17 @@ import {isStaffDesktopLayout,usesCompactLayout} from '../src/ui/layout-role.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('Responsable/Employé PC : mêmes composants Accueil et Planning que sur mobile',()=>{
+test('Responsable/Employé PC : accueil personnel conservé, planning partagé en lecture seule',()=>{
  const js=read('src/ui/live.js');
  assert.ok(js.includes("const isMobileHome=()=>usesCompactLayout(state.profile?.role,smallScreen())"));
  assert.ok(js.includes("const isStaffDesktop=()=>isStaffDesktopLayout(state.profile?.role,smallScreen())"));
  assert.ok(js.includes("if(isMobileHome())return mobileOverviewPage()"));
- assert.ok(js.includes("if(isMobileHome())return renderMobilePlanning("));
+ assert.ok(js.includes("if(smallScreen())return renderMobilePlanning("));
+ assert.ok(js.includes("const staffPlanningRole=()=>!smallScreen()&&['admin','role_point-de-vente','responsable','employe'].includes(state.profile?.role)"));
+ assert.ok(js.includes("readOnly:['responsable','employe'].includes(state.profile?.role)"));
+ assert.ok(js.includes("editor:planningEditorDesktopAllowed()?"));
+ assert.ok(js.includes("ROOT.classList.toggle('mobile-planning-active',state.page==='planning'&&smallScreen())"));
+ assert.ok(js.includes("const planningEditorDesktopAllowed=()=>!smallScreen()&&state.page==='planning'&&['admin','role_point-de-vente'].includes(state.profile?.role)"));
  assert.ok(js.includes("ROOT.classList.toggle('staff-desktop-layout',isStaffDesktop())"));
  assert.ok(js.includes("if(isMobileHome())void loadPersonalHome()"));
  for(const role of ['responsable','employe']){

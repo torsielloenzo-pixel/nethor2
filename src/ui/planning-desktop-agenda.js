@@ -37,9 +37,9 @@ function ranges(day){
 function statusMarkup(day){
   return '<span class="n2-agenda-status" data-tone="'+esc(day.status)+'">'+STATUS[day.status]+'</span>';
 }
-function editorControls(editor){
+function editorControls(editor,readOnly=false){
   const refresh='<button class="n2-agenda-refresh" type="button" data-action="refresh">Actualiser ↻</button>';
-  if(!editor?.available)return refresh;
+  if(!editor?.available)return readOnly?'<div class="n2-agenda-admin-actions"><span class="n2-agenda-readonly">Lecture seule</span>'+refresh+'</div>':refresh;
   const canLock=editor.canLock===true;
   const badge=editor.locked?'<span class="n2-agenda-lock-badge">🔒 Semaine verrouillée</span>':
     editor.editing?'<span class="n2-agenda-edit-badge">✎ Mode édition</span>':'';
@@ -127,13 +127,13 @@ function summary(people,day,week,model,view){
       '<span><i data-tone="morning"></i>Matin</span><span><i data-tone="afternoon"></i>Après-midi</span>'+
       '<span><i data-tone="rest"></i>Repos</span><span><i data-tone="leave"></i>Congés</span></div></div>';
 }
-export function renderDesktopPlanningAgenda({model,people=[],week,day,view='week',sourceFile='',renderPerson,formatHours,canYear=false,loading=false,query='',editor=null}){
+export function renderDesktopPlanningAgenda({model,people=[],week,day,view='week',sourceFile='',renderPerson,formatHours,canYear=false,loading=false,query='',editor=null,readOnly=false}){
   const currentDay=Array.from({length:7},(_,i)=>plusDays(week,i)).includes(day)?day:week;
   const shown=people.filter(p=>p.name.toLocaleLowerCase('fr').includes(query.trim().toLocaleLowerCase('fr')));
   const content=!model?'<div class="n2-agenda-empty">Aucun planning publié pour cette semaine. Utilise les flèches pour choisir une autre semaine.</div>':
     view==='day'?dayGrid(shown,currentDay,week,model,renderPerson):weekGrid(shown,week,model,renderPerson,formatHours,editor);
   return '<section class="card n2-agenda" aria-label="Planning de l’équipe">'+
-    '<div class="n2-agenda-top"><div><h2>Planning de l’équipe</h2><p>'+esc(model?(sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div>'+editorControls(model?editor:null)+'</div>'+
+    '<div class="n2-agenda-top"><div><h2>Planning de l’équipe</h2><p>'+esc(model?(sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div>'+editorControls(model?editor:null,readOnly)+'</div>'+
     (editor?.message?'<div class="n2-agenda-editor-message" data-kind="'+esc(editor.messageKind||'info')+'" role="status">'+esc(editor.message)+'</div>':'')+
     nav(view,week,currentDay,canYear,query)+content+(model?summary(shown,currentDay,week,model,view):'')+
     (loading?'<div class="n2-agenda-loading" role="status">Chargement du planning…</div>':'')+'</section>';

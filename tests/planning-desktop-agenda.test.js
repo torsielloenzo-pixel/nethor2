@@ -97,6 +97,18 @@ test('Point de vente : édition disponible sans aucun contrôle de verrouillage'
   assert.doesNotMatch(locked,/data-action="planning-edit-unlock"/);
 });
 
+test('Responsable et Employé : agenda complet en lecture seule, sans commandes de modification',()=>{
+ for(const view of ['week','day']){
+  const html=renderDesktopPlanningAgenda({...common,view,readOnly:true});
+  assert.match(html,/Lecture seule/);
+  assert.match(html,/data-action="refresh"/);
+  assert.match(html,/data-action="week-view"/);
+  assert.match(html,/data-action="day-view"/);
+  assert.match(html,/data-action="year-view"/);
+  assert.doesNotMatch(html,/data-action="planning-edit|data-planning-edit/);
+ }
+});
+
 test('Administrateur : conserve les actions de verrouillage',()=>{
   const idle=renderDesktopPlanningAgenda({...common,view:'week',editor:{
     available:true,editing:false,locked:false,canLock:true,busy:false
