@@ -60,7 +60,7 @@ export async function saveAdminPlanningWeek(client,{weekStart,expectedRevision,m
   if(error)throw error;
   const status=String(data?.status||'');
   if(!['ok','unchanged','conflict','locked','forbidden','invalid','not_found'].includes(status))
-    throw new Error('Enregistrement administrateur non confirmé');
+    throw new Error('Enregistrement du planning non confirmé');
   return {status,revision:data?.revision?String(data.revision):null,locked:data?.locked===true};
 }
 
