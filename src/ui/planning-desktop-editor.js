@@ -1,4 +1,4 @@
-// NETHOR 2 — édition du planning réservée à l'administrateur Desktop / PWA Desktop.
+// NETHOR 2 — édition du planning pour Administrateur et Point de vente sur Desktop / PWA Desktop.
 // Ce module ne publie rien : il prépare et modifie uniquement un brouillon local.
 // La publication et le verrouillage restent contrôlés côté Supabase.
 import {describeDesktopPlanningDay} from './planning-desktop-colors.js';
