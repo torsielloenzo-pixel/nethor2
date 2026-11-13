@@ -26,6 +26,28 @@ function ranges(day){
 function statusMarkup(day){
   return '<span class="n2-agenda-status" data-tone="'+esc(day.status)+'">'+STATUS[day.status]+'</span>';
 }
+function editorControls(editor){
+  const refresh='<button class="n2-agenda-refresh" type="button" data-action="refresh">Actualiser ↻</button>';
+  if(!editor?.available)return refresh;
+  const badge=editor.locked?'<span class="n2-agenda-lock-badge">🔒 Semaine verrouillée</span>':
+    editor.editing?'<span class="n2-agenda-edit-badge">✎ Mode édition</span>':'';
+  const actions=editor.editing
+    ?'<button class="btn" type="button" data-action="planning-edit-cancel" '+(editor.busy?'disabled':'')+'>Annuler</button>'+
+      '<button class="btn" type="button" data-action="planning-edit-save" '+(editor.busy?'disabled':'')+'>Enregistrer</button>'+
+      '<button class="btn primary" type="button" data-action="planning-edit-save-lock" '+(editor.busy?'disabled':'')+'>Enregistrer et verrouiller</button>'
+    :editor.locked
+      ?'<button class="btn" type="button" data-action="planning-edit-unlock" '+(editor.busy?'disabled':'')+'>Déverrouiller</button>'
+      :'<button class="btn" type="button" data-action="planning-edit-start">Modifier</button>'+
+       '<button class="btn" type="button" data-action="planning-edit-lock">🔒 Verrouiller</button>';
+  return '<div class="n2-agenda-admin-actions">'+badge+actions+(editor.editing?'':refresh)+'</div>';
+}
+function editableWeekCell(day,model,editor,person,date){
+  const content=weekCell(day);
+  if(!editor?.editing)return content;
+  const employeeIndex=(model?.employees||[]).findIndex(item=>item?.name===person?.name);
+  if(employeeIndex<0)return content;
+  return '<button type="button" class="n2-agenda-edit-cell" data-planning-edit-person="'+employeeIndex+'" data-planning-edit-day="'+esc(date)+'" aria-label="Modifier '+esc(person.name)+' le '+esc(date)+'">'+content+'<small>Modifier</small></button>';
+}
 function weekCell(day){
   const detail=ranges(day);
   return detail.length?'<div class="n2-agenda-shift-list">'+detail.map(shift=>
@@ -53,11 +75,11 @@ function nav(view,week,day,canYear,query){
       '<label class="n2-agenda-search">⌕ <input id="n2AgendaSearch" type="search" autocomplete="off" value="'+esc(query)+'" placeholder="Rechercher un collaborateur…" aria-label="Rechercher un collaborateur"></label>'+
     '</div>';
 }
-function weekGrid(people,week,model,renderPerson,formatHours){
+function weekGrid(people,week,model,renderPerson,formatHours,editor){
   const dates=Array.from({length:7},(_,i)=>plusDays(week,i));
   const header=dates.map((date,i)=>'<th scope="col"><button type="button" data-day="'+date+'" title="Voir le '+esc(label(date,{weekday:'long',day:'numeric',month:'long'}))+'">'+WEEKDAYS[i]+'<small>'+esc(label(date,{day:'numeric',month:'2-digit'}))+'</small></button></th>').join('');
   const body=people.map(p=>{
-    const dayCells=dates.map((date,i)=>'<td>'+weekCell(getDay(p.days[i],model))+'</td>').join('');
+    const dayCells=dates.map((date,i)=>'<td class="'+(editor?.editing?'n2-agenda-editable':'')+'">'+editableWeekCell(getDay(p.days[i],model),model,editor,p,date)+'</td>').join('');
     return '<tr class="n2-agenda-person-row n2staff-row" data-agenda-person="'+esc(p.name.toLocaleLowerCase('fr'))+'" data-staff-person="'+esc(p.name)+'"><th scope="row">'+personName(p,renderPerson)+'</th>'+dayCells+'<td class="n2-agenda-hours">'+formatHours(p.total)+'</td></tr>';
   }).join('');
   return '<div class="n2-agenda-scroll" role="region" aria-label="Planning hebdomadaire" tabindex="0"><table class="n2-agenda-week-table"><thead><tr><th scope="col">Collaborateur</th>'+header+'<th scope="col">Total</th></tr></thead><tbody>'+body+'</tbody></table></div>';
@@ -93,13 +115,14 @@ function summary(people,day,week,model,view){
       '<span><i data-tone="morning"></i>Matin</span><span><i data-tone="afternoon"></i>Après-midi</span>'+
       '<span><i data-tone="rest"></i>Repos</span><span><i data-tone="leave"></i>Congés</span></div></div>';
 }
-export function renderDesktopPlanningAgenda({model,people=[],week,day,view='week',sourceFile='',renderPerson,formatHours,canYear=false,loading=false,query=''}){
+export function renderDesktopPlanningAgenda({model,people=[],week,day,view='week',sourceFile='',renderPerson,formatHours,canYear=false,loading=false,query='',editor=null}){
   const currentDay=Array.from({length:7},(_,i)=>plusDays(week,i)).includes(day)?day:week;
   const shown=people.filter(p=>p.name.toLocaleLowerCase('fr').includes(query.trim().toLocaleLowerCase('fr')));
   const content=!model?'<div class="n2-agenda-empty">Aucun planning publié pour cette semaine. Utilise les flèches pour choisir une autre semaine.</div>':
-    view==='day'?dayGrid(shown,currentDay,week,model,renderPerson):weekGrid(shown,week,model,renderPerson,formatHours);
+    view==='day'?dayGrid(shown,currentDay,week,model,renderPerson):weekGrid(shown,week,model,renderPerson,formatHours,editor);
   return '<section class="card n2-agenda" aria-label="Planning de l’équipe">'+
-    '<div class="n2-agenda-top"><div><h2>Planning de l’équipe</h2><p>'+esc(model?(sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div><button class="n2-agenda-refresh" type="button" data-action="refresh">Actualiser ↻</button></div>'+
+    '<div class="n2-agenda-top"><div><h2>Planning de l’équipe</h2><p>'+esc(model?(sourceFile||'Semaine publiée'):'Aucune version enregistrée')+'</p></div>'+editorControls(model?editor:null)+'</div>'+
+    (editor?.message?'<div class="n2-agenda-editor-message" data-kind="'+esc(editor.messageKind||'info')+'" role="status">'+esc(editor.message)+'</div>':'')+
     nav(view,week,currentDay,canYear,query)+content+(model?summary(shown,currentDay,week,model,view):'')+
     (loading?'<div class="n2-agenda-loading" role="status">Chargement du planning…</div>':'')+'</section>';
 }
