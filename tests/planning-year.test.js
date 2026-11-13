@@ -89,3 +89,16 @@ test('intégration: état annuel, chargement, clic jour, responsive, PWA',()=>{
  assert.match(build,/verify-pwa-shell\.py _site sw\.js/);
  assert.match(sw,/const CACHE_NAME='nethor-[^']+-v\d+'/);
 });
+
+test('Point de vente dispose du calendrier annuel déjà partagé par les autres rôles Desktop/PWA',()=>{
+ const js=read('src/ui/live.js');
+ assert.ok(js.includes("const desktopAnnualAllowed=()=>!smallScreen()&&['admin','role_point-de-vente','responsable','employe'].includes(state.profile?.role)"));
+ assert.ok(js.includes('canYear:desktopAnnualAllowed()'));
+ assert.ok(js.includes("if(annualAllowed()&&state.view==='year')"));
+ assert.ok(js.includes('return renderPlanningYear('));
+ assert.ok(js.includes('void loadAnnualWeeks(true)'));
+ assert.ok(js.includes("ROOT.classList.toggle('desktop-year-active',state.page==='planning'&&state.view==='year'&&desktopAnnualAllowed())"));
+ // Les journées sélectionnées rouvrent le planning hebdomadaire existant.
+ assert.ok(js.includes('const targetWeek=mondayFor(day)'));
+ assert.ok(js.includes('await loadWeek()'));
+});

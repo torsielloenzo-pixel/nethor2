@@ -676,7 +676,7 @@ function summary(metrics){
   const third=adminPlanningDesktop()?'<article class="live-stat n2collab-stat"><button type="button" class="n2collab-trigger" data-action="collaborators-toggle" aria-expanded="'+collaboratorHistory.open+'"><label>Collaborateurs</label><strong>'+(collaboratorHistory.loaded?collaboratorHistory.items.length:'—')+'</strong><small>Historique des plannings · Ouvrir ↗</small></button></article>':'<article class="live-stat"><label>Points à vérifier</label><strong>'+metrics.issues.length+'</strong><small>Contrôles automatiques</small></article>';
   return '<section class="live-summary"><article class="live-stat"><label>Collaborateurs planifiés</label><strong>'+planned+'</strong><small>Sur la semaine</small></article><article class="live-stat"><label>Heures planifiées</label><strong>'+hours(total)+'</strong><small>Total calculé</small></article>'+third+'</section>';
 }
-const desktopAnnualAllowed=()=>!smallScreen()&&['admin','responsable','employe'].includes(state.profile?.role);
+const desktopAnnualAllowed=()=>!smallScreen()&&['admin','role_point-de-vente','responsable','employe'].includes(state.profile?.role);
 const annualAllowed=()=>smallScreen()||desktopAnnualAllowed();
 function weekNav(){
   return '<div class="live-week-wrapper"><div class="live-paging"><button class="icon-btn" data-action="prev" aria-label="Semaine précédente">‹</button><strong>'+shortDate(state.week)+' – '+shortDate(plusDays(state.week,6))+'</strong><button class="icon-btn" data-action="next" aria-label="Semaine suivante">›</button></div><div class="segmented"><button data-action="week-view" class="'+(state.view==='week'?'selected':'')+'">Semaine</button><button data-action="day-view" class="'+(state.view==='day'?'selected':'')+'">Jour</button>'+(desktopAnnualAllowed()?'<button data-action="year-view">Année</button>':'')+'</div></div>';
@@ -1829,7 +1829,7 @@ ROOT.addEventListener('click',async event=>{
   const nav=event.target.closest('[data-page]');
   if(nav){go(nav.dataset.page);return;}
 
-  // La vue annuelle NETHOR 1 est volontairement réservée au téléphone et à sa PWA.
+  // Le calendrier annuel existant est partagé sur téléphone, PWA, Desktop et PWA Desktop selon le rôle.
   const yearDate=event.target.closest('[data-year-day]');
   if(yearDate&&state.page==='planning'&&state.view==='year'&&annualAllowed()){
     const day=yearDate.dataset.yearDay;
