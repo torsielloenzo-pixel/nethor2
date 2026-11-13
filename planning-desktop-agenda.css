@@ -16,7 +16,9 @@
     margin:3px 20px 15px;display:grid;grid-template-columns:repeat(var(--agenda-tabs,3),minmax(0,1fr));gap:5px;
     padding:4px;border:1px solid #e0e7f0;border-radius:11px;background:#f7f9fd;
   }
-  #app .n2-agenda-tabs button{border:0;background:transparent;border-radius:8px;padding:11px 9px;color:#435979;font-size:12px;font-weight:700}
+  #app .n2-agenda-tabs button{border:0;background:transparent;border-radius:8px;padding:11px 9px;color:#435979;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px}
+  #app .n2-agenda-tab-icon{width:16px;height:16px;flex:none;opacity:.9}
+  #app .n2-agenda-tabs button.active .n2-agenda-tab-icon{opacity:1}
   #app .n2-agenda-tabs button.active{background:#173d7e;color:#fff;box-shadow:0 2px 7px #1b44712d}
   #app .n2-agenda-tabs button:not(.active):hover{background:#e8eef9}
   #app .n2-agenda-toolbar{
@@ -25,7 +27,8 @@
   }
   #app .n2-agenda-team{display:grid;gap:5px}
   #app .n2-agenda-team small{color:#8291a9;font-size:10px}
-  #app .n2-agenda-team span{display:flex;align-items:center;padding:10px 12px;min-height:39px;border:1px solid #e0e7f2;border-radius:9px;color:#3f5372;font-size:11px;font-weight:650;background:#fff}
+  #app .n2-agenda-team span{display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:39px;border:1px solid #e0e7f2;border-radius:9px;color:#3f5372;font-size:11px;font-weight:650;background:#fff}
+  #app .n2-agenda-team-icon{width:16px;height:16px;flex:none;color:#5578aa}
   #app .n2-agenda-nav{display:flex;align-items:center;justify-content:center;gap:9px;min-width:0}
   #app .n2-agenda-nav>div{text-align:center;min-width:0;flex:1}
   #app .n2-agenda-nav strong{display:block;color:#203559;font-size:12px;line-height:1.35;text-transform:capitalize}
@@ -93,6 +96,8 @@
   #app .n2-agenda-day-status .n2-agenda-status{height:100%;display:grid;place-items:center}
   #app .n2-agenda-footer{padding:14px 19px;display:flex;align-items:center;gap:18px;justify-content:space-between;flex-wrap:wrap;border-top:1px solid #e8edf5;background:#fbfcff;font-size:11px;color:#5d708d}
   #app .n2-agenda-footer strong{color:#234775}
+  #app .n2-agenda-footer-team{display:inline-flex;align-items:center;gap:6px}
+  #app .n2-agenda-footer-icon{width:15px;height:15px;flex:none;color:#5876a1}
   #app .n2-agenda-legend{display:flex;flex-wrap:wrap;gap:17px;align-items:center}
   #app .n2-agenda-legend span{display:inline-flex;gap:6px;align-items:center}
   #app .n2-agenda-legend i{display:inline-block;width:13px;height:13px;border-radius:4px}

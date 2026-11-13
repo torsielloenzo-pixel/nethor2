@@ -586,11 +586,12 @@ function shift(ranges){
   return '<div class="shift">'+ranges.map(r=>hhmm(r.startMinutes)+'–'+hhmm(r.endMinutes)).join('<i>puis</i>')+'</div>';
 }
 const adminPlanningDesktop=()=>!smallScreen()&&state.page==='planning'&&state.profile?.role==='admin';
+const planningEditorDesktopAllowed=()=>!smallScreen()&&state.page==='planning'&&['admin','role_point-de-vente'].includes(state.profile?.role);
 function clearPlanningEditor(message='',messageKind='info'){
   planningEditor={editing:false,week:null,draft:null,active:null,dirty:false,busy:false,message,messageKind};
 }
 function startPlanningEditor(){
-  if(!adminPlanningDesktop()||!state.weekData?.model||state.weekData.locked||planningEditor.busy)return;
+  if(!planningEditorDesktopAllowed()||!state.weekData?.model||state.weekData.locked||planningEditor.busy)return;
   planningEditor={editing:true,week:state.week,draft:clonePlanningModel(state.weekData.model),active:null,dirty:false,busy:false,message:'Clique sur une journée pour modifier ses horaires.',messageKind:'info'};
   state.view='week';
   render();
@@ -601,18 +602,20 @@ function cancelPlanningEditor(){
   render();
 }
 async function savePlanningEditor(lockAfter=false){
-  if(!adminPlanningDesktop()||!planningEditor.editing||!planningEditor.draft||planningEditor.busy)return;
+  if(!planningEditorDesktopAllowed()||!planningEditor.editing||!planningEditor.draft||planningEditor.busy)return;
   planningEditor.busy=true;planningEditor.message='Enregistrement du planning…';planningEditor.messageKind='info';render();
   try{
     const gate=await checkSession();
-    if(!gate||gate.gate.profile?.role!=='admin')throw Error('Droits administrateur requis.');
+    const editorRole=gate?.gate?.profile?.role;
+    if(!gate||!['admin','role_point-de-vente'].includes(editorRole))throw Error('Droits d’édition du planning requis.');
+    if(lockAfter&&editorRole!=='admin')throw Error('Seul l’administrateur peut verrouiller une semaine.');
     if(state.week!==planningEditor.week)throw Error('La semaine affichée a changé. Modifications non publiées.');
     const outcome=await saveAdminPlanningWeek(client,{
       weekStart:state.week,expectedRevision:state.weekData?.revision,model:planningEditor.draft,lockAfter
     });
     if(outcome.status==='conflict')throw Error('Le planning a changé depuis le début de l’édition. Recharge la semaine avant de recommencer.');
     if(outcome.status==='locked')throw Error('Cette semaine a été verrouillée entre-temps.');
-    if(outcome.status==='forbidden')throw Error('Les droits administrateur ne sont plus actifs.');
+    if(outcome.status==='forbidden')throw Error('Les droits d’édition du planning ne sont plus actifs.');
     if(outcome.status==='invalid')throw Error('Le brouillon ne respecte pas la structure du planning.');
     if(outcome.status==='not_found')throw Error('Cette semaine n’existe plus dans le planning publié.');
     const message=lockAfter?'Planning enregistré et semaine verrouillée.':'Planning enregistré.';
@@ -1024,9 +1027,10 @@ function pagePlanning(metrics){
     renderDesktopPlanningAgenda({model:planningModel,people:metrics.people,week:state.week,day:state.day,view:state.view,
       sourceFile:state.weekData?.sourceFile||'',renderPerson:personWithAccountLink,formatHours:hours,
       canYear:desktopAnnualAllowed(),loading:state.loading,query:desktopAgendaQuery,
-      editor:adminPlanningDesktop()?{available:true,editing:planningEditor.editing,locked:state.weekData?.locked===true,
-        dirty:planningEditor.dirty,busy:planningEditor.busy,message:planningEditor.message,messageKind:planningEditor.messageKind}:null})+
-    (adminPlanningDesktop()?renderPlanningEditorDialog({model:planningEditor.draft,active:planningEditor.active}):'')+
+      editor:planningEditorDesktopAllowed()?{available:true,editing:planningEditor.editing,locked:state.weekData?.locked===true,
+        canLock:state.profile?.role==='admin',dirty:planningEditor.dirty,busy:planningEditor.busy,
+        message:planningEditor.message,messageKind:planningEditor.messageKind}:null})+
+    (planningEditorDesktopAllowed()?renderPlanningEditorDialog({model:planningEditor.draft,active:planningEditor.active}):'')+
     (staffPlanningRole()?(staffDetail.showMonth?renderStaffDetail(metrics):sheet):'');
 }
 
@@ -1704,7 +1708,7 @@ document.addEventListener('click',event=>{
 ROOT.addEventListener('submit',async event=>{
   if(event.target.id==='planningEditorForm'){
     event.preventDefault();
-    if(!adminPlanningDesktop()||!planningEditor.editing||!planningEditor.draft)return;
+    if(!planningEditorDesktopAllowed()||!planningEditor.editing||!planningEditor.draft)return;
     const values=Object.fromEntries(new FormData(event.target).entries());
     try{
       applyPlanningDayEdit(planningEditor.draft,{
@@ -1744,7 +1748,7 @@ ROOT.addEventListener('submit',async event=>{
 });
 ROOT.addEventListener('click',async event=>{
  const editCell=event.target.closest('[data-planning-edit-person][data-planning-edit-day]');
- if(editCell&&adminPlanningDesktop()&&planningEditor.editing){
+ if(editCell&&planningEditorDesktopAllowed()&&planningEditor.editing){
    const visible=visibleModel(planningEditor.draft);
    const shownIndex=Number(editCell.dataset.planningEditPerson);
    const name=visible?.employees?.[shownIndex]?.name;
@@ -1859,7 +1863,7 @@ ROOT.addEventListener('click',async event=>{
   }
   const day=event.target.closest('[data-day]');
   if(day){
-    if(planningEditor.editing&&adminPlanningDesktop()){window.alert('Enregistre ou annule les modifications avant de changer de vue.');return;}
+    if(planningEditor.editing&&planningEditorDesktopAllowed()){window.alert('Enregistre ou annule les modifications avant de changer de vue.');return;}
     state.day=day.dataset.day;state.view='day';render();return;
   }
   const createFor=event.target.closest('[data-account-create-for]');
@@ -1878,7 +1882,7 @@ ROOT.addEventListener('click',async event=>{
   if(action==='planning-edit-lock'){await changePlanningWeekLock(true);return;}
   if(action==='planning-edit-unlock'){await changePlanningWeekLock(false);return;}
   if(action==='planning-editor-close'){planningEditor.active=null;render();return;}
-  if(planningEditor.editing&&adminPlanningDesktop()&&['prev','next','today','refresh','agenda-prev-day','agenda-next-day','day-view','year-view','go-import'].includes(action)){
+  if(planningEditor.editing&&planningEditorDesktopAllowed()&&['prev','next','today','refresh','agenda-prev-day','agenda-next-day','day-view','year-view','go-import'].includes(action)){
     window.alert('Enregistre ou annule les modifications avant de quitter cette semaine.');return;
   }
   if(action==='promo-refresh'&&state.page==='promo'&&canNavigate('promo',state.profile,smallScreen())){
