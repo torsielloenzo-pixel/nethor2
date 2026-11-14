@@ -1,5 +1,6 @@
 import {SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY} from '../config/public.js';
 import {loadAuthorizedSession} from '../auth/session-gate.js';
+import {signOutNethorSession} from '../auth/logout-policy.js';
 import {canViewTeam,canNavigate} from './team-access.js';
 import {resolveLoginEmail} from '../auth/login-identifier.js';
 import {validateRecoveryEmail,validateNewPassword,RESET_REQUEST_MESSAGE} from '../auth/account-security.js';
@@ -252,7 +253,7 @@ async function signOut(){
   state.planningNotifications={accessChecked:false,enabled:false,loaded:false,loading:false,open:false,items:[],error:'',checkedAt:0};
   state.personalHistory={open:false,loaded:false,loading:false,items:[],error:'',checkedAt:0};
   state.calendarSubscription={checked:false,enabled:false,loading:false,webcalUrl:'',httpsUrl:'',calendarName:'',error:''};
-  try{await client.auth.signOut();}catch(err){console.warn('Déconnexion',err);}
+  try{await signOutNethorSession(client,state.user?.id);}catch(err){console.warn('Déconnexion',err);}
   syncController?.dispose();
   syncController=null;
   state.user=null;state.profile=null;state.weekData=null;state.profiles=[];state.importFile=null;state.importModel=null;state.importAnalysis=null;
@@ -1740,10 +1741,13 @@ ROOT.addEventListener('submit',async event=>{
   if(submit){submit.disabled=true;submit.textContent='Connexion…';}
   try{
     const email=resolveLoginEmail(identifier);
-    const {error}=await client.auth.signInWithPassword({email,password});
+    const {data:authData,error}=await client.auth.signInWithPassword({email,password});
     if(error)throw Error('Identifiants incorrects ou accès indisponible.');
     const gate=await checkSession();
-    if(!gate){await client.auth.signOut();throw Error('Votre compte ne dispose pas d’un accès actif au planning.');}
+    if(!gate){
+      await signOutNethorSession(client,authData?.user?.id);
+      throw Error('Votre compte ne dispose pas d’un accès actif au planning.');
+    }
     clearRecoveryDismissed(gate.gate.user.id);
     await startAuthorized(gate);
   }catch(err){showMessage(String(err.message||err));if(submit){submit.disabled=false;submit.textContent='Se connecter';}}
